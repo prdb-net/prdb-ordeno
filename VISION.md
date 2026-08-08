@@ -36,7 +36,7 @@ The core loop, running continuously:
 
 1. **Watch** one or more source directories, wherever downloads accumulate.
 2. **Identify** each video against prdb.
-3. **File** it into a target structure following a layout the user picked, based
+3. **Move** it into a target structure following a layout the user picked, based
    on which media server they use.
 4. **Enrich** it with the sidecar files that server reads — metadata, and
    optionally artwork from prdb.
@@ -45,6 +45,14 @@ The core loop, running continuously:
 Anything it cannot identify confidently is not a failure state to be hidden. It
 surfaces in the UI as work waiting for a decision, and the user resolves it
 there.
+
+A watched directory is full of files that are not ready: a download still being
+written, a temporary name, an archive mid-extraction. Only a file that is
+demonstrably finished is a candidate, and the tool would rather wait another
+cycle than act on a growing file. Watching is also not a solved problem on this
+audience's hardware — filesystem notifications are unreliable across SMB and
+NFS, which is exactly where a NAS user's media sits, so periodic scanning is the
+normal case rather than a fallback.
 
 ## Identification
 
@@ -98,6 +106,67 @@ everyone wants to spend.
 Actual layouts, filename shapes and sidecar contents are a design decision to be
 made against each server's documented behaviour, and validated against a real
 library rather than a reading of the docs.
+
+## Files are moved, not copied
+
+The download directory is meant to end up empty. Tidiness on disk is part of
+what the user came for, and a tool that leaves a second copy behind has solved
+the media server's problem while making the storage problem worse.
+
+This is why the documentation has to be honest about source and target sharing a
+filesystem: a move within one filesystem is instant and cannot half-happen,
+while a move across two is a copy, a verification and a delete — slow, and the
+only place where a file can be lost to a crash. Both must work, but the user
+should be able to choose the fast one knowingly rather than discover the slow one
+by watching a progress bar.
+
+## Duplicates
+
+Two files can be the same scene. Whether that is a problem depends on what
+differs between them, so the default distinguishes:
+
+- **Different quality** — both are kept. Someone who has the 1080p and the 2160p
+  version usually has a reason, and quietly discarding one is not a decision the
+  tool should make on their behalf.
+- **Same scene, same quality** — the library does not hold it twice. The second
+  file is not filed, and it is not deleted either: it is left where it is and
+  reported, because a redundant copy is a reason to skip an import, never a
+  reason to destroy data on a default setting.
+
+The user can change this, in both directions. Note that comparing quality means
+reading it out of the file itself — prdb identifies the scene, not the encode a
+particular person happens to have — and that "same scene" is only knowable for
+files that were actually identified. Two unidentified files are never assumed to
+be duplicates of each other.
+
+## The library is not written once
+
+Everything above describes a file arriving. The tool then runs for years, and
+during those years the library itself changes underneath it:
+
+- The user switches media server, or picks a different layout. Their existing
+  library was filed under the old one.
+- prdb corrects a title, a date, or a cast entry. The `.nfo` written last spring
+  still says the old thing.
+- A scene the user resolved by hand turns out to have been resolved wrongly.
+
+None of these are edge cases; over a long enough run all three are certain. So
+re-filing an existing library and refreshing existing metadata are part of the
+tool rather than something to bolt on later — and both are bulk operations over
+files the user already considers sorted, which makes them the most dangerous
+thing it does. How far each goes, and how much is automatic versus confirmed,
+is still open.
+
+## Every operation is reversible
+
+The counterpart to treating files as irreplaceable: the tool keeps a log of what
+it moved, from where, to where, and why it believed that was right. The log is
+what the UI shows, what a bug report quotes, and what an undo reads.
+
+Undo matters most exactly where the tool is most useful — the unattended run
+that filed two hundred files overnight under a rule that turned out to be wrong.
+Without a way back, the only safe way to use such a tool is to not let it run
+unattended, which is the whole point of it.
 
 ## Contributing back to prdb
 
@@ -162,11 +231,30 @@ which keeps the responsibility where the correction can actually be made.
   discovered at first run.
 - Docker, and storage that can be mounted into a container.
 
+## The first release, and what comes after
+
+The first release has to be the whole loop and nothing else: sources and a
+target configured through onboarding, identification, filing, sidecar metadata,
+a review queue for what could not be identified, and the operation log with its
+undo. A version of this that identifies beautifully but leaves the user without
+a way back is not a smaller release, it is an unusable one.
+
+Deliberately after that, not before:
+
+- **Notifications.** An unattended tool has to be able to say something went
+  wrong without the user thinking to go and look. This is the first thing on the
+  list once the loop works, and it is why an email address may appear in the
+  configuration later — for alerting, and for nothing else.
+- **Artwork**, if it turns out to be more than a small addition to the sidecar
+  work.
+
 ## Open questions
 
 - The implementation language, and with it which `prdb-sdk` client is used.
   These are one decision, not two — see `AGENTS.md`.
 - The exact layouts per media server, and how far artwork support goes.
+- How much of re-filing and metadata refresh happens on its own, and how much
+  the user confirms first.
 - How the review queue behaves at scale: a first run over an existing library of
   thousands of files is a different problem from the steady state of a handful
   of new downloads a day, and the design has to survive both.
