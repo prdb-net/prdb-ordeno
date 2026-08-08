@@ -13,6 +13,11 @@ That is deliberate rather than an omission: the sections below on setting up and
 running tests will be filled in with the first code, and until then any
 instructions here would be a guess.
 
+`VISION.md` describes what the tool is meant to become — a self-hosted web
+application that files downloads into a library a media server can read — and,
+just as usefully, what it is not. It is the best place to check whether an idea
+belongs here before spending an evening on it.
+
 If you are thinking about contributing something substantial, open an issue
 first. A design that does not fit yet is much cheaper to redirect before it is
 written than after.
@@ -23,12 +28,19 @@ written than after.
 useful in proportion to how precisely it separates the two sides:
 
 - **Wrong file handling** — a file moved, renamed or skipped when it should not
-  have been. Include the layout before and after, and the exact command. This is
-  the tool's own logic.
+  have been. Include the directory layout before and after, the chosen target
+  layout, and what the tool said it was going to do beforehand if you saw it.
+  This is the tool's own logic.
 - **Wrong metadata** — the tool did what it was told, but prdb's answer was
   wrong. That belongs upstream, though report it here if you are unsure and we
   will route it.
-- **A crash** — the full error output, and what the tool was pointed at.
+- **A crash** — the container logs around the failure, and what the tool was
+  pointed at.
+
+Since the tool runs unattended, plenty of bugs are found after the fact rather
+than watched happening. That is fine, and it is what the logs are for; say which
+it was, because "I saw the preview and confirmed it" and "I found it like this
+in the morning" point at different code.
 
 Anything that moves or deletes files deserves particular care in a report. Say
 whether the data was recoverable, because that changes how urgent the fix is.

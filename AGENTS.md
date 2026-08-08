@@ -4,6 +4,12 @@ A tool that organises video files using metadata from prdb. Open source, MIT.
 The implementation language is not decided yet, so most of this file describes
 constraints rather than commands.
 
+It is a self-hosted web application, not a command-line tool: a long-running
+service in a container, with a browser UI, that keeps filing new downloads
+without being asked. Source and target storage arrive as Docker mounts. Read
+`VISION.md` before designing anything — it is what these constraints are in
+service of.
+
 ## Language
 
 **Everything in this repository is in English** — code, comments, documentation,
@@ -16,11 +22,18 @@ names, and anything visible to users of the tool. No exceptions.
 Treat every write path as the dangerous one, because it is:
 
 - A destructive operation is opt-in, never the default. Deleting or overwriting
-  needs an explicit flag, not merely the absence of a cautious one.
-- There is a dry run, and it is the default until proven otherwise. It prints
-  exactly what a real run would do.
+  is something the user turned on deliberately, not something that happens
+  because nobody turned it off.
+- Every write path can be asked what it would do without doing it, and that
+  answer is exactly what the real run performs. In the UI this is a preview the
+  user confirms; in the automatic runs that follow, it is what gets recorded and
+  shown afterwards. A button is easier to press than a command is to type, so
+  running unattended behind a web UI raises the stakes here rather than
+  lowering them.
 - Nothing is written on the strength of a partial or failed metadata lookup. An
-  API error means stopping, not falling back to a guess at the filename.
+  API error means stopping, not falling back to a guess at the filename. A
+  scheduled run is no excuse to degrade: unattended is not the same as
+  unsupervised, and the user reads the result later.
 - Moves across filesystems are copy-then-verify-then-delete. A rename that turns
   into a copy under the hood must not lose the file when it fails halfway.
 
@@ -48,6 +61,7 @@ the implementation language and choosing the SDK are one decision, not two.
 ```
 LICENSE           MIT
 README.md         what the tool is
+VISION.md         what it is for, and what it is deliberately not
 CONTRIBUTING.md   how to report a bug, how to shape a commit
 CHANGELOG.md      Keep a Changelog, Unreleased at the top
 ```
@@ -69,7 +83,9 @@ notice. A refactor that changes no behaviour does not need one.
 ## Verifying a change
 
 To be written with the first code. Whatever the language, the destructive paths
-above get tests before they get a release.
+above get tests before they get a release, and those tests run against a real
+filesystem — the interesting failures are the ones a mocked file layer cannot
+have.
 
 ## Versioning
 
