@@ -1,0 +1,29 @@
+# Language-specific rules follow once the language is decided.
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.local
+secrets.*
+*.pem
+*.key
+credentials.json
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*~
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Tooling
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Logs and temporary files
+*.log
+tmp/
