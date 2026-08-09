@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.RateLimiting;
 
 using Prdb.Ordeno.Infrastructure.Access;
@@ -21,17 +22,27 @@ internal static class AccessEndpoints
     /// </summary>
     public const string SignInRateLimitPolicy = "sign-in";
 
+    /// <summary>
+    /// The return types are the union of what each endpoint can answer, because
+    /// that is what the OpenAPI document is generated from — ADR 0014. A
+    /// response the compiler knows about is one the frontend's types know about.
+    /// </summary>
     public static IEndpointRouteBuilder MapAccess(this IEndpointRouteBuilder endpoints)
     {
-        var access = endpoints.MapGroup("/api/access");
+        // The tag names the group in the document; without one every endpoint
+        // is filed under the assembly name, which tells a reader nothing.
+        var access = endpoints.MapGroup("/api/access").WithTags("Access");
 
-        access.MapGet("/state", async (AccessService service, HttpContext context, CancellationToken cancellationToken) =>
-            Results.Ok(new AccessState(
+        access.MapGet("/state", async Task<Ok<AccessState>> (
+            AccessService service,
+            HttpContext context,
+            CancellationToken cancellationToken) =>
+            TypedResults.Ok(new AccessState(
                 PasswordSet: await service.IsPasswordSetAsync(cancellationToken),
                 Authenticated: context.User.Identity?.IsAuthenticated == true)))
             .AllowAnonymous();
 
-        access.MapPost("/password", async (
+        access.MapPost("/password", async Task<Results<Ok<AccessState>, BadRequest<ProblemResponse>, Conflict<ProblemResponse>>> (
                 SetPasswordRequest request,
                 AccessService service,
                 HttpContext context,
@@ -42,9 +53,9 @@ internal static class AccessEndpoints
                 return result.Status switch
                 {
                     SetInitialPasswordStatus.Set => SignedIn(context, result.SessionToken!),
-                    SetInitialPasswordStatus.TooShort => Results.BadRequest(new ProblemResponse(
+                    SetInitialPasswordStatus.TooShort => TypedResults.BadRequest(new ProblemResponse(
                         $"The password must be at least {AccessService.MinimumPasswordLength} characters long.")),
-                    _ => Results.Conflict(new ProblemResponse(
+                    _ => TypedResults.Conflict(new ProblemResponse(
                         "This installation already has a password. Sign in with it, or reset it from the "
                         + "machine the data directory is mounted on.")),
                 };
@@ -52,7 +63,12 @@ internal static class AccessEndpoints
             .AllowAnonymous()
             .RequireRateLimiting(SignInRateLimitPolicy);
 
-        access.MapPost("/session", async (
+        // The one endpoint whose responses are declared rather than returned: a
+        // 401 that carries a body has no typed result behind it, and the
+        // untyped JSON one describes itself as a 200. Declaring both here keeps
+        // the document honest; changing what this answers means changing the
+        // two lines below with it.
+        access.MapPost("/session", async Task<IResult> (
                 SignInRequest request,
                 AccessService service,
                 HttpContext context,
@@ -67,9 +83,11 @@ internal static class AccessEndpoints
                         statusCode: StatusCodes.Status401Unauthorized);
             })
             .AllowAnonymous()
-            .RequireRateLimiting(SignInRateLimitPolicy);
+            .RequireRateLimiting(SignInRateLimitPolicy)
+            .Produces<AccessState>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status401Unauthorized);
 
-        access.MapDelete("/session", async (
+        access.MapDelete("/session", async Task<NoContent> (
             AccessService service,
             HttpContext context,
             CancellationToken cancellationToken) =>
@@ -81,16 +99,16 @@ internal static class AccessEndpoints
 
             SessionCookie.Delete(context.Response);
 
-            return Results.NoContent();
+            return TypedResults.NoContent();
         });
 
         return endpoints;
     }
 
-    private static IResult SignedIn(HttpContext context, string token)
+    private static Ok<AccessState> SignedIn(HttpContext context, string token)
     {
         SessionCookie.Write(context.Response, token, DateTimeOffset.UtcNow + AccessService.SessionLifetime);
 
-        return Results.Ok(new AccessState(PasswordSet: true, Authenticated: true));
+        return TypedResults.Ok(new AccessState(PasswordSet: true, Authenticated: true));
     }
 }

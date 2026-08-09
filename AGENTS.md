@@ -26,6 +26,26 @@ compiles against, both committed and both checked by CI
 Never edit the generated file, and give endpoints named response types — an
 anonymous shape generates a type nobody can read.
 
+The document is `src/Prdb.Ordeno.Host/openapi.json`, written by every build of
+the host, and the types are `src/Prdb.Ordeno.Frontend/src/api/schema.d.ts`. One
+command regenerates both:
+
+```
+cd src/Prdb.Ordeno.Frontend && npm run generate:api
+```
+
+An endpoint declares what it answers by returning it: `TypedResults` and a
+`Results<...>` union put the responses in the signature, where the compiler
+keeps them true. The sign-in endpoint is the exception — a 401 carrying a body
+has no typed result behind it, so it declares its responses with `.Produces<T>`
+and says so in a comment. Reach for that only when there is no typed result to
+return.
+
+The generator loads the host to read its endpoints and stops it where it would
+start listening, so `Program.cs` skips the startup work in that process — see
+the `GetDocument.Insider` check there before adding anything between building
+the application and running it.
+
 Local state — review queue, operation log, hash backlog, configuration — lives
 in **SQLite through EF Core**, in a file in the mounted data volume, with
 migrations applied at startup —
@@ -241,6 +261,17 @@ Touching the frontend means building it too:
 ```
 cd src/Prdb.Ordeno.Frontend && npm run build
 ```
+
+Touching an endpoint's request or response means regenerating the contract and
+committing what changes:
+
+```
+cd src/Prdb.Ordeno.Frontend && npm run generate:api
+```
+
+CI runs the same command and fails on a diff, so a stale generated file is a red
+build rather than a frontend quietly compiled against a shape the backend no
+longer sends.
 
 ## Versioning
 

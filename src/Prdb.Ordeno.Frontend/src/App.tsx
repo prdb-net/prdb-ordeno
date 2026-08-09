@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 
-type Health = { status: string }
+import type { components } from './api/schema'
+
+// ADR 0014: the shape is the backend's, not a hand-made copy of it. Rename the
+// field there without regenerating and this build is where it stops.
+type Health = components['schemas']['HealthResponse']
 
 type Backend =
   | { state: 'checking' }

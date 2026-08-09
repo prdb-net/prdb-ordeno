@@ -7,9 +7,11 @@ commit messages, branch names and PR descriptions. No exceptions.
 
 ## Where the project stands
 
-This is an early repository. The backend stack is settled — .NET 10 — but there
-is no code yet, so there is nothing to build or test until the first feature
-lands.
+This is an early repository. The backend stack is settled — .NET 10 — and what
+exists so far is the shape of the application rather than the feature it is for:
+the projects, the database, the password everything sits behind, and the API
+contract the browser side is built against. Nothing is identified, moved or
+filed yet.
 
 `VISION.md` describes what the tool is meant to become — a self-hosted web
 application that files downloads into a library a media server can read — and,
@@ -95,6 +97,30 @@ The tool keeps its database in the directory `ORDENO_DATA_DIRECTORY` names —
 it from the repository. Delete that directory to start over from an empty
 installation, or set `ORDENO_RESET_PASSWORD=true` for one start to clear the
 password and every session while keeping the rest.
+
+## Changing the API
+
+The frontend does not describe the API for itself. The backend emits an OpenAPI
+document — `src/Prdb.Ordeno.Host/openapi.json`, written by every build of the
+host — and `openapi-typescript` turns it into the types the browser code
+compiles against, in `src/Prdb.Ordeno.Frontend/src/api/schema.d.ts`. Both files
+are committed, and neither is edited by hand.
+
+If you change what an endpoint accepts or answers, regenerate them and commit
+what changes:
+
+```
+cd src/Prdb.Ordeno.Frontend
+npm run generate:api
+```
+
+CI runs that command and fails if the result differs from what is checked in.
+The diff is the point: a changed response shape shows up in review, and the
+frontend build stops on a field it can no longer rely on instead of rendering a
+blank column.
+
+Give endpoints named response types. An anonymous shape generates a type nobody
+can read, and it is the backend that pays for that rather than the frontend.
 
 ## Changing the database schema
 
