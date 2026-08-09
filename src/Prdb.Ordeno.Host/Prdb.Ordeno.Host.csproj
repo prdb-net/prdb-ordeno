@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    ADR 0012: the composition root. It references Core and Infrastructure and
+    wires them together; nothing references it back.
+  -->
+
+  <PropertyGroup>
+    <FrontendDirectory>$(MSBuildProjectDirectory)\..\Prdb.Ordeno.Frontend</FrontendDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Prdb.Ordeno.Core\Prdb.Ordeno.Core.csproj" />
+    <ProjectReference Include="..\Prdb.Ordeno.Infrastructure\Prdb.Ordeno.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+  </ItemGroup>
+
+  <!--
+    ADR 0006: Vite builds the frontend into this project's wwwroot, so a release
+    build produces the whole application rather than an API with a blank page in
+    front of it. Debug builds leave it alone — the development flow is `npm run
+    dev` next to `dotnet run`, and paying for an npm build on every F5 would only
+    teach people to skip it. Pass -p:SkipFrontendBuild=true to opt out.
+  -->
+  <Target Name="BuildFrontend"
+          BeforeTargets="Build"
+          Condition="'$(Configuration)' == 'Release' AND '$(SkipFrontendBuild)' != 'true'">
+    <Exec Command="npm ci" WorkingDirectory="$(FrontendDirectory)" />
+    <Exec Command="npm run build" WorkingDirectory="$(FrontendDirectory)" />
+    <ItemGroup>
+      <Content Include="wwwroot\**" Exclude="@(Content)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -170,6 +170,15 @@ makes asking a write path what it would do the same code path as doing it. See
 replaced the earlier instruction to leave this open until the first feature.
 A fifth project is a decision, not a habit.
 
+`ArchitectureTests` in `Prdb.Ordeno.Core.Tests` reads the project files and
+fails when a reference appears where the ADR says none may be. If you are about
+to add one, that test is the conversation, not the obstacle.
+
+Package versions are central, in `Directory.Packages.props`; project files carry
+`PackageReference` without a version. NuGet auditing is on and warnings are
+errors, so a package with a published advisory stops the build — the fix is a
+newer version or a documented override, never a suppression.
+
 ## Commits
 
 Subjects follow [Conventional Commits](https://www.conventionalcommits.org/):
@@ -193,7 +202,14 @@ The destructive paths above get tests before they get a release, and those tests
 run against a real filesystem in a temporary directory — the interesting
 failures are the ones a mocked file layer cannot have: a half-finished
 cross-device copy, a file still being written, a target path that already
-exists.
+exists. `TempDirectory` in `Prdb.Ordeno.Infrastructure.Tests` is where such a
+test starts.
+
+Touching the frontend means building it too:
+
+```
+cd src/Prdb.Ordeno.Frontend && npm run build
+```
 
 ## Versioning
 

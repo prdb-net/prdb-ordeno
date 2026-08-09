@@ -12,10 +12,14 @@ things — see SemVer's clause on initial development.
 
 ## [Unreleased]
 
-Nothing released yet. The repository currently holds its licence and project
-documentation. The stack is .NET 10 on the backend, React with Vite in the
-browser, and SQLite for local state. The first release targets Jellyfin;
-Plex and Emby follow after it.
+Nothing released yet. The repository holds its licence, its project
+documentation and the scaffolding the application will be built in: a .NET 10
+solution, a React frontend that Vite builds into the backend's static assets,
+and the test projects. Nothing is identified, moved or filed yet.
+
+The stack is .NET 10 on the backend, React with Vite in the browser, and SQLite
+for local state. The first release targets Jellyfin; Plex and Emby follow after
+it.
 
 Configuration and the single password are set up in the browser on first run
 rather than through the container environment, and the image will be published

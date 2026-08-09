@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ADR 0012: everything that reaches out lives here — SQLite, the filesystem,
+    prdb and ffmpeg — behind the interfaces Prdb.Ordeno.Core declares.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Prdb.Ordeno.Core\Prdb.Ordeno.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <!-- Overrides the vulnerable SQLite that EF Core still brings; see Directory.Packages.props. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="Prdb.Sdk" />
+    <PackageReference Include="Prdb.Hashing" />
+  </ItemGroup>
+
+</Project>

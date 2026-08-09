@@ -22,6 +22,10 @@ secrets.*
 *.key
 credentials.json
 
+# Frontend
+node_modules/
+src/Prdb.Ordeno.Host/wwwroot/
+
 # Editors / IDEs
 .idea/
 .vscode/

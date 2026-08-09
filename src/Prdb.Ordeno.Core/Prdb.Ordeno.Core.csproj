@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ADR 0012: this project holds the domain and application logic and reaches
+    nothing. It references no package, no database, no HTTP client and no
+    filesystem — what it needs, it declares as an interface for
+    Prdb.Ordeno.Infrastructure to implement. Adding a reference here is how the
+    hard rule in AGENTS.md stops being enforceable, so the ArchitectureTests in
+    Prdb.Ordeno.Core.Tests fail the build when one appears.
+  -->
+
+</Project>

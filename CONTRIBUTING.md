@@ -59,13 +59,35 @@ notice. Internal refactoring that changes no behaviour does not need one.
 ## Setting up
 
 You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) — `global.json`
-requires a 10.0 SDK and takes the newest one you have installed — and, to run
-the tool rather than just build it, Docker. `ffmpeg` and `ffprobe` are needed
-for perceptual hashing; the container image brings its own, so install them
-locally only if you work on that part outside a container.
+requires a 10.0 SDK and takes the newest one you have installed — and
+[Node](https://nodejs.org) for the frontend. To run the tool rather than just
+build it, you also need Docker. `ffmpeg` and `ffprobe` are needed for perceptual
+hashing; the container image brings its own, so install them locally only if you
+work on that part outside a container.
 
 ```
 dotnet build
+```
+
+That builds the backend alone. The frontend is a separate Vite project that
+builds into the host's `wwwroot`:
+
+```
+cd src/Prdb.Ordeno.Frontend
+npm ci
+npm run build
+```
+
+A release build does this for you — `dotnet publish -c Release` runs the npm
+build first, so the published output is the whole application rather than an API
+with a blank page in front of it. Pass `-p:SkipFrontendBuild=true` if you have
+already built it.
+
+While working on the UI, run both and let Vite forward the API:
+
+```
+dotnet run --project src/Prdb.Ordeno.Host    # http://localhost:8080
+cd src/Prdb.Ordeno.Frontend && npm run dev   # http://localhost:5173
 ```
 
 ## Running the tests

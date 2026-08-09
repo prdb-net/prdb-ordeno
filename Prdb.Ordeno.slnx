@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="AGENTS.md" />
+    <File Path="CHANGELOG.md" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="README.md" />
+    <File Path="VISION.md" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Prdb.Ordeno.Core/Prdb.Ordeno.Core.csproj" />
+    <Project Path="src/Prdb.Ordeno.Infrastructure/Prdb.Ordeno.Infrastructure.csproj" />
+    <Project Path="src/Prdb.Ordeno.Host/Prdb.Ordeno.Host.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Prdb.Ordeno.Core.Tests/Prdb.Ordeno.Core.Tests.csproj" />
+    <Project Path="tests/Prdb.Ordeno.Infrastructure.Tests/Prdb.Ordeno.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
