@@ -45,10 +45,17 @@ default branch, and the version on a release.
 - The Docker Hub page *is* the landing page for a large part of this audience.
   Its description is published from the repository as part of the release, not
   maintained by hand in a web form.
-- `linux/arm64` is built either through emulation or on a native runner. Whether
-  emulated builds are fast enough is a measurement to make once, not an
-  assumption to carry: `ffmpeg` is not compiled here, but the frontend build and
-  the .NET publish are not free either.
+- `linux/arm64` is built through emulation, and that is fast enough. Measured on
+  2026-08-09 on a GitHub-hosted `ubuntu-latest` runner: 52 s for everything up
+  to and including the `linux/amd64` image, and 131 s for `linux/arm64` on top
+  of it. The measurement is not a one-off — both builds are timed into the job
+  summary on every run, so the day it stops being true is a number somebody can
+  see rather than a suspicion.
+  What emulation pays for is `apt-get` and nothing else: the frontend build and
+  the .NET publish run on the runner's own architecture and produce output that
+  does not care where it lands. A runtime identifier in that publish would put
+  MSBuild under QEMU and make this a different measurement, which is the reason
+  there is none.
 - The tag on a release is what the documentation pins. `latest` exists for people
   who want it, and the Compose examples should not use it silently — an
   unattended tool that upgrades itself the next time the NAS restarts is a
