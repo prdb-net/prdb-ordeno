@@ -1,0 +1,61 @@
+# ADR 0014: the OpenAPI document and the types generated from it are committed,
+# so what this workflow has to catch is an endpoint that changed without them
+# being regenerated. Forgetting is a red build here rather than a stale frontend
+# that compiles against a shape the backend no longer sends.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build, test and check the API contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/Prdb.Ordeno.Frontend/package-lock.json
+
+      - name: Install the frontend's dependencies
+        run: npm ci
+        working-directory: src/Prdb.Ordeno.Frontend
+
+      # Writes src/Prdb.Ordeno.Host/openapi.json on the way through.
+      - name: Build
+        run: dotnet build
+
+      - name: Test
+        run: dotnet test --no-build
+
+      - name: The committed API contract matches the code
+        working-directory: src/Prdb.Ordeno.Frontend
+        run: |
+          npm run generate:api
+          if ! git diff --exit-code -- ../Prdb.Ordeno.Host/openapi.json src/api/schema.d.ts; then
+            echo "::error::The API contract is stale. Run 'npm run generate:api' in src/Prdb.Ordeno.Frontend and commit the result."
+            exit 1
+          fi
+
+      - name: Lint the frontend
+        run: npm run lint
+        working-directory: src/Prdb.Ordeno.Frontend
+
+      # Compiles the frontend against the committed types, which is where a
+      # response shape it relies on having changed turns into an error.
+      - name: Build the frontend
+        run: npm run build
+        working-directory: src/Prdb.Ordeno.Frontend

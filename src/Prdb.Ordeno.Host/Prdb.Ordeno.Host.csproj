@@ -9,6 +9,17 @@
     <FrontendDirectory>$(MSBuildProjectDirectory)\..\Prdb.Ordeno.Frontend</FrontendDirectory>
   </PropertyGroup>
 
+  <!--
+    ADR 0014: every build writes the OpenAPI document next to this project, and
+    it is committed. The frontend's types are generated from that file, so a
+    changed response shape shows up as a diff in review and as a build error in
+    the frontend rather than as an empty column in the UI.
+  -->
+  <PropertyGroup>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name openapi</OpenApiGenerateDocumentsOptions>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Prdb.Ordeno.Core\Prdb.Ordeno.Core.csproj" />
     <ProjectReference Include="..\Prdb.Ordeno.Infrastructure\Prdb.Ordeno.Infrastructure.csproj" />
@@ -16,6 +27,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Overrides the vulnerable version that pulls in; see Directory.Packages.props. -->
+    <PackageReference Include="Microsoft.OpenApi" />
+    <!-- A build-time tool, not something the application ships with. -->
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
   </ItemGroup>
 
   <!--

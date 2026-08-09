@@ -1,8 +1,10 @@
+using System.Reflection;
 using System.Threading.RateLimiting;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.OpenApi;
 
 using Prdb.Ordeno.Host.Access;
 using Prdb.Ordeno.Infrastructure.Access;
@@ -17,6 +19,23 @@ var dataDirectory = builder.Configuration["ORDENO_DATA_DIRECTORY"] ?? "/data";
 
 builder.Services.AddOrdenoPersistence(dataDirectory);
 builder.Services.AddOrdenoAccess();
+
+// ADR 0014: this describes the API for the build that turns it into the
+// frontend's types. Nothing maps it as an endpoint — the document is written to
+// a file at build time and committed, and the browser never asks for it.
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
+{
+    document.Info = new OpenApiInfo
+    {
+        Title = "prdb-ordeno",
+        Version = "v1",
+        Description =
+            "The API the browser side of prdb-ordeno talks to. Generated from the "
+            + "code at build time and committed: change an endpoint, not this file.",
+    };
+
+    return Task.CompletedTask;
+}));
 
 builder.Services
     .AddAuthentication(SessionAuthenticationHandler.SchemeName)
@@ -52,23 +71,32 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-// Before anything is served. A migration that cannot be applied stops the tool
-// rather than letting it run against a schema it does not understand — ADR 0007.
-try
-{
-    await app.Services.PrepareOrdenoDatabaseAsync();
-}
-catch (DatabaseMigrationException)
-{
-    // The migrator has already logged what happened and why, at critical level.
-    // Adding a stack trace on top of it would only bury that message in the
-    // container's log, which is the one place the user will look.
-    return 1;
-}
+// ADR 0014: the build-time generator loads this application to read its
+// endpoints and stops it where it would start listening. Everything below runs
+// in that process too, so what prepares a real installation is skipped there —
+// a build has no business creating a database or clearing a password.
+var readingTheEndpoints = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 
-if (builder.Configuration.GetValue("ORDENO_RESET_PASSWORD", defaultValue: false))
+if (!readingTheEndpoints)
 {
-    await app.Services.ResetOrdenoAccessAsync();
+    // Before anything is served. A migration that cannot be applied stops the tool
+    // rather than letting it run against a schema it does not understand — ADR 0007.
+    try
+    {
+        await app.Services.PrepareOrdenoDatabaseAsync();
+    }
+    catch (DatabaseMigrationException)
+    {
+        // The migrator has already logged what happened and why, at critical level.
+        // Adding a stack trace on top of it would only bury that message in the
+        // container's log, which is the one place the user will look.
+        return 1;
+    }
+
+    if (builder.Configuration.GetValue("ORDENO_RESET_PASSWORD", defaultValue: false))
+    {
+        await app.Services.ResetOrdenoAccessAsync();
+    }
 }
 
 app.UseDefaultFiles();
@@ -78,7 +106,9 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/health", () => Results.Ok(new HealthResponse("ok"))).AllowAnonymous();
+app.MapGet("/api/health", () => TypedResults.Ok(new HealthResponse("ok")))
+    .AllowAnonymous()
+    .WithTags("Health");
 
 app.MapAccess();
 
