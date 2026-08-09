@@ -84,6 +84,24 @@ done
 [ -n "$health" ] || fail "no answer from /api/health within ${startup_timeout_seconds}s."
 echo "  /api/health said: $health"
 
+# The API answering proves the application is in the image. It does not prove
+# the frontend is: ADR 0006 has Vite build into wwwroot in a stage this image
+# then copies out of, and every way that can go wrong ends in a white page
+# rather than an error. So ask for the page, and then for the script it names —
+# a wwwroot that arrived without its assets serves the first and not the second.
+page="$(curl --silent --fail "http://127.0.0.1:$port/" 2>/dev/null)" \
+    || fail "/ did not answer; the image is serving no frontend at all."
+
+echo "$page" | grep --quiet '<div id="root">' \
+    || fail "/ answered with something that is not the application's page."
+
+script_path="$(echo "$page" | grep --only-matching 'src="/assets/[^"]*\.js"' | head -1 | cut -d'"' -f2)"
+[ -n "$script_path" ] || fail "the page names no script, so the build that produced it was not a real one."
+
+curl --silent --fail --output /dev/null "http://127.0.0.1:$port$script_path" \
+    || fail "the page asks for $script_path and the image does not have it."
+echo "  the page and $script_path are both served"
+
 database="$workspace/data/ordeno.db"
 [ -f "$database" ] || fail "no database in the data volume; the tool did not get as far as its own state."
 
