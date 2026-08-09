@@ -113,6 +113,37 @@ Two things this deliberately does **not** do:
   `user:`.** Start the container as a non-root user and the tool leaves the
   question alone; `/data` then has to be writable by that user already.
 
+## When the library is on a network share
+
+SMB and NFS do not carry ownership the way a local disk does, so the mount
+invents some. A CIFS line in `/etc/fstab` usually looks about like this:
+
+```
+//server/VideoData  /mnt/videodata  cifs  credentials=…,uid=1000,gid=1000,file_mode=0755,dir_mode=0755
+```
+
+Everything under that mount then belongs to `1000:1000` with those permissions,
+regardless of what the server has stored. If `PUID` is anything other than
+`1000`, the tool is "other": it may read the directories and enter them, and it
+may not write. That is exactly what onboarding reports, and it is telling the
+truth — the same `touch` fails from a shell on the host.
+
+Two ways out:
+
+- **Point `PUID` and `PGID` at the ids the mount forces** — the `uid=` and
+  `gid=` above. Nothing outside the container changes, and the share is none
+  the wiser: the SMB session authenticates as whoever `credentials=` names, so
+  the local ids only decide whether the kernel lets the write through in the
+  first place.
+- **Give your group write access on the mount**: `gid=<your group>`,
+  `dir_mode=0775`, `file_mode=0664`, then remount. This is the one to pick when
+  another account has to keep writing there too. Unmount fails while the
+  container is running, so stop it first.
+
+`UMASK` does nothing on a mount like this. `file_mode` and `dir_mode` decide the
+permissions on everything the share shows, and the tool's mask cannot argue with
+them.
+
 ## Environment variables
 
 Everything the tool asks about during the first run lives in its database, not
