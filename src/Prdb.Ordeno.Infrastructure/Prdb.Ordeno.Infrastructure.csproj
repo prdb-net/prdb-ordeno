@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <!-- Overrides the vulnerable SQLite that EF Core still brings; see Directory.Packages.props. -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
     <PackageReference Include="Prdb.Sdk" />
     <PackageReference Include="Prdb.Hashing" />
   </ItemGroup>

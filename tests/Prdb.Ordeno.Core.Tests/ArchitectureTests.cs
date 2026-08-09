@@ -22,10 +22,16 @@ public sealed class ArchitectureTests
         Assert.Empty(References(core, "ProjectReference"));
     }
 
+    /// <summary>
+    /// ADR 0015: the rule is about <c>src/</c>. A test project may drive the
+    /// composition root — that is the only way to check the wiring itself — but
+    /// no library may depend on it, or it stops being the place where everything
+    /// comes together.
+    /// </summary>
     [Fact]
-    public void Nothing_references_the_host()
+    public void Nothing_in_src_references_the_host()
     {
-        foreach (var project in ProjectsExcept("Prdb.Ordeno.Host.csproj"))
+        foreach (var project in SourceProjectsExcept("Prdb.Ordeno.Host.csproj"))
         {
             var references = References(XDocument.Load(project.FullName), "ProjectReference");
 
@@ -43,8 +49,8 @@ public sealed class ArchitectureTests
     private static XDocument Project(string relativePath) =>
         XDocument.Load(Path.Combine(RepositoryRoot().FullName, relativePath));
 
-    private static IEnumerable<FileInfo> ProjectsExcept(string fileName) =>
-        RepositoryRoot()
+    private static IEnumerable<FileInfo> SourceProjectsExcept(string fileName) =>
+        new DirectoryInfo(Path.Combine(RepositoryRoot().FullName, "src"))
             .EnumerateFiles("*.csproj", SearchOption.AllDirectories)
             .Where(project => project.Name != fileName);
 

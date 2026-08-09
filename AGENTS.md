@@ -127,12 +127,22 @@ container therefore starts into onboarding and scans nothing until it is done.
 Do not add an environment variable for a setting the UI owns.
 
 Access is one password, no username, set during that same first run and hashed
-with `PasswordHasher<T>`; sessions are HttpOnly cookies stored in the database,
-and sign-in is rate-limited
-([ADR 0010](docs/adr/0010-one-password-set-at-first-run.md)). There is no
-default password. The setup screen is the only unauthenticated write path in the
-application and must become unreachable the moment a password exists — that
-transition gets a test.
+with `PasswordHasher<T>`; sessions are opaque tokens in HttpOnly cookies, stored
+as rows so they survive a restart and can be revoked, and sign-in is
+rate-limited ([ADR 0010](docs/adr/0010-one-password-set-at-first-run.md)). There
+is no default password. The setup path is the only unauthenticated write path in
+the application and closes the moment a password exists — that transition has a
+test, in `tests/Prdb.Ordeno.Host.Tests`.
+
+**Endpoints are behind the password unless they say otherwise.** The
+authorization fallback policy requires an authenticated user, so a new endpoint
+is protected by default and `.AllowAnonymous()` is a deliberate act. If you find
+yourself adding it, say in the same breath why a stranger may call that.
+
+`ORDENO_RESET_PASSWORD=true` clears the password and every session at startup —
+the documented way back in for someone who lost it, reachable only by whoever
+can edit how the container starts. It warns loudly, because leaving it set means
+clearing the password on every restart.
 
 ## Shipping
 
@@ -169,6 +179,7 @@ src/Prdb.Ordeno.Frontend        React and Vite
 
 tests/Prdb.Ordeno.Core.Tests
 tests/Prdb.Ordeno.Infrastructure.Tests
+tests/Prdb.Ordeno.Host.Tests           hosts the real application; see ADR 0015
 ```
 
 This file holds the rules; `docs/adr/` holds why they are the rules. When a rule
@@ -185,6 +196,10 @@ makes asking a write path what it would do the same code path as doing it. See
 [ADR 0012](docs/adr/0012-src-is-sliced-before-the-first-feature.md), which
 replaced the earlier instruction to leave this open until the first feature.
 A fifth project is a decision, not a habit.
+
+The rule about the host is about `src/`: a test project may host the real
+application, and none of it may be replaced with a double when it does —
+[ADR 0015](docs/adr/0015-tests-may-reference-the-host.md).
 
 `ArchitectureTests` in `Prdb.Ordeno.Core.Tests` reads the project files and
 fails when a reference appears where the ADR says none may be. If you are about

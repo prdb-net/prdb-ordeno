@@ -93,7 +93,8 @@ cd src/Prdb.Ordeno.Frontend && npm run dev   # http://localhost:5173
 The tool keeps its database in the directory `ORDENO_DATA_DIRECTORY` names —
 `/data` in the container, and `.local/data` under the host project when you run
 it from the repository. Delete that directory to start over from an empty
-installation.
+installation, or set `ORDENO_RESET_PASSWORD=true` for one start to clear the
+password and every session while keeping the rest.
 
 ## Changing the database schema
 

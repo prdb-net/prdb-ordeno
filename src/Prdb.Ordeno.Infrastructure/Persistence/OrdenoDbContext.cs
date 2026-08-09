@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Ordeno.Infrastructure.Access;
+
 namespace Prdb.Ordeno.Infrastructure.Persistence;
 
 /// <summary>
@@ -12,6 +14,8 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
     public DbSet<StoredConfiguration> Configuration => Set<StoredConfiguration>();
 
     public DbSet<SourceDirectory> SourceDirectories => Set<SourceDirectory>();
+
+    public DbSet<Session> Sessions => Set<Session>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,6 +42,15 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
             source.HasKey(row => row.Id);
             source.Property(row => row.Path).IsRequired();
             source.HasIndex(row => row.Path).IsUnique();
+        });
+
+        modelBuilder.Entity<Session>(session =>
+        {
+            session.HasKey(row => row.Id);
+            session.Property(row => row.TokenHash).IsRequired().HasMaxLength(64);
+
+            // Every authenticated request looks a session up by this.
+            session.HasIndex(row => row.TokenHash).IsUnique();
         });
     }
 }

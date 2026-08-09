@@ -32,4 +32,13 @@ public sealed class StoredConfiguration
     public string? Layout { get; set; }
 
     public DateTimeOffset? OnboardingCompletedAt { get; set; }
+
+    /// <summary>
+    /// The one password, hashed (ADR 0010). Null means a fresh installation
+    /// where the setup path is still open — it is what "no password has been set
+    /// yet" is read from, so nothing else may write it.
+    /// </summary>
+    public string? PasswordHash { get; set; }
+
+    public DateTimeOffset? PasswordSetAt { get; set; }
 }

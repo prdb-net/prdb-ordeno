@@ -19,6 +19,12 @@ and the test projects. The tool now creates and migrates its SQLite database in
 the directory `ORDENO_DATA_DIRECTORY` names, `/data` by default. Nothing is
 identified, moved or filed yet.
 
+Access exists: a fresh installation sets one password on first use, and
+everything else is behind the session cookie it hands out. There is no default
+password. `ORDENO_RESET_PASSWORD=true` clears the password and every session at
+startup for someone who has lost it. The browser side of this arrives with
+onboarding; today it is the API.
+
 The stack is .NET 10 on the backend, React with Vite in the browser, and SQLite
 for local state. The first release targets Jellyfin; Plex and Emby follow after
 it.

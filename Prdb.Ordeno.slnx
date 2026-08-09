@@ -16,6 +16,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Prdb.Ordeno.Core.Tests/Prdb.Ordeno.Core.Tests.csproj" />
+    <Project Path="tests/Prdb.Ordeno.Host.Tests/Prdb.Ordeno.Host.Tests.csproj" />
     <Project Path="tests/Prdb.Ordeno.Infrastructure.Tests/Prdb.Ordeno.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
