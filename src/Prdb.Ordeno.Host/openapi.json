@@ -141,6 +141,212 @@
           }
         }
       }
+    },
+    "/api/configuration": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/configuration/api-key": {
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetApiKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/configuration/sources": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/configuration/sources/{id}": {
+      "delete": {
+        "tags": [
+          "Configuration"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/configuration/target": {
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetTargetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/configuration/completion": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -160,6 +366,109 @@
           }
         }
       },
+      "AddSourceRequest": {
+        "required": [
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "ConfigurationProblem": {
+        "required": [
+          "message",
+          "configuration"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/ConfigurationState"
+          }
+        }
+      },
+      "ConfigurationState": {
+        "required": [
+          "apiKeySet",
+          "sources",
+          "target",
+          "layout",
+          "availableLayouts",
+          "complete",
+          "readyToComplete",
+          "whatHappensNext"
+        ],
+        "type": "object",
+        "properties": {
+          "apiKeySet": {
+            "type": "boolean"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceState"
+            }
+          },
+          "target": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DirectoryState"
+              }
+            ]
+          },
+          "layout": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "availableLayouts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LayoutOption"
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "readyToComplete": {
+            "type": "boolean"
+          },
+          "whatHappensNext": {
+            "type": "string"
+          }
+        }
+      },
+      "DirectoryState": {
+        "required": [
+          "path",
+          "usable",
+          "problem"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "usable": {
+            "type": "boolean"
+          },
+          "problem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "HealthResponse": {
         "required": [
           "status"
@@ -167,6 +476,21 @@
         "type": "object",
         "properties": {
           "status": {
+            "type": "string"
+          }
+        }
+      },
+      "LayoutOption": {
+        "required": [
+          "name",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
             "type": "string"
           }
         }
@@ -182,6 +506,17 @@
           }
         }
       },
+      "SetApiKeyRequest": {
+        "required": [
+          "apiKey"
+        ],
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          }
+        }
+      },
       "SetPasswordRequest": {
         "required": [
           "password"
@@ -189,6 +524,21 @@
         "type": "object",
         "properties": {
           "password": {
+            "type": "string"
+          }
+        }
+      },
+      "SetTargetRequest": {
+        "required": [
+          "path",
+          "layout"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "layout": {
             "type": "string"
           }
         }
@@ -203,6 +553,45 @@
             "type": "string"
           }
         }
+      },
+      "SourceState": {
+        "required": [
+          "id",
+          "path",
+          "usable",
+          "problem",
+          "movement",
+          "movementExplained"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "path": {
+            "type": "string"
+          },
+          "usable": {
+            "type": "boolean"
+          },
+          "problem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "movement": {
+            "type": "string"
+          },
+          "movementExplained": {
+            "type": "string"
+          }
+        }
       }
     }
   },
@@ -212,6 +601,9 @@
     },
     {
       "name": "Access"
+    },
+    {
+      "name": "Configuration"
     }
   ]
 }

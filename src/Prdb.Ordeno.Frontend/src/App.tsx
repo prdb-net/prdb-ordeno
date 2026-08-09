@@ -1,63 +1,60 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import type { components } from './api/schema'
+import AccessGate from './access/AccessGate'
+import { access, Refused, type AccessState } from './api/client'
+import ConfigurationScreen from './configuration/ConfigurationScreen'
 
-// ADR 0014: the shape is the backend's, not a hand-made copy of it. Rename the
-// field there without regenerating and this build is where it stops.
-type Health = components['schemas']['HealthResponse']
-
-type Backend =
-  | { state: 'checking' }
-  | { state: 'answering'; status: string }
+type Gate =
+  | { state: 'asking' }
+  | { state: 'answered'; access: AccessState }
   | { state: 'silent'; reason: string }
 
 export default function App() {
-  const [backend, setBackend] = useState<Backend>({ state: 'checking' })
+  const [gate, setGate] = useState<Gate>({ state: 'asking' })
 
-  useEffect(() => {
-    let abandoned = false
-
-    const check = async () => {
-      try {
-        const response = await fetch('/api/health')
-        if (!response.ok) {
-          throw new Error(`the API answered ${response.status}`)
-        }
-
-        const health = (await response.json()) as Health
-        if (!abandoned) {
-          setBackend({ state: 'answering', status: health.status })
-        }
-      } catch (error) {
-        if (!abandoned) {
-          setBackend({
-            state: 'silent',
-            reason: error instanceof Error ? error.message : 'unknown error',
-          })
-        }
-      }
-    }
-
-    void check()
-
-    return () => {
-      abandoned = true
+  const ask = useCallback(async () => {
+    try {
+      setGate({ state: 'answered', access: await access.state() })
+    } catch (error) {
+      setGate({
+        state: 'silent',
+        reason: error instanceof Refused ? error.message : 'The tool is not answering.',
+      })
     }
   }, [])
 
+  useEffect(() => {
+    void ask()
+  }, [ask])
+
+  const signOut = async () => {
+    await access.signOut().catch(() => undefined)
+    await ask()
+  }
+
   return (
     <main>
-      <h1>prdb-ordeno</h1>
-      <p>
-        There is no interface yet. This page exists so that the frontend the
-        backend serves is demonstrably the frontend that was built.
-      </p>
-      <p>
-        Backend:{' '}
-        {backend.state === 'checking' && <span>asking…</span>}
-        {backend.state === 'answering' && <span>{backend.status}</span>}
-        {backend.state === 'silent' && <span>not answering — {backend.reason}</span>}
-      </p>
+      <header>
+        <h1>prdb-ordeno</h1>
+        {gate.state === 'answered' && gate.access.authenticated && (
+          <button type="button" className="quiet" onClick={() => void signOut()}>
+            Sign out
+          </button>
+        )}
+      </header>
+
+      {gate.state === 'asking' && <p className="hint">Asking the tool…</p>}
+      {gate.state === 'silent' && <p className="problem">{gate.reason}</p>}
+
+      {gate.state === 'answered' &&
+        (gate.access.authenticated ? (
+          <ConfigurationScreen onSignedOut={() => void ask()} />
+        ) : (
+          <AccessGate
+            passwordSet={gate.access.passwordSet}
+            onSignedIn={(state) => setGate({ state: 'answered', access: state })}
+          />
+        ))}
     </main>
   )
 }

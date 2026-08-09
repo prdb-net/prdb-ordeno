@@ -22,8 +22,19 @@ identified, moved or filed yet.
 Access exists: a fresh installation sets one password on first use, and
 everything else is behind the session cookie it hands out. There is no default
 password. `ORDENO_RESET_PASSWORD=true` clears the password and every session at
-startup for someone who has lost it. The browser side of this arrives with
-onboarding; today it is the API.
+startup for someone who has lost it.
+
+Onboarding exists, in the browser. A fresh container walks from the password
+through the prdb API key, the directories downloads arrive in, and the directory
+the library lives in with the layout that reads it. Nothing is stored before it
+has been checked: the key is checked against prdb, and each directory against
+the filesystem the container can actually see — a path nothing is mounted at, a
+source it may not read and a library it may not write to each say so next to the
+field. Each download directory also says whether videos will be renamed into the
+library or copied and deleted, which depends on the two sitting on one
+filesystem. Until onboarding is finished the tool scans nothing and says so, and
+afterwards the same screen is the settings. The stored API key is never sent
+back to the browser and never written to a log.
 
 The stack is .NET 10 on the backend, React with Vite in the browser, and SQLite
 for local state. The first release targets Jellyfin; Plex and Emby follow after
