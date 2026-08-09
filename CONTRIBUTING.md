@@ -90,6 +90,28 @@ dotnet run --project src/Prdb.Ordeno.Host    # http://localhost:8080
 cd src/Prdb.Ordeno.Frontend && npm run dev   # http://localhost:5173
 ```
 
+The tool keeps its database in the directory `ORDENO_DATA_DIRECTORY` names —
+`/data` in the container, and `.local/data` under the host project when you run
+it from the repository. Delete that directory to start over from an empty
+installation.
+
+## Changing the database schema
+
+`dotnet ef` is pinned as a local tool:
+
+```
+dotnet tool restore
+dotnet ef migrations add <Name> \
+  --project src/Prdb.Ordeno.Infrastructure \
+  --startup-project src/Prdb.Ordeno.Host \
+  --output-dir Persistence/Migrations
+```
+
+Migrations are applied at startup, and one that fails stops the tool rather than
+letting it run against a schema it does not understand. Write them so that they
+can meet a database somebody has been using for a year: this is not a database
+anyone can be asked to restore.
+
 ## Running the tests
 
 ```

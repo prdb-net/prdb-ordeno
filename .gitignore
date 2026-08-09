@@ -26,6 +26,9 @@ credentials.json
 node_modules/
 src/Prdb.Ordeno.Host/wwwroot/
 
+# The data directory a local run writes its database into
+.local/
+
 # Editors / IDEs
 .idea/
 .vscode/

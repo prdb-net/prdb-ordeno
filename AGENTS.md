@@ -118,9 +118,10 @@ belongs in a background queue rather than the import path.
 ## Configuration and access
 
 The container environment carries only what must exist before the application
-starts: data directory, port, `PUID`/`PGID`/umask. Everything else — API key,
-sources, target, layout, behaviour switches — is collected by onboarding and
-stored in the database
+starts: `ORDENO_DATA_DIRECTORY` (default `/data`, holding the SQLite file), the
+port, and `PUID`/`PGID`/umask. Everything else — API key, sources, target,
+layout, behaviour switches — is collected by onboarding and stored in the
+database
 ([ADR 0009](docs/adr/0009-configuration-is-collected-by-onboarding.md)). A fresh
 container therefore starts into onboarding and scans nothing until it is done.
 Do not add an environment variable for a setting the UI owns.

@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <!-- For the design-time context factory that `dotnet ef` uses; not flowed to consumers. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <!-- Overrides the vulnerable SQLite that EF Core still brings; see Directory.Packages.props. -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
     <PackageReference Include="Prdb.Sdk" />
