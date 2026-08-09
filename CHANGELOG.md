@@ -40,9 +40,16 @@ The stack is .NET 10 on the backend, React with Vite in the browser, and SQLite
 for local state. The first release targets Jellyfin; Plex and Emby follow after
 it.
 
-The image will be Debian-based, bring its own `ffmpeg`, and honour `PUID` and
-`PGID` so filed files carry the owner the NAS expects.
+There is an image. It is Debian-based, brings its own `ffmpeg`, and honours
+`PUID`, `PGID` and `UMASK`, so what the tool writes carries the owner and the
+permissions the NAS expects — and it never changes the ownership of the media
+it was pointed at, only of its own data directory. `docker stop` reaches the
+application itself, which matters for a tool that may be in the middle of moving
+a file. It is published to Docker Hub as `prdbnet/prdb-ordeno` for
+`linux/amd64` and `linux/arm64`, tagged with the commit, with `latest`, and with
+the version on a release; [docs/running-in-docker.md](docs/running-in-docker.md)
+covers the mounts and the settings people get wrong, and there is a Compose
+example to copy.
 
 Configuration and the single password are set up in the browser on first run
-rather than through the container environment, and the image will be published
-to Docker Hub for `linux/amd64` and `linux/arm64`.
+rather than through the container environment.

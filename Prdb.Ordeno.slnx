@@ -5,7 +5,10 @@
     <File Path="CONTRIBUTING.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
+    <File Path="Dockerfile" />
     <File Path="README.md" />
+    <File Path="docker-compose.yml" />
+    <File Path="docker/entrypoint.sh" />
     <File Path="VISION.md" />
     <File Path="global.json" />
   </Folder>

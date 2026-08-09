@@ -1,0 +1,30 @@
+# What the build context does not need — and, more to the point, what it must
+# not pick up from a working copy. src/Prdb.Ordeno.Host/wwwroot is produced by
+# the frontend stage; a laptop's older copy of it winning over that stage would
+# put an image together from two different commits.
+
+.git
+.github
+.config
+.local
+docs
+tests
+
+**/bin/
+**/obj/
+**/node_modules/
+src/Prdb.Ordeno.Host/wwwroot/
+
+**/.vs/
+**/.idea/
+**/.vscode/
+**/TestResults/
+**/*.user
+
+# The image build reads none of these, and each one of them invalidates the
+# context when it changes.
+*.md
+*.slnx
+Dockerfile
+.dockerignore
+docker-compose.yml
