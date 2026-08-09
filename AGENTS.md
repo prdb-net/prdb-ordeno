@@ -19,6 +19,13 @@ assets the backend serves: no server-side rendering, and **no Node in the
 runtime image**. Node compiles the frontend in a build stage; the runtime stage
 carries neither it nor `node_modules`. Dependencies stay few and boring.
 
+The contract between the two is generated, not maintained: the host emits an
+OpenAPI document and `openapi-typescript` turns it into types the frontend
+compiles against, both committed and both checked by CI
+([ADR 0014](docs/adr/0014-the-frontend-types-are-generated-from-openapi.md)).
+Never edit the generated file, and give endpoints named response types — an
+anonymous shape generates a type nobody can read.
+
 Local state — review queue, operation log, hash backlog, configuration — lives
 in **SQLite through EF Core**, in a file in the mounted data volume, with
 migrations applied at startup —
@@ -134,6 +141,14 @@ default branch, and the version on a release
 ([ADR 0011](docs/adr/0011-images-are-built-by-github-actions-and-published-to-docker-hub.md)).
 Documentation and Compose examples pin a version rather than `latest`: an
 unattended tool that upgrades itself on the next NAS restart is a surprise.
+
+The runtime base is `mcr.microsoft.com/dotnet/aspnet:10.0` with `ffmpeg` and
+`ffprobe` from Debian. The container starts as root, and the entrypoint applies
+`PUID`/`PGID` (default `1000:1000`) and `exec`s the application under that
+identity — `exec`, so the app stays PID 1 and still receives `SIGTERM` mid-move
+([ADR 0013](docs/adr/0013-the-image-is-debian-based-and-drops-privileges.md)).
+**The entrypoint never chowns the media.** It touches ownership of the tool's
+own data volume and nothing else.
 
 ## Layout
 
