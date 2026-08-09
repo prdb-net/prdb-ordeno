@@ -63,11 +63,10 @@ would otherwise follow while carrying `X-Api-Key` off the API host, because they
 strip only `Authorization`. It targets `net8.0` and is consumed from `net10.0`
 unchanged.
 
-Identification goes through `POST /videos/identify`, which takes a batch of
-files and walks the whole recognition ladder server-side. Do not rebuild that
-ladder here out of the individual lookup endpoints: it costs roughly one request
-per file instead of a handful in total, and it would put the matching rules in
-the one place that cannot see the corpus they run against.
+Identification goes through `POST /videos/identify`, which walks the whole
+recognition ladder server-side. **Do not rebuild that ladder here** out of the
+individual lookup endpoints, and do not keep a local copy of prdb's corpus —
+[ADR 0001](docs/adr/0001-identification-runs-in-prdb.md).
 
 ## Computing the hashes
 
@@ -76,25 +75,17 @@ The `osHash` and `pHash` values sent to that endpoint come from the
 starts processes and needs ffmpeg; use both.
 
 **Do not reimplement either hash, and do not "clean up" the one in the package.**
-The values are only worth anything if they are bit-identical to what Stash
-produces, and the method reaches that by reproducing its quirks deliberately —
-an unusual resampler, a threshold function that is not the median it claims to
-be, cosine tables copied rather than recomputed because one ulp flips a bit. A
-correction to any of those produces a value that matches nothing.
-
-The method is specified normatively in
+It looks wrong in several places and is wrong on purpose; a correction produces
+values that match nothing, and no test here would notice —
+[ADR 0004](docs/adr/0004-hashes-stay-bit-compatible-with-stash.md) explains
+which places and why. The method is specified normatively in
 [`docs/video-hashing.md`](https://github.com/prdb-net/prdb-sdk/blob/main/docs/video-hashing.md)
-in `prdb-sdk`, with test vectors as data next to it. Read that before touching
-anything hash-shaped.
+in `prdb-sdk`, with test vectors as data next to it. Read one of the two before
+touching anything hash-shaped.
 
-Two consequences for design, both from the package's own documentation:
-
-- **`osHash` is `null` for a file under 128 KiB.** That is a real state, not an
-  error to paper over.
-- **A perceptual hash decodes 25 frames**, so it cannot sit in the path of a
-  file being imported. It belongs in a background queue, and failures come back
-  as outcomes rather than exceptions because a truncated download is routine on
-  a real library.
+Two states from the package's contract that shape design here: `osHash` is
+`null` for a file under 128 KiB, and a perceptual hash decodes 25 frames, so it
+belongs in a background queue rather than the import path.
 
 ## Layout
 
@@ -104,9 +95,15 @@ README.md         what the tool is
 VISION.md         what it is for, and what it is deliberately not
 CONTRIBUTING.md   how to report a bug, how to shape a commit
 CHANGELOG.md      Keep a Changelog, Unreleased at the top
+docs/adr/         decisions, and the alternatives they ruled out
+docs/agents/      where issues live, where domain docs live
 src/              projects
 tests/            test projects
 ```
+
+This file holds the rules; `docs/adr/` holds why they are the rules. When a rule
+here looks wrong, the ADR is where the answer is — and if it is genuinely wrong,
+a new ADR supersedes the old one rather than editing it.
 
 The solution file lives at the root. How the source is divided inside `src/` is
 open and should follow from the first real feature rather than be laid out in
@@ -141,3 +138,15 @@ exists.
 
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Pre-`1.0`, a minor
 bump may break things.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repository's GitHub Issues, via the `gh` CLI. See
+`docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repository root. See
+`docs/agents/domain.md`.
