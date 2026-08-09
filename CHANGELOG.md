@@ -13,5 +13,6 @@ things — see SemVer's clause on initial development.
 ## [Unreleased]
 
 Nothing released yet. The repository currently holds its licence and project
-documentation. The backend stack is .NET 10; the frontend framework is still
-open.
+documentation. The stack is .NET 10 on the backend, React with Vite in the
+browser, and SQLite for local state. The first release targets Jellyfin;
+Plex and Emby follow after it.

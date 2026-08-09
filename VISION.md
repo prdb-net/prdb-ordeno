@@ -110,6 +110,12 @@ Jellyfin, Plex or Emby — and each of those has its own conventions for where
 files go and what the sidecars are called. Choosing a layout is therefore
 answering "what do you watch this in?", not filling in a pattern language.
 
+The supported set starts at one. The first release ships Jellyfin's layout and
+says so plainly, because a layout is only worth shipping once it has been
+checked against that server rather than against its documentation — and three
+layouts validated that way is the most uncertain work in the release done three
+times over. Plex and Emby follow on the same evidence.
+
 Illustrative, not a specification:
 
 ```
@@ -275,10 +281,10 @@ which keeps the responsibility where the correction can actually be made.
 
 ## The first release, and what comes after
 
-The first release has to be the whole loop and nothing else: sources and a
-target configured through onboarding, identification, filing, sidecar metadata,
-a review queue for what could not be identified, and the operation log with its
-undo. A version of this that identifies beautifully but leaves the user without
+The first release has to be the whole loop and nothing else, for one media
+server: sources and a target configured through onboarding, identification,
+filing into the Jellyfin layout, sidecar metadata, a review queue for what could
+not be identified, and the operation log with its undo. A version of this that identifies beautifully but leaves the user without
 a way back is not a smaller release, it is an unusable one.
 
 Deliberately after that, not before:
@@ -292,11 +298,11 @@ Deliberately after that, not before:
 
 ## Open questions
 
-- The frontend framework. The backend is .NET 10 and talks to prdb through the
-  `Prdb.Sdk` package; the browser side is still open, except that it has to
-  build to static assets the backend serves rather than bring a runtime of its
-  own into the image.
-- The exact layouts per media server, and how far artwork support goes.
+- Where configuration lives. Onboarding collects the API key, the source and
+  target directories and the layout through the browser, while Docker hands the
+  container environment variables — and which of the two owns a given setting
+  decides both what onboarding is and what the documentation has to teach.
+- The exact Jellyfin layout, and how far artwork support goes.
 - How much of re-filing and metadata refresh happens on its own, and how much
   the user confirms first.
 - How the review queue behaves at scale: a first run over an existing library of

@@ -10,18 +10,33 @@ service of.
 
 ## Stack
 
-The backend is **.NET 10**, with the SDK version pinned in `global.json`. The
-frontend framework is not decided yet; until it is, do not add one.
+The backend is **.NET 10**, with the SDK version pinned in `global.json` —
+[ADR 0005](docs/adr/0005-dotnet-10-on-the-backend.md).
 
-Whatever it turns out to be, **it has to build to static assets the backend
-serves**. A framework that brings a server-side runtime of its own would put a
-second runtime into an image that already carries `ffmpeg` —
-[ADR 0005](docs/adr/0005-dotnet-10-on-the-backend.md). That rules out a
-deployment mode, not a framework.
+The frontend is **React with Vite and TypeScript** —
+[ADR 0006](docs/adr/0006-react-and-vite-on-the-frontend.md). It builds to static
+assets the backend serves: no server-side rendering, and **no Node in the
+runtime image**. Node compiles the frontend in a build stage; the runtime stage
+carries neither it nor `node_modules`. Dependencies stay few and boring.
+
+Local state — review queue, operation log, hash backlog, configuration — lives
+in **SQLite through EF Core**, in a file in the mounted data volume, with
+migrations applied at startup —
+[ADR 0007](docs/adr/0007-sqlite-through-ef-core-for-local-state.md). SQLite
+takes one writer at a time, so a transaction spans a state change and never an
+ffmpeg call or a request to prdb. This store is not a copy of prdb's corpus and
+never becomes one.
 
 The image ships `ffmpeg` and `ffprobe`, because computing a perceptual hash
 decodes frames. Nothing may require the user to install anything on the host
 beyond Docker.
+
+## Scope of the first release
+
+One media server: **Jellyfin**, with its layout validated against a real library
+— [ADR 0008](docs/adr/0008-the-first-release-targets-jellyfin-only.md). Plex and
+Emby follow on the same evidence. Sidecar writing gets a seam, not a second
+implementation built for a server nobody has run yet.
 
 ## Language
 
