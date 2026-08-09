@@ -1,0 +1,105 @@
+# ADR 0011: the image goes to Docker Hub, because that is where this audience
+# looks for it — Unraid's Community Applications, Portainer's search box, a
+# Synology dialog. Tagged with the commit SHA always, `latest` on the default
+# branch, and the version on a release.
+name: Publish the image
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two pushes to main in quick succession would otherwise race for `latest`, and
+# the loser is whichever finishes second rather than whichever is newer.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: prdbnet/prdb-ordeno
+
+jobs:
+  publish:
+    name: Build linux/amd64 and linux/arm64 and push them
+    runs-on: ubuntu-latest
+
+    # A fork has neither the account nor any business publishing under this
+    # name, and would otherwise get a red build for it on every push.
+    if: github.repository == 'prdb-net/prdb-ordeno'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The credential is an account-level Docker Hub access token in the
+      # repository secrets (ADR 0011). Until it is there, this is a warning and
+      # a skipped publish rather than a failure — CI still builds and starts the
+      # image on every push, so what is missing is distribution, not proof.
+      - name: Docker Hub credentials
+        id: credentials
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "::warning::DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are not set, so nothing was published."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-qemu-action@v4
+        if: steps.credentials.outputs.present == 'true'
+
+      - uses: docker/setup-buildx-action@v4
+        if: steps.credentials.outputs.present == 'true'
+
+      - uses: docker/login-action@v4
+        if: steps.credentials.outputs.present == 'true'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # The SHA tag is the one that always exists and always means exactly one
+      # commit; `latest` and the version are conveniences on top of it.
+      - name: Work out the tags
+        id: metadata
+        if: steps.credentials.outputs.present == 'true'
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,format=long,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+
+      - name: Build and push
+        if: steps.credentials.outputs.present == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ADR 0011: for a large part of this audience the Docker Hub page is the
+      # landing page, so its text comes from the repository and is reviewed like
+      # anything else here — not typed into a web form. The document links to
+      # GitHub absolutely for that reason: relative links do not resolve once it
+      # is rendered over there.
+      - name: Publish the Docker Hub description
+        if: steps.credentials.outputs.present == 'true' && github.event_name == 'release'
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.IMAGE }}
+          short-description: Files downloaded videos into a media library using metadata from prdb
+          readme-filepath: docs/running-in-docker.md

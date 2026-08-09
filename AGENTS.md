@@ -181,6 +181,18 @@ identity — `exec`, so the app stays PID 1 and still receives `SIGTERM` mid-mov
 **The entrypoint never chowns the media.** It touches ownership of the tool's
 own data volume and nothing else.
 
+The published name is `prdbnet/prdb-ordeno`. Only the runtime stage of the
+`Dockerfile` is architecture-specific: the frontend build and the .NET publish
+run on the build machine's own architecture and produce output that does not
+care where it lands, so an arm64 image costs emulation for `apt-get` and not for
+MSBuild. Keep it that way — a runtime identifier in that publish is what would
+put a Node build and a compiler under QEMU.
+
+`docs/running-in-docker.md` is the user-facing half of all this, and a release
+publishes it as the Docker Hub description. It is written for someone who has
+never seen this repository, and it links to GitHub absolutely, because relative
+links do not resolve once Docker Hub renders it.
+
 ## Layout
 
 ```
@@ -191,6 +203,10 @@ CONTRIBUTING.md   how to report a bug, how to shape a commit
 CHANGELOG.md      Keep a Changelog, Unreleased at the top
 docs/adr/         decisions, and the alternatives they ruled out
 docs/agents/      where issues live, where domain docs live
+
+Dockerfile          frontend, publish, and a Debian runtime with ffmpeg in it
+docker/             the entrypoint, and the test that starts a built image
+docker-compose.yml  an example to copy, pinned to a version rather than latest
 
 src/Prdb.Ordeno.Core            domain and application logic; no I/O
 src/Prdb.Ordeno.Infrastructure  SQLite/EF Core, filesystem, Prdb.Sdk, Prdb.Hashing
@@ -272,6 +288,20 @@ cd src/Prdb.Ordeno.Frontend && npm run generate:api
 CI runs the same command and fails on a diff, so a stale generated file is a red
 build rather than a frontend quietly compiled against a shape the backend no
 longer sends.
+
+Touching the `Dockerfile` or the entrypoint means starting what comes out of it:
+
+```
+docker build -t ordeno:local .
+docker/smoke-test.sh ordeno:local
+```
+
+That is the same script CI runs, on both published architectures. It checks what
+only a running container can: that the application ends up as `PUID:PGID`, that
+the media it was pointed at keeps the owner it arrived with, and that
+`docker stop` is a shutdown rather than a kill after the timeout. A change to
+how the container starts that no test could have noticed is exactly the kind
+this repository cannot afford.
 
 ## Versioning
 

@@ -1,0 +1,44 @@
+# An example to copy, not a file to run from this repository.
+#
+# The tag is a version rather than `latest` on purpose (ADR 0011): an unattended
+# tool that moves files, upgrading itself the next time the NAS restarts, is a
+# surprise. Look up the current version on the releases page and pin that one.
+#
+# docs/running-in-docker.md explains the two things that go wrong most often —
+# PUID/PGID, and mounting the downloads and the library from two different
+# filesystems.
+
+services:
+  ordeno:
+    image: prdbnet/prdb-ordeno:0.1.0
+    container_name: prdb-ordeno
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      # The user and group filed videos should belong to. On a NAS this is the
+      # account the library already belongs to, not root and not a new one.
+      PUID: 1000
+      PGID: 1000
+      # 022 gives the group read access; 002 gives it write access as well,
+      # which is what a shared library usually wants.
+      UMASK: "002"
+
+    volumes:
+      # The tool's own state: the database, and nothing you have to back up
+      # separately from it. Keep this on the NAS's own disk rather than on a
+      # network share — SQLite and SMB are a bad combination.
+      - ./data:/data
+
+      # One mount holding both the downloads and the library, so that filing a
+      # video is a rename and not an hour of copying (ADR 0002). Two separate
+      # mounts work, and the tool says which of the two you are getting while
+      # you are still setting it up — but a rename is what you want.
+      - /srv/media:/media
+
+# Everything else — the prdb API key, which directories under /media hold the
+# downloads, where the library is and how it is laid out — is answered in the
+# browser on first run and kept in the database (ADR 0009). There is nothing
+# else to put in this file.
