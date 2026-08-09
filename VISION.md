@@ -292,8 +292,8 @@ Deliberately after that, not before:
 
 ## Open questions
 
-- The implementation language, and with it which `prdb-sdk` client is used.
-  These are one decision, not two — see `AGENTS.md`.
+- The frontend framework. The backend is .NET 10 and talks to prdb through the
+  `Prdb.Sdk` package; the browser side is still open.
 - The exact layouts per media server, and how far artwork support goes.
 - How much of re-filing and metadata refresh happens on its own, and how much
   the user confirms first.

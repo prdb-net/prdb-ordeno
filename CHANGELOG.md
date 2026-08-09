@@ -13,4 +13,5 @@ things — see SemVer's clause on initial development.
 ## [Unreleased]
 
 Nothing released yet. The repository currently holds its licence and project
-documentation; the implementation language is still open.
+documentation. The backend stack is .NET 10; the frontend framework is still
+open.

@@ -7,11 +7,9 @@ commit messages, branch names and PR descriptions. No exceptions.
 
 ## Where the project stands
 
-This is an early repository. There is no code yet, and the implementation
-language is not decided, so there is nothing to build or test at the moment.
-That is deliberate rather than an omission: the sections below on setting up and
-running tests will be filled in with the first code, and until then any
-instructions here would be a guess.
+This is an early repository. The backend stack is settled — .NET 10 — but there
+is no code yet, so there is nothing to build or test until the first feature
+lands.
 
 `VISION.md` describes what the tool is meant to become — a self-hosted web
 application that files downloads into a library a media server can read — and,
@@ -60,11 +58,25 @@ notice. Internal refactoring that changes no behaviour does not need one.
 
 ## Setting up
 
-To be written with the first code, once the language is chosen.
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) and, to run
+the tool rather than just build it, Docker. `ffmpeg` is needed for perceptual
+hashing; the container image brings its own, so install it locally only if you
+work on that part outside a container.
+
+```
+dotnet build
+```
 
 ## Running the tests
 
-To be written with the first code, once the language is chosen.
+```
+dotnet test
+```
+
+Tests that touch file handling work against a real filesystem in a temporary
+directory rather than a mocked one. If you are changing anything that moves,
+renames or deletes files, that is where the test belongs — see the hard rule in
+`AGENTS.md`.
 
 ## License
 

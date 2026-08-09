@@ -1,4 +1,16 @@
-# Language-specific rules follow once the language is decided.
+# .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+*.coverage
+*.nupkg
 
 # Secrets and local configuration
 .env

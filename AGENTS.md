@@ -1,14 +1,20 @@
 # Repository Guidelines
 
 A tool that organises video files using metadata from prdb. Open source, MIT.
-The implementation language is not decided yet, so most of this file describes
-constraints rather than commands.
 
 It is a self-hosted web application, not a command-line tool: a long-running
 service in a container, with a browser UI, that keeps filing new downloads
 without being asked. Source and target storage arrive as Docker mounts. Read
 `VISION.md` before designing anything — it is what these constraints are in
 service of.
+
+## Stack
+
+The backend is **.NET 10**. The frontend framework is not decided yet; until it
+is, do not add one.
+
+The image ships `ffmpeg`, because computing a perceptual hash decodes frames.
+Nothing may require the user to install anything on the host beyond Docker.
 
 ## Language
 
@@ -49,12 +55,18 @@ OpenAPI document is public, but the path is not guessable — the docs UI fetche
 Authentication is an API key in the `X-Api-Key` header, over https. `GET /health`
 is the only endpoint that works without a key.
 
-**Do not hand-roll an HTTP client for it.** `prdb-sdk` publishes generated,
-maintained clients for Python, TypeScript, Go and C#, and they already handle
-the parts that are easy to get wrong — in particular refusing a redirect to a
-different origin, which every HTTP stack would otherwise follow while carrying
-`X-Api-Key` off the API host, because they strip only `Authorization`. Choosing
-the implementation language and choosing the SDK are one decision, not two.
+**Do not hand-roll an HTTP client for it.** Use the `Prdb.Sdk` NuGet package
+from `prdb-sdk`. It handles the parts that are easy to get wrong — in
+particular refusing a redirect to a different origin, which every HTTP stack
+would otherwise follow while carrying `X-Api-Key` off the API host, because they
+strip only `Authorization`. It targets `net8.0` and is consumed from `net10.0`
+unchanged.
+
+Identification goes through `POST /videos/identify`, which takes a batch of
+files and walks the whole recognition ladder server-side. Do not rebuild that
+ladder here out of the individual lookup endpoints: it costs roughly one request
+per file instead of a handful in total, and it would put the matching rules in
+the one place that cannot see the corpus they run against.
 
 ## Layout
 
@@ -64,9 +76,13 @@ README.md         what the tool is
 VISION.md         what it is for, and what it is deliberately not
 CONTRIBUTING.md   how to report a bug, how to shape a commit
 CHANGELOG.md      Keep a Changelog, Unreleased at the top
+src/              projects
+tests/            test projects
 ```
 
-Source layout follows once the language is chosen.
+The solution file lives at the root. How the source is divided inside `src/` is
+open and should follow from the first real feature rather than be laid out in
+advance.
 
 ## Commits
 
@@ -82,10 +98,16 @@ notice. A refactor that changes no behaviour does not need one.
 
 ## Verifying a change
 
-To be written with the first code. Whatever the language, the destructive paths
-above get tests before they get a release, and those tests run against a real
-filesystem — the interesting failures are the ones a mocked file layer cannot
-have.
+```
+dotnet build
+dotnet test
+```
+
+The destructive paths above get tests before they get a release, and those tests
+run against a real filesystem in a temporary directory — the interesting
+failures are the ones a mocked file layer cannot have: a half-finished
+cross-device copy, a file still being written, a target path that already
+exists.
 
 ## Versioning
 
