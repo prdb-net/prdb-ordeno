@@ -15,6 +15,9 @@ internal sealed class TempDirectory : IDisposable
 
     public string Root { get; }
 
+    /// <summary>A path inside it — a download directory, a library — created by the caller.</summary>
+    public string Combine(string name) => Path.Combine(Root, name);
+
     public void Dispose()
     {
         try

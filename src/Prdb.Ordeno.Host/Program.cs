@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
 
 using Prdb.Ordeno.Host.Access;
+using Prdb.Ordeno.Host.Configuration;
 using Prdb.Ordeno.Infrastructure.Access;
+using Prdb.Ordeno.Infrastructure.Configuration;
 using Prdb.Ordeno.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +21,7 @@ var dataDirectory = builder.Configuration["ORDENO_DATA_DIRECTORY"] ?? "/data";
 
 builder.Services.AddOrdenoPersistence(dataDirectory);
 builder.Services.AddOrdenoAccess();
+builder.Services.AddOrdenoConfiguration();
 
 // ADR 0014: this describes the API for the build that turns it into the
 // frontend's types. Nothing maps it as an endpoint — the document is written to
@@ -111,6 +114,7 @@ app.MapGet("/api/health", () => TypedResults.Ok(new HealthResponse("ok")))
     .WithTags("Health");
 
 app.MapAccess();
+app.MapConfiguration();
 
 // ADR 0006: routing happens in the browser, so unknown paths return index.html
 // and let the frontend decide. Unknown API paths must not — a caller that asked
