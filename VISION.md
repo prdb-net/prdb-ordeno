@@ -293,7 +293,9 @@ Deliberately after that, not before:
 ## Open questions
 
 - The frontend framework. The backend is .NET 10 and talks to prdb through the
-  `Prdb.Sdk` package; the browser side is still open.
+  `Prdb.Sdk` package; the browser side is still open, except that it has to
+  build to static assets the backend serves rather than bring a runtime of its
+  own into the image.
 - The exact layouts per media server, and how far artwork support goes.
 - How much of re-filing and metadata refresh happens on its own, and how much
   the user confirms first.

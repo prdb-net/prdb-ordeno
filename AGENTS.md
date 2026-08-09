@@ -10,8 +10,14 @@ service of.
 
 ## Stack
 
-The backend is **.NET 10**. The frontend framework is not decided yet; until it
-is, do not add one.
+The backend is **.NET 10**, with the SDK version pinned in `global.json`. The
+frontend framework is not decided yet; until it is, do not add one.
+
+Whatever it turns out to be, **it has to build to static assets the backend
+serves**. A framework that brings a server-side runtime of its own would put a
+second runtime into an image that already carries `ffmpeg` —
+[ADR 0005](docs/adr/0005-dotnet-10-on-the-backend.md). That rules out a
+deployment mode, not a framework.
 
 The image ships `ffmpeg` and `ffprobe`, because computing a perceptual hash
 decodes frames. Nothing may require the user to install anything on the host
