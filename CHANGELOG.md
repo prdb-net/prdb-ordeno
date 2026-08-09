@@ -16,3 +16,7 @@ Nothing released yet. The repository currently holds its licence and project
 documentation. The stack is .NET 10 on the backend, React with Vite in the
 browser, and SQLite for local state. The first release targets Jellyfin;
 Plex and Emby follow after it.
+
+Configuration and the single password are set up in the browser on first run
+rather than through the container environment, and the image will be published
+to Docker Hub for `linux/amd64` and `linux/arm64`.

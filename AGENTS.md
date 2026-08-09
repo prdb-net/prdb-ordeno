@@ -108,6 +108,33 @@ Two states from the package's contract that shape design here: `osHash` is
 `null` for a file under 128 KiB, and a perceptual hash decodes 25 frames, so it
 belongs in a background queue rather than the import path.
 
+## Configuration and access
+
+The container environment carries only what must exist before the application
+starts: data directory, port, `PUID`/`PGID`/umask. Everything else — API key,
+sources, target, layout, behaviour switches — is collected by onboarding and
+stored in the database
+([ADR 0009](docs/adr/0009-configuration-is-collected-by-onboarding.md)). A fresh
+container therefore starts into onboarding and scans nothing until it is done.
+Do not add an environment variable for a setting the UI owns.
+
+Access is one password, no username, set during that same first run and hashed
+with `PasswordHasher<T>`; sessions are HttpOnly cookies stored in the database,
+and sign-in is rate-limited
+([ADR 0010](docs/adr/0010-one-password-set-at-first-run.md)). There is no
+default password. The setup screen is the only unauthenticated write path in the
+application and must become unreachable the moment a password exists — that
+transition gets a test.
+
+## Shipping
+
+GitHub Actions builds the image and publishes it to Docker Hub for
+`linux/amd64` and `linux/arm64`, tagged with the commit SHA, `latest` on the
+default branch, and the version on a release
+([ADR 0011](docs/adr/0011-images-are-built-by-github-actions-and-published-to-docker-hub.md)).
+Documentation and Compose examples pin a version rather than `latest`: an
+unattended tool that upgrades itself on the next NAS restart is a surprise.
+
 ## Layout
 
 ```
@@ -118,17 +145,30 @@ CONTRIBUTING.md   how to report a bug, how to shape a commit
 CHANGELOG.md      Keep a Changelog, Unreleased at the top
 docs/adr/         decisions, and the alternatives they ruled out
 docs/agents/      where issues live, where domain docs live
-src/              projects
-tests/            test projects
+
+src/Prdb.Ordeno.Core            domain and application logic; no I/O
+src/Prdb.Ordeno.Infrastructure  SQLite/EF Core, filesystem, Prdb.Sdk, Prdb.Hashing
+src/Prdb.Ordeno.Host            ASP.NET Core: HTTP, auth, static assets, workers
+src/Prdb.Ordeno.Frontend        React and Vite
+
+tests/Prdb.Ordeno.Core.Tests
+tests/Prdb.Ordeno.Infrastructure.Tests
 ```
 
 This file holds the rules; `docs/adr/` holds why they are the rules. When a rule
 here looks wrong, the ADR is where the answer is — and if it is genuinely wrong,
 a new ADR supersedes the old one rather than editing it.
 
-The solution file lives at the root. How the source is divided inside `src/` is
-open and should follow from the first real feature rather than be laid out in
-advance.
+The solution file lives at the root. The dependency direction is fixed and the
+build enforces it: `Core` references neither EF Core, nor `Prdb.Sdk`, nor the
+filesystem — it declares what it needs as interfaces, `Infrastructure`
+implements them, `Host` wires the two together, and nothing references `Host`.
+That is what keeps the hard rule above enforceable rather than merely agreed:
+the dangerous paths are reachable only through an interface, which is also what
+makes asking a write path what it would do the same code path as doing it. See
+[ADR 0012](docs/adr/0012-src-is-sliced-before-the-first-feature.md), which
+replaced the earlier instruction to leave this open until the first feature.
+A fifth project is a decision, not a habit.
 
 ## Commits
 

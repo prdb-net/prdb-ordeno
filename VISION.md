@@ -237,6 +237,12 @@ that ends with the user watching the first batch get filed, and after that the
 tool should not need attention. A tool that needs weekly babysitting has failed
 at its actual job.
 
+That path is also where those settings live. The container gets only what it
+needs to start — where the data goes, which port, which user it runs as — and
+everything else is answered in the browser and kept by the tool, so that
+changing the target directory is a decision made in the UI rather than an edit
+to a YAML file and a restart.
+
 **Usability is a feature, not polish.** The review queue, the onboarding, and
 the "what is it about to do" view are the product. Everything else is
 plumbing.
@@ -252,7 +258,9 @@ kind of step that turns a five-minute setup into an evening.
 
 **Reachable, but not open.** Even on a LAN, the UI is behind a password. One
 password, no username, no email — an email address may be added later, and only
-for alerting. Someone who exposes this to the internet has made their own
+for alerting. It is set during the first run, because a tool that ships with a
+default credential is open for exactly as long as it takes someone to get round
+to changing it. Someone who exposes this to the internet has made their own
 choice, but the default must not be an open door.
 
 **prdb is the only metadata source.** It is reached through `prdb-sdk`, never a
@@ -298,10 +306,6 @@ Deliberately after that, not before:
 
 ## Open questions
 
-- Where configuration lives. Onboarding collects the API key, the source and
-  target directories and the layout through the browser, while Docker hands the
-  container environment variables — and which of the two owns a given setting
-  decides both what onboarding is and what the documentation has to teach.
 - The exact Jellyfin layout, and how far artwork support goes.
 - How much of re-filing and metadata refresh happens on its own, and how much
   the user confirms first.
