@@ -13,8 +13,9 @@ service of.
 The backend is **.NET 10**. The frontend framework is not decided yet; until it
 is, do not add one.
 
-The image ships `ffmpeg`, because computing a perceptual hash decodes frames.
-Nothing may require the user to install anything on the host beyond Docker.
+The image ships `ffmpeg` and `ffprobe`, because computing a perceptual hash
+decodes frames. Nothing may require the user to install anything on the host
+beyond Docker.
 
 ## Language
 
@@ -67,6 +68,33 @@ files and walks the whole recognition ladder server-side. Do not rebuild that
 ladder here out of the individual lookup endpoints: it costs roughly one request
 per file instead of a handful in total, and it would put the matching rules in
 the one place that cannot see the corpus they run against.
+
+## Computing the hashes
+
+The `osHash` and `pHash` values sent to that endpoint come from the
+**`Prdb.Hashing`** NuGet package. It is separate from `Prdb.Sdk` because it
+starts processes and needs ffmpeg; use both.
+
+**Do not reimplement either hash, and do not "clean up" the one in the package.**
+The values are only worth anything if they are bit-identical to what Stash
+produces, and the method reaches that by reproducing its quirks deliberately —
+an unusual resampler, a threshold function that is not the median it claims to
+be, cosine tables copied rather than recomputed because one ulp flips a bit. A
+correction to any of those produces a value that matches nothing.
+
+The method is specified normatively in
+[`docs/video-hashing.md`](https://github.com/prdb-net/prdb-sdk/blob/main/docs/video-hashing.md)
+in `prdb-sdk`, with test vectors as data next to it. Read that before touching
+anything hash-shaped.
+
+Two consequences for design, both from the package's own documentation:
+
+- **`osHash` is `null` for a file under 128 KiB.** That is a real state, not an
+  error to paper over.
+- **A perceptual hash decodes 25 frames**, so it cannot sit in the path of a
+  file being imported. It belongs in a background queue, and failures come back
+  as outcomes rather than exceptions because a truncated download is routine on
+  a real library.
 
 ## Layout
 

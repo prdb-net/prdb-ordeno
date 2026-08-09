@@ -59,9 +59,9 @@ notice. Internal refactoring that changes no behaviour does not need one.
 ## Setting up
 
 You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) and, to run
-the tool rather than just build it, Docker. `ffmpeg` is needed for perceptual
-hashing; the container image brings its own, so install it locally only if you
-work on that part outside a container.
+the tool rather than just build it, Docker. `ffmpeg` and `ffprobe` are needed
+for perceptual hashing; the container image brings its own, so install them
+locally only if you work on that part outside a container.
 
 ```
 dotnet build
