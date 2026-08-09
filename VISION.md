@@ -56,15 +56,14 @@ normal case rather than a fallback.
 
 ## Identification
 
-Recognition is a ladder, not a single lookup, and the tool is expected to climb
-only as far as the evidence takes it:
+Recognition is a ladder rather than a single lookup, and it is climbed only as
+far as the evidence takes it:
 
 - **File hash.** prdb holds `osHash` and `pHash` values with file sizes, so a
   file that someone else has already identified is identified here too, whatever
   it has been renamed to. This is the strongest signal and it is tried first.
-- **Release name.** prdb knows the scene release names (`preNames`) belonging to
-  a video, so a file still carrying its original name resolves without a hash
-  match.
+- **Release name.** prdb knows the scene release names belonging to a video, so
+  a file still carrying its original name resolves without a hash match.
 - **Site.** Failing both, the site is often still readable from the filename.
   That is enough to file the video under the right site even though the specific
   scene is unknown — which is a much better outcome than leaving it in the
@@ -74,9 +73,34 @@ only as far as the evidence takes it:
   by hand must be quick, because this is the queue that decides whether someone
   keeps using the tool after the first week.
 
-A partial or failed lookup never becomes a guess. The tool would rather leave a
-file where it is than file it wrongly, and an API error stops work rather than
-degrading it.
+The ladder itself runs inside prdb, not here. `POST /videos/identify` takes a
+batch of files and answers per file with the rung that matched and how strongly,
+which turns the first pass over an existing library from roughly one request per
+file into a handful in total. That is the difference between a setup the user
+watches finish and one they leave running overnight.
+
+It also means the climbing improves without the tool changing, and that the
+matching happens where the data is — which is the reason no local copy of prdb's
+corpus is needed, or wanted.
+
+A partial or failed lookup never becomes a guess. When several videos fit
+equally well, the answer says so and names the candidates rather than picking
+one, and that lands in the review queue for a person to settle. An API error
+stops work rather than degrading it.
+
+Two things about this are worth being plain about rather than discovering later.
+Identification is not optional and not anonymous: file names and hashes are sent
+to prdb for every file the tool looks at, because that is what identification
+*is*. And the perceptual hash is not yet the safety net it looks like — prdb
+still compares it exactly, and a perceptual hash compared exactly is only a
+worse `osHash`. The rung exists; it does not carry weight until prdb matches
+those values by distance.
+
+Computing a perceptual hash means decoding 25 frames of the video, which is far
+too slow to sit in the path of a file being imported: it would turn a scan that
+takes seconds into one that takes days. It belongs in a background queue that
+works through a backlog at its own pace, and a file waiting for its hash must
+not hold up the filing of anything else.
 
 ## The target layout
 
@@ -170,11 +194,27 @@ unattended, which is the whole point of it.
 
 ## Contributing back to prdb
 
-The user may optionally let the tool report what it has found back to prdb —
-marking videos as fulfilled, so their wanted list reflects reality. This is
-**off by default and opt-in**, and it stays that way. A tool that quietly tells
-a remote service what is on someone's disk is not a tool anyone should install,
-however useful the aggregate data would be.
+The user may optionally let the tool report back to prdb, through two separate
+channels:
+
+- **Fulfilment.** Videos the user has are marked as fulfilled, so their wanted
+  list reflects what is actually on disk.
+- **Confirmed assignments.** When a file is resolved by hand in the review
+  queue, that produces something prdb cannot obtain otherwise: a human-checked
+  link between a file hash and a video, for exactly the file that automatic
+  recognition failed on. Today such a result simply dies locally.
+
+Both are **off by default and opt-in**, and they stay that way. A tool that
+quietly tells a remote service what is on someone's disk is not a tool anyone
+should install, however useful the aggregate data would be. Opting into one is
+not opting into the other.
+
+Worth stating honestly, because the tempting version of this claim is not true
+yet: submitted assignments do not currently feed back into anyone's lookups.
+prdb accepts them and deliberately keeps them out of its read paths for now, so
+the argument that contributing improves recognition for everyone describes an
+intention rather than an effect. The feature is worth building on that
+intention; it should not be sold to users as more than it is.
 
 ## Principles
 
@@ -200,7 +240,9 @@ several — the way. Source and target storage arrive as mounts, and the
 documentation has to teach that properly, including the parts people get wrong:
 `PUID`/`PGID` and ownership, NAS shares, and why the source and target should
 sit on the same filesystem if you do not want every file copied instead of
-moved.
+moved. The image brings what it needs with it — `ffmpeg`, for one, since
+perceptual hashing decodes frames — because "install these first" is exactly the
+kind of step that turns a five-minute setup into an evening.
 
 **Reachable, but not open.** Even on a LAN, the UI is behind a password. One
 password, no username, no email — an email address may be added later, and only
