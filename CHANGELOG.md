@@ -33,8 +33,9 @@ source it may not read and a library it may not write to each say so next to the
 field. Each download directory also says whether videos will be renamed into the
 library or copied and deleted, which depends on the two sitting on one
 filesystem. Until onboarding is finished the tool scans nothing and says so, and
-afterwards the same screen is the settings. The stored API key is never sent
-back to the browser and never written to a log.
+afterwards the same screen is the settings — where it says plainly that nothing
+is filed yet either, because identification and filing are not built. The stored
+API key is never sent back to the browser and never written to a log.
 
 The stack is .NET 10 on the backend, React with Vite in the browser, and SQLite
 for local state. The first release targets Jellyfin; Plex and Emby follow after

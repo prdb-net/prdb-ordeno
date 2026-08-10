@@ -91,8 +91,13 @@ public sealed class OrdenoConfigurationTests
         Assert.Contains("different filesystems", configuration.WhatHappensNext, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A finished path says the tool is set up, and it does not say the tool is
+    /// working — nothing identifies or files anything yet. Someone told their
+    /// downloads are being handled stops looking at them.
+    /// </summary>
     [Fact]
-    public void A_finished_path_speaks_of_what_the_tool_is_doing()
+    public void A_finished_path_claims_no_filing_that_has_not_been_built()
     {
         var configuration = Configured(Source(FileMovement.Rename)) with
         {
@@ -100,7 +105,9 @@ public sealed class OrdenoConfigurationTests
         };
 
         Assert.True(configuration.Complete);
-        Assert.Contains("is watching", configuration.WhatHappensNext, StringComparison.Ordinal);
+        Assert.Contains("is set up", configuration.WhatHappensNext, StringComparison.Ordinal);
+        Assert.Contains("Nothing is filed yet", configuration.WhatHappensNext, StringComparison.Ordinal);
+        Assert.DoesNotContain("is watching", configuration.WhatHappensNext, StringComparison.Ordinal);
     }
 
     [Theory]

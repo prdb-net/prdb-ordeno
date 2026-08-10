@@ -79,22 +79,32 @@ public sealed record OrdenoConfiguration(
             var copying = Sources.Count(source => source.Movement is not FileMovement.Rename);
             var speed = copying switch
             {
-                0 => " Everything it files is renamed into place, which is instant.",
+                0 => " Everything it files will be renamed into place, which is instant.",
                 _ when copying == Sources.Count =>
-                    " Videos are copied to the library and only then deleted from the download "
+                    " Videos will be copied to the library and only then deleted from the download "
                     + "directory, because the two are on different filesystems — correct, but "
                     + "as slow as the files are large.",
                 _ => $" {copying} of those {directories} sit on a different filesystem from the "
-                    + "library, so videos from them are copied rather than renamed into place.",
+                    + "library, so videos from them will be copied rather than renamed into place.",
             };
 
+            // A finished path speaks in the future too, and says why. Nothing
+            // watches anything yet: identification and filing are not built, and
+            // a sentence telling someone the tool is already working is one they
+            // act on — they stop watching, and later report as a bug that their
+            // downloads were never touched. Both of these go when filing lands,
+            // and not one release earlier.
             var ending = Complete
-                ? $"prdb-ordeno is watching {Sources.Count} {directories} and files what it "
+                ? $"prdb-ordeno is set up and will watch {Sources.Count} {directories} and file what it "
                 : $"prdb-ordeno will watch {Sources.Count} {directories} and file what it ";
+
+            var notYet = Complete
+                ? " Nothing is filed yet — identification and filing arrive with the first release."
+                : string.Empty;
 
             return ending
                 + $"recognises into {Target.Path}, in the layout {LibraryLayouts.NameOf(Layout.Value)} "
-                + "reads." + speed;
+                + "reads." + speed + notYet;
         }
     }
 }
