@@ -13,6 +13,18 @@ Docker itself.
 - Releases: <https://github.com/prdb-net/prdb-ordeno/releases>
 - Issues: <https://github.com/prdb-net/prdb-ordeno/issues>
 
+## Where this stands
+
+**This version sets itself up and stops there.** It takes a password, checks
+your prdb API key, and checks the directories you point it at. It does not yet
+identify, rename or move anything — that is what the first release adds, and
+the rest of this document describes the tool that release will be.
+
+Running it now still answers something worth knowing: whether it works on your
+hardware. The identity it files under, the mounts, whether the library you
+pointed it at is really writable — all of that is better found out before it
+starts touching files than after.
+
 ## Before you start
 
 - **A prdb account with an API key.** The tool identifies nothing without one,
@@ -73,7 +85,7 @@ where you change any of it.
 
 | Mount | What it is |
 | --- | --- |
-| `/data` | The tool's own state: the SQLite database holding your configuration, the review queue and the operation log. |
+| `/data` | The tool's own state: the SQLite database holding your password and your configuration, and later the review queue and the operation log. |
 | Your media | Whatever you mount your downloads and your library from. The paths inside the container are yours to choose; you point the tool at them during the first run. |
 
 Two things are worth getting right here.
