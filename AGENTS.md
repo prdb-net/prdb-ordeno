@@ -87,6 +87,14 @@ fails:
 Jellyfin 10.11.11. Re-run it before changing anything layout-shaped, and against
 a new Jellyfin before claiming the layout still holds.
 
+The tool may also be given a Jellyfin URL and API key, and works without them —
+[ADR 0018](docs/adr/0018-the-jellyfin-connection-is-optional.md). They buy three
+things: the release date format read back before it silently discards every date,
+a refresh of an item whose sidecar was just rewritten, and the confirmation
+onboarding ends on. **The filing path never depends on them.** A server that is
+down, moved or answering with a stale key does not stop, delay or fail a move,
+and no feature may require the connection to exist.
+
 ## Watching the download directories
 
 Source directories are walked on a timer, not watched through the filesystem:

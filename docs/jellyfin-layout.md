@@ -38,11 +38,14 @@ export ORDENO_PROBE_UID=$(id -u) ORDENO_PROBE_GID=$(id -g)
 mkdir -p state/config state/cache && docker compose up -d
 ./probe.sh setup && ./probe.sh scan && ./probe.sh dump observation.json
 ./probe-refresh.sh
+./probe-itemid.sh
 ```
 
 Keep the fixtures outside the repository — they are a hundred generated files
-the generator can recreate at any time. `probe-refresh.sh` edits one of them, so
-a run leaves the fixture set dirty; regenerate before repeating.
+the generator can recreate at any time. `probe-refresh.sh` and `probe-itemid.sh`
+edit one of them, so a run leaves the fixture set dirty; regenerate before
+repeating. Both of them also wait out a one-minute tolerance window several
+times over, deliberately: they take minutes, and the waiting is the measurement.
 
 The generator clears the fixture root's contents rather than the root itself,
 and it matters. Removing the directory that is bind mounted into the running
@@ -427,6 +430,125 @@ What follows for the writer:
   re-shared to a Windows client, where 260 characters is the traditional limit.
   Worth documenting for the user rather than enforcing.
 
+## 9. From a path to an item
+
+Everything above is about files. This section is about the two things that need
+the server's cooperation: making a change the tool has just written appear at
+once (section 7), and finding out whether the server will read the dates the tool
+writes (section 4). Both mean talking to the API, and what that costs is mostly
+in the route from what the tool knows — a path it just wrote to — to what the API
+wants. Measured by `docs/jellyfin-probe/probe-itemid.sh`, against the same server
+and fixtures. The decision this fed is
+[ADR 0018](adr/0018-the-jellyfin-connection-is-optional.md).
+
+### An item is found by enumerating, and by nothing else
+
+An item's `Path` is the **video file**, not the scene directory —
+`/fixtures/movies/<scene>/<scene>.mkv`, the same value as its single
+`MediaSources[0].Path`. Three ways to get from that path to the item:
+
+| Route | Result |
+| --- | --- |
+| `GET /Items?recursive=true&fields=Path`, matched here | works — 58 movies, 43 KB of JSON |
+| `GET /Items?…&path=<the exact path>` | **the whole library**, all 58 items |
+| `GET /Items?…&searchTerm=<the scene directory name>` | 0 items |
+
+The middle row is the trap. The parameter is accepted, the response is a 200,
+and the filter is not applied — a caller that passes a path and takes
+`.Items[0]` refreshes an arbitrary item. The last row fails for a reason worth
+knowing: the name Jellyfin indexes comes from the sidecar, so the directory name
+the tool built is not something the server can be asked about.
+
+### The path the tool knows is not the path the server knows
+
+Both sides run in containers with their own mounts. In the probe the same
+directory is `/var/tmp/ordeno-jellyfin-fixtures/movies/<scene>` here and
+`/fixtures/movies/<scene>` there, and neither configuration mentions the other.
+
+`GET /Library/VirtualFolders` reports its `Locations` as `/fixtures/movies`, and
+`GET /Library/PhysicalPaths` the same plus `/config/data/playlists`. That is
+enough to see *that* the two disagree and not enough to translate, because
+neither names the host side.
+
+Matching the **tail** of the path does both. The site directory, the scene
+directory and the file name are identical on both sides — only the mount prefix
+differs — so matching on `…/<scene>/<scene>.mkv` found the item, and subtracting
+the tail from what came back yields the prefix the server uses. The substitution
+can be discovered rather than configured.
+
+### Reporting a path instead of refreshing an item
+
+`POST /Library/Media/Updated` takes a path rather than an item id, which would
+make the lookup above unnecessary. It half works, and the half that does not is
+the half this tool needs.
+
+Every case below waited past the one-minute tolerance from section 7 first —
+except the last, which deliberately did not — and nothing triggered a scan
+afterwards, so a change that appeared was the report's doing. The one case that
+did produce a change was then measured again with a control: the same wait with
+no report in it, to prove the item was not being refreshed by something else. The
+rows that report nothing need no such control, because a stray refresh can only
+manufacture a hit, never a miss. Real-time monitoring was tried on and off, and
+made no difference to any row.
+
+| Reported path | Result |
+| --- | --- |
+| the video file, as the server sees it | **picked up** |
+| the scene directory | ignored |
+| the `movie.nfo` | ignored |
+| the video file, as *this side* sees it | ignored, and the call still answers 204 |
+| the video file, edit inside the tolerance window | ignored |
+
+So it is a way to say "this file changed, read it again" without scanning the
+library — and it obeys exactly the same tolerance a scan does, which means it
+cannot do the one thing a targeted refresh is for. It also has to be given the
+path Jellyfin knows, which is the mapping the tool has to derive anyway, and a
+wrong one is answered with a 204 and silence.
+
+That last property is the argument for the item id rather than against it.
+Finding the id means the tool matched something the server actually has; the id
+*is* the receipt for the path substitution being right. A path report has none.
+
+The control in that table was added after the fact. The first version of this
+measurement ran the cases back to back with no control and produced one hit that
+did not reproduce: the library monitor collects what it is told and acts on it
+later, so a report from the previous case lands in the middle of the next one and
+reads as its result.
+
+### An API key is enough, and no user account
+
+A key created in Jellyfin's dashboard (`POST /Auth/Keys`) reached everything this
+needs:
+
+| Endpoint | Status |
+| --- | --- |
+| `GET /System/Info` | 200 |
+| `GET /Library/VirtualFolders` | 200 |
+| `GET /Items?recursive=true&fields=Path` — no user id | 200, all 58 movies |
+| `POST /Items/{id}/Refresh` | 204 |
+| `POST /Library/Media/Updated` | 204 |
+| `GET /System/Configuration/xbmcmetadata` | 200 |
+
+`GET /Items` normally takes a `userId`; with an API key it answers without one.
+So a connection needs a URL and a key, and no user name, password or user id.
+
+### The release date format can be read back
+
+The setting section 4 measured lives at `GET /System/Configuration/xbmcmetadata`,
+and a default installation answers:
+
+```json
+{
+  "ReleaseDateFormat": "yyyy-MM-dd",
+  "SaveImagePathsInNfo": true,
+  "EnablePathSubstitution": true,
+  "EnableExtraThumbsDuplication": false
+}
+```
+
+The one setting that silently discards every date the tool writes is therefore
+one `GET` away from being visible.
+
 ## Where the documentation and the server disagreed
 
 - `art.jpg` is documented alongside the other artwork names as its own kind. It
@@ -452,13 +574,13 @@ element, the fields worth writing and the exact form three of them need, which
 two artwork files are worth the bandwidth, how a second quality has to be named,
 and what the tool has to escape and how long a component may be.
 
+Section 9 was added later, when the API question below was taken up. It settles
+what talking to the server would cost, not whether to do it; that is
+[ADR 0018](adr/0018-the-jellyfin-connection-is-optional.md), which decided on an
+optional connection that the filing path never depends on.
+
 Not settled, and deliberately out of scope here:
 
-- Whether the tool ever talks to Jellyfin's API at all. Section 7 shows a
-  targeted refresh is the only way to make a self-written change appear
-  immediately, which is an argument for it; requiring a URL and a key from the
-  user is an argument against. That is a product decision, not a research
-  result.
 - What a scene with no known date files as. Every fixture had one.
 - Whether the site directory should carry artwork or metadata of its own. It
   resolves as a plain `Folder`, and nothing was written at that level to find
