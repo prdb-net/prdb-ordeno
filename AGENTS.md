@@ -65,6 +65,23 @@ One media server: **Jellyfin**, with its layout validated against a real library
 Emby follow on the same evidence. Sidecar writing gets a seam, not a second
 implementation built for a server nobody has run yet.
 
+## Watching the download directories
+
+Source directories are walked on a timer, not watched through the filesystem:
+notifications do not cross an SMB or NFS mount reliably, and that is where this
+audience's media sits — [ADR 0016](docs/adr/0016-directories-are-scanned-on-a-timer.md).
+
+A file is a candidate only once **two scans have seen it unchanged**. Never
+decide that from the file's modification time against the local clock: on a
+share that timestamp comes from the NAS, and two clocks that disagree would
+either hold everything back forever or release a file mid-download. Compare an
+observation with the previous observation, both taken here.
+
+The walk reads directory entries and opens nothing — it is work the container
+does every few minutes for years. A scan writes to the tool's own tables and to
+nothing else; the download directories are read-only to it, whatever comes
+later.
+
 ## Language
 
 **Everything in this repository is in English** — code, comments, documentation,
