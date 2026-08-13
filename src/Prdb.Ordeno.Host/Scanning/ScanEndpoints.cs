@@ -1,51 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 
-using Prdb.Ordeno.Core.Scanning;
+using Prdb.Ordeno.Infrastructure.Identification;
 using Prdb.Ordeno.Infrastructure.Scanning;
 
 namespace Prdb.Ordeno.Host.Scanning;
-
-/// <summary>
-/// One watched directory and what is in it.
-/// </summary>
-public sealed record ScannedSourceState(
-    int SourceId,
-    string Path,
-    bool Reachable,
-    string? Problem,
-    int Ready,
-    int Settling,
-    int Total);
-
-/// <summary>
-/// One video the tool has found. <paramref name="Ready"/> means it has stopped
-/// being written to — not that anything has been done with it.
-/// </summary>
-public sealed record ScannedFileState(
-    int Id,
-    int SourceId,
-    string Path,
-    string Name,
-    long SizeBytes,
-    bool Ready,
-    DateTimeOffset FirstSeenAt);
-
-/// <summary>
-/// What the last scan found, and whether one is running. The file list is capped
-/// — <paramref name="Total"/> is the real number.
-/// </summary>
-public sealed record ScanState(
-    bool Scanning,
-    DateTimeOffset? LastScanStartedAt,
-    DateTimeOffset? LastScanFinishedAt,
-    string? Problem,
-    bool OnboardingComplete,
-    IReadOnlyList<ScannedSourceState> Sources,
-    IReadOnlyList<ScannedFileState> Files,
-    int Ready,
-    int Settling,
-    int Total,
-    string WhatItFound);
 
 internal static class ScanEndpoints
 {
@@ -59,9 +17,16 @@ internal static class ScanEndpoints
 
         scan.MapGet("/", async Task<Ok<ScanState>> (
             ScanService service,
+            PerceptualHashService hashing,
             ScanRunner runner,
+            IdentificationRunner identification,
             CancellationToken cancellationToken) =>
-            TypedResults.Ok(StateOf(await service.ReadAsync(cancellationToken), runner.Status)));
+            TypedResults.Ok(await DownloadsState.ReadAsync(
+                service,
+                hashing,
+                runner.Status,
+                identification.Status,
+                cancellationToken)));
 
         // Starts a scan and answers with the state as it is now, rather than
         // holding the request open: a first pass over an existing library is
@@ -70,7 +35,9 @@ internal static class ScanEndpoints
         // in progress either way, which is what the caller wanted.
         scan.MapPost("/", async Task<Ok<ScanState>> (
             ScanService service,
+            PerceptualHashService hashing,
             ScanRunner runner,
+            IdentificationRunner identification,
             IHostApplicationLifetime lifetime,
             CancellationToken cancellationToken) =>
         {
@@ -78,42 +45,14 @@ internal static class ScanEndpoints
             // response; what may stop it is the container shutting down.
             runner.TryStart(lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(StateOf(await service.ReadAsync(cancellationToken), runner.Status));
+            return TypedResults.Ok(await DownloadsState.ReadAsync(
+                service,
+                hashing,
+                runner.Status,
+                identification.Status,
+                cancellationToken));
         });
 
         return endpoints;
     }
-
-    private static ScanState StateOf(Inventory inventory, ScanRun run) => new(
-        Scanning: run.Running,
-        LastScanStartedAt: run.StartedAt,
-        LastScanFinishedAt: run.FinishedAt,
-        Problem: run.Problem,
-        OnboardingComplete: inventory.OnboardingComplete,
-        Sources:
-        [
-            .. inventory.Sources.Select(source => new ScannedSourceState(
-                source.SourceId,
-                source.Path,
-                source.Reachable,
-                source.Problem,
-                source.Ready,
-                source.Settling,
-                source.Total)),
-        ],
-        Files:
-        [
-            .. inventory.Files.Select(file => new ScannedFileState(
-                file.Id,
-                file.SourceId,
-                file.Path,
-                file.Name,
-                file.SizeBytes,
-                file.Ready,
-                file.FirstSeenAt)),
-        ],
-        Ready: inventory.Ready,
-        Settling: inventory.Settling,
-        Total: inventory.Total,
-        WhatItFound: inventory.WhatItFound);
 }

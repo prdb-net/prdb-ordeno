@@ -519,6 +519,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/identification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ScanState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -552,12 +587,46 @@ export interface components {
         HealthResponse: {
             status: string;
         };
+        IdentificationState: {
+            running: boolean;
+            /** Format: date-time */
+            lastRunFinishedAt: null | string;
+            /** Format: int32 */
+            lastRunAsked: number | string;
+            problem: null | string;
+            /** Format: date-time */
+            notBefore: null | string;
+            /** Format: int32 */
+            recognised: number | string;
+            /** Format: int32 */
+            ambiguous: number | string;
+            /** Format: int32 */
+            siteOnly: number | string;
+            /** Format: int32 */
+            unrecognised: number | string;
+            /** Format: int32 */
+            waiting: number | string;
+            /** Format: int32 */
+            perceptualBacklog: number | string;
+            whatItRecognised: null | string;
+        };
         LayoutOption: {
             name: string;
             description: string;
         };
         ProblemResponse: {
             message: string;
+        };
+        RecognisedState: {
+            state: string;
+            answer: string;
+            because: null | string;
+            /** Format: uuid */
+            videoId: null | string;
+            /** Format: int32 */
+            candidates: number | string;
+            /** Format: date-time */
+            askedAt: string;
         };
         ScannedFileState: {
             /** Format: int32 */
@@ -571,6 +640,7 @@ export interface components {
             ready: boolean;
             /** Format: date-time */
             firstSeenAt: string;
+            recognised: null | components["schemas"]["RecognisedState"];
         };
         ScannedSourceState: {
             /** Format: int32 */
@@ -602,6 +672,7 @@ export interface components {
             /** Format: int32 */
             total: number | string;
             whatItFound: string;
+            identification: components["schemas"]["IdentificationState"];
         };
         SetApiKeyRequest: {
             apiKey: string;

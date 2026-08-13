@@ -1,3 +1,4 @@
+using Prdb.Ordeno.Core.Identification;
 using Prdb.Ordeno.Core.Scanning;
 
 using Xunit;
@@ -14,7 +15,7 @@ public sealed class InventoryTests
     [Fact]
     public void An_unfinished_setup_says_so_rather_than_reporting_an_empty_directory()
     {
-        var inventory = new Inventory(OnboardingComplete: false, Sources: [], Files: []);
+        var inventory = new Inventory(OnboardingComplete: false, Sources: [], Files: [], RecognitionSummary.Nothing);
 
         Assert.Contains("Finish the setup", inventory.WhatItFound, StringComparison.Ordinal);
     }
@@ -46,15 +47,16 @@ public sealed class InventoryTests
 
     /// <summary>
     /// The claim the tool must never make by implication. Someone who reads a
-    /// list of their downloads in a tool that promises to file them concludes it
-    /// is filing them, and reports the absence months later as data loss.
+    /// list of their downloads, each with the video it was recognised as beside
+    /// it, concludes it is filing them, and reports the absence months later as
+    /// data loss.
     /// </summary>
     [Fact]
     public void Anything_found_is_reported_as_untouched()
     {
         var inventory = Found(Source(1, ready: 1, settling: 0));
 
-        Assert.Contains("Nothing is identified or filed yet", inventory.WhatItFound, StringComparison.Ordinal);
+        Assert.Contains("Nothing is filed yet", inventory.WhatItFound, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -63,7 +65,8 @@ public sealed class InventoryTests
         var inventory = new Inventory(
             OnboardingComplete: true,
             Sources: [new ScannedSource(1, "/downloads", Reachable: false, "The share is gone.", 0, 0)],
-            Files: []);
+            Files: [],
+            RecognitionSummary.Nothing);
 
         Assert.Contains("cannot be read", inventory.WhatItFound, StringComparison.Ordinal);
         Assert.DoesNotContain("No videos", inventory.WhatItFound, StringComparison.Ordinal);
@@ -84,7 +87,8 @@ public sealed class InventoryTests
                 Source(1, ready: 5, settling: 0),
                 new ScannedSource(2, "/other", Reachable: false, "The share is gone.", 0, 0),
             ],
-            Files: []);
+            Files: [],
+            RecognitionSummary.Nothing);
 
         Assert.Contains("5 videos", inventory.WhatItFound, StringComparison.Ordinal);
         Assert.Contains("1 download directory could not be read", inventory.WhatItFound, StringComparison.Ordinal);
@@ -102,5 +106,5 @@ public sealed class InventoryTests
         new(id, $"/downloads/{id}", Reachable: true, Problem: null, ready, settling);
 
     private static Inventory Found(params ScannedSource[] sources) =>
-        new(OnboardingComplete: true, Sources: sources, Files: []);
+        new(OnboardingComplete: true, Sources: sources, Files: [], RecognitionSummary.Nothing);
 }

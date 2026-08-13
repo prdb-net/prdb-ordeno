@@ -9,6 +9,7 @@ export type LayoutOption = components['schemas']['LayoutOption']
 export type ScanState = components['schemas']['ScanState']
 export type ScannedFileState = components['schemas']['ScannedFileState']
 export type ScannedSourceState = components['schemas']['ScannedSourceState']
+export type RecognisedState = components['schemas']['RecognisedState']
 
 type ConfigurationProblem = components['schemas']['ConfigurationProblem']
 type ProblemResponse = components['schemas']['ProblemResponse']
@@ -121,4 +122,12 @@ export const scanning = {
    * screen keeps reading `read` until `scanning` goes back to false.
    */
   now: () => request<ScanState>('/api/scan', { method: 'POST' }),
+
+  /**
+   * Asks prdb about whatever has finished downloading. Like a scan, it answers
+   * as soon as a run is under way rather than when it has finished — a library
+   * is a few minutes of batches — so the screen keeps reading `read` until
+   * `identification.running` goes back to false.
+   */
+  identify: () => request<ScanState>('/api/identification', { method: 'POST' }),
 }

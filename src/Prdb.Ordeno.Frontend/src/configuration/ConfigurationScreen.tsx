@@ -104,6 +104,14 @@ function ApiKeyStep({ state, run }: { state: ConfigurationState; run: Run }) {
         again.
       </p>
 
+      {/* ADR 0001: this is not optional and not anonymous, because it is what
+          identification is. It belongs here, before the key is stored, rather
+          than in a changelog somebody finds afterwards. */}
+      <p className="hint">
+        To work out what a file is, the tool sends its name, its size and a hash of it to prdb —
+        for every file it examines. The files themselves are never uploaded.
+      </p>
+
       {state.apiKeySet && <p className="done">A key is stored and prdb accepted it.</p>}
 
       <form onSubmit={submit}>

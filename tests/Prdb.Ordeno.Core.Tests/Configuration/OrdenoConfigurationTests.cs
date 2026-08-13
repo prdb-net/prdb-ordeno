@@ -93,9 +93,9 @@ public sealed class OrdenoConfigurationTests
 
     /// <summary>
     /// A finished path says what is true of this version and nothing beyond it.
-    /// The tool watches — the scan runs on its own — and it identifies and files
-    /// nothing, so it claims exactly the first and disclaims the second. Someone
-    /// told their downloads are being handled stops looking at them.
+    /// The tool watches and identifies — both run on their own — and it files
+    /// nothing, so it claims exactly the first two and disclaims the third.
+    /// Someone told their downloads are being handled stops looking at them.
     /// </summary>
     [Fact]
     public void A_finished_path_claims_no_filing_that_has_not_been_built()
@@ -108,7 +108,7 @@ public sealed class OrdenoConfigurationTests
         Assert.True(configuration.Complete);
         Assert.Contains("is watching", configuration.WhatHappensNext, StringComparison.Ordinal);
         Assert.Contains(
-            "Nothing is identified or filed yet",
+            "Nothing is filed yet",
             configuration.WhatHappensNext,
             StringComparison.Ordinal);
     }

@@ -27,9 +27,6 @@ public sealed class PrdbApiKeyCheck(
     ILogger<PrdbApiKeyCheck> logger)
     : IPrdbApiKeyCheck
 {
-    /// <summary>The named client whose handler the SDK sends through.</summary>
-    public const string HttpClientName = "prdb";
-
     /// <summary>
     /// Someone is waiting in front of a form. A minute of retries would be worse
     /// than being told that prdb did not answer.
@@ -45,7 +42,7 @@ public sealed class PrdbApiKeyCheck(
 
         var client = PrdbClientFactory.Create(
             apiKey.Trim(),
-            transport: handlers.CreateHandler(HttpClientName),
+            transport: handlers.CreateHandler(PrdbTransport.HttpClientName),
             // The SDK's retry would turn one refused check into three requests
             // with the same answer, and a rate limit into a wait nobody asked for.
             retry: PrdbRetryOptions.Disabled,

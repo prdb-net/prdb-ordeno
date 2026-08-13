@@ -98,8 +98,8 @@ public sealed record OrdenoConfiguration(
                 : $"prdb-ordeno will watch {Sources.Count} {directories} and file what it ";
 
             var notYet = Complete
-                ? " Nothing is identified or filed yet — that arrives with the first release. Until "
-                    + "then the tool reports what it finds and leaves it where it is."
+                ? " Nothing is filed yet — that arrives with the first release. Until then the tool "
+                    + "reports what it finds, works out what it is, and leaves it where it is."
                 : string.Empty;
 
             return ending

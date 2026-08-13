@@ -218,3 +218,10 @@ button.view.chosen {
   border-color: var(--right);
   color: var(--right);
 }
+
+/* What prdb said the file is. Deliberately the same weight as the file name
+   above it: on this screen the answer is the point, not a footnote to it. */
+.answer {
+  font-size: 0.9rem;
+  margin: 0.4rem 0;
+}

@@ -1,3 +1,5 @@
+using Prdb.Ordeno.Core.Identification;
+
 namespace Prdb.Ordeno.Infrastructure.Persistence;
 
 /// <summary>
@@ -5,6 +7,11 @@ namespace Prdb.Ordeno.Infrastructure.Persistence;
 /// memory of an observation, not a claim about the file: it says what was there
 /// and when, and nothing at all about what the video is.
 /// </summary>
+/// <remarks>
+/// The hashes below belong here for that reason. They are read off the bytes at
+/// this path and say nothing about what the video is — what prdb makes of them
+/// is a claim, and claims live in <see cref="FileIdentification"/>.
+/// </remarks>
 /// <remarks>
 /// Rows come and go with the files. One that disappears from disk between two
 /// scans leaves the table, because a row pointing at nothing would only be a
@@ -45,4 +52,28 @@ public sealed class DiscoveredFile
     /// file that changes goes back to the beginning of its quiet period.
     /// </summary>
     public DateTimeOffset UnchangedSince { get; set; }
+
+    /// <summary>
+    /// The exact hash, in the lowercase form everything local compares in.
+    /// Computed once the file has settled and cleared the moment the bytes
+    /// change, because a hash of a file that has since grown is worse than no
+    /// hash: it is a wrong answer that looks like a right one.
+    /// </summary>
+    public string? OsHash { get; set; }
+
+    /// <summary>The perceptual hash, once the backlog has got to this file.</summary>
+    public string? PerceptualHash { get; set; }
+
+    /// <summary>
+    /// How the last attempt at a perceptual hash went, or <c>null</c> if there
+    /// has not been one. A file ffmpeg cannot read is a routine event on a real
+    /// library, and recording why is what stops the backlog from trying it again
+    /// every few minutes for years.
+    /// </summary>
+    public PerceptualHashState? PerceptualHashState { get; set; }
+
+    /// <summary>How often the backlog has tried. Only a timeout earns another go.</summary>
+    public int PerceptualHashAttempts { get; set; }
+
+    public DateTimeOffset? PerceptualHashAt { get; set; }
 }

@@ -155,6 +155,18 @@ recognition ladder server-side. **Do not rebuild that ladder here** out of the
 individual lookup endpoints, and do not keep a local copy of prdb's corpus —
 [ADR 0001](docs/adr/0001-identification-runs-in-prdb.md).
 
+What comes back is stored per file, with enough of the video — title, date, site
+— to put on a screen, and **a file is asked about once**
+([ADR 0017](docs/adr/0017-prdbs-answer-is-stored-and-asked-for-once.md)). Only
+two things make it worth asking again: its bytes changed, or a perceptual hash
+arrived that the first question did not carry. Anything that re-asks on a timer
+spends a rate-limited quota to be told the same thing, which is the request
+pattern ADR 0001 exists to avoid.
+
+That stored copy is for reading. Nothing is filed from it and nothing may grow
+it into a corpus: what a sidecar is written from is fetched again when it is
+written.
+
 ## Computing the hashes
 
 The `osHash` and `pHash` values sent to that endpoint come from the
@@ -173,6 +185,12 @@ touching anything hash-shaped.
 Two states from the package's contract that shape design here: `osHash` is
 `null` for a file under 128 KiB, and a perceptual hash decodes 25 frames, so it
 belongs in a background queue rather than the import path.
+
+The queue takes one file at a time and only files the exact hash did not settle.
+prdb still compares perceptual hashes for equality, so hashing a file it has
+already recognised by its `osHash` spends minutes of somebody's evening to learn
+what is already known. A file waiting for its hash holds nothing up: it is asked
+about without one and asked again once it has one.
 
 ## Configuration and access
 
