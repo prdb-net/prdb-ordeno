@@ -14,17 +14,7 @@ public static class ConfigurationServiceCollectionExtensions
         services.TryAddSingleton<IPrdbApiKeyCheck, PrdbApiKeyCheck>();
         services.AddScoped<ConfigurationService>();
 
-        // The connections the SDK's clients send through. A key check builds its
-        // own client — the key belongs to the request, not to the application —
-        // but the transport underneath is pooled and rotated here, so checking a
-        // key repeatedly does not open a socket every time.
-        services
-            .AddHttpClient(PrdbApiKeyCheck.HttpClientName)
-            // The default primary handler follows redirects, and the SDK refuses
-            // to build on one that does: a redirect it never sees is a redirect
-            // whose cross-origin rule never runs, and nothing below strips
-            // X-Api-Key.
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+        services.AddPrdbTransport();
 
         return services;
     }

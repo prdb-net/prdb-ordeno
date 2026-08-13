@@ -383,6 +383,25 @@
           }
         }
       }
+    },
+    "/api/identification": {
+      "post": {
+        "tags": [
+          "Identification"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanState"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -516,6 +535,110 @@
           }
         }
       },
+      "IdentificationState": {
+        "required": [
+          "running",
+          "lastRunFinishedAt",
+          "lastRunAsked",
+          "problem",
+          "notBefore",
+          "recognised",
+          "ambiguous",
+          "siteOnly",
+          "unrecognised",
+          "waiting",
+          "perceptualBacklog",
+          "whatItRecognised"
+        ],
+        "type": "object",
+        "properties": {
+          "running": {
+            "type": "boolean"
+          },
+          "lastRunFinishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastRunAsked": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "problem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notBefore": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "recognised": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ambiguous": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "siteOnly": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unrecognised": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "waiting": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "perceptualBacklog": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "whatItRecognised": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "LayoutOption": {
         "required": [
           "name",
@@ -542,6 +665,50 @@
           }
         }
       },
+      "RecognisedState": {
+        "required": [
+          "state",
+          "answer",
+          "because",
+          "videoId",
+          "candidates",
+          "askedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "because": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "videoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "candidates": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "askedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "ScannedFileState": {
         "required": [
           "id",
@@ -550,7 +717,8 @@
           "name",
           "sizeBytes",
           "ready",
-          "firstSeenAt"
+          "firstSeenAt",
+          "recognised"
         ],
         "type": "object",
         "properties": {
@@ -590,6 +758,16 @@
           "firstSeenAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "recognised": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecognisedState"
+              }
+            ]
           }
         }
       },
@@ -663,7 +841,8 @@
           "ready",
           "settling",
           "total",
-          "whatItFound"
+          "whatItFound",
+          "identification"
         ],
         "type": "object",
         "properties": {
@@ -731,6 +910,9 @@
           },
           "whatItFound": {
             "type": "string"
+          },
+          "identification": {
+            "$ref": "#/components/schemas/IdentificationState"
           }
         }
       },
@@ -835,6 +1017,9 @@
     },
     {
       "name": "Scanning"
+    },
+    {
+      "name": "Identification"
     }
   ]
 }

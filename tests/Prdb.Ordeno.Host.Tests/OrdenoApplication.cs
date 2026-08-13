@@ -35,7 +35,7 @@ internal sealed class OrdenoApplication(
         if (prdb is not null)
         {
             builder.ConfigureServices(services => services
-                .AddHttpClient(PrdbApiKeyCheck.HttpClientName)
+                .AddHttpClient(PrdbTransport.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => prdb));
         }
     }

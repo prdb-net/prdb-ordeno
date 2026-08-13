@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.Identification;
 using Prdb.Ordeno.Core.Scanning;
 using Prdb.Ordeno.Infrastructure.Persistence;
 
@@ -143,6 +144,8 @@ public sealed class ScanService(
             .Take(Inventory.Limit)
             .ToListAsync(cancellationToken);
 
+        var recognition = await RecognitionOf(recent, cancellationToken);
+
         var byId = sources.ToDictionary(source => source.Id, source => source.Path);
 
         var scanned = sources
@@ -169,13 +172,92 @@ public sealed class ScanService(
                 Below(byId.GetValueOrDefault(file.SourceDirectoryId), file.Path),
                 file.SizeBytes,
                 Settling.HasSettled(file.SizeBytes, file.UnchangedSince, now),
-                file.FirstSeenAt))
+                file.FirstSeenAt,
+                recognition.GetValueOrDefault(file.Id)))
             .ToList();
 
         return new Inventory(
             OnboardingComplete: configuration.OnboardingCompletedAt is not null,
             Sources: scanned,
-            Files: files);
+            Files: files,
+            Recognition: await SummariseAsync(scanned.Sum(source => source.Ready), cancellationToken));
+    }
+
+    /// <summary>
+    /// What prdb said about the files on the screen. One query for the visible
+    /// rows rather than one per row, and none at all for a first run that has
+    /// nothing identified yet.
+    /// </summary>
+    private async Task<Dictionary<int, Recognition>> RecognitionOf(
+        IReadOnlyList<DiscoveredFile> recent,
+        CancellationToken cancellationToken)
+    {
+        if (recent.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = recent.Select(file => file.Id).ToList();
+
+        return await context.FileIdentifications
+            .AsNoTracking()
+            .Where(identification => ids.Contains(identification.DiscoveredFileId))
+            .Select(identification => new
+            {
+                identification.DiscoveredFileId,
+                Recognition = new Recognition(
+                    identification.Confidence,
+                    identification.MatchedBy,
+                    identification.VideoId,
+                    identification.Title,
+                    identification.ReleaseDate,
+                    identification.SiteTitle,
+                    identification.Candidates.Count,
+                    identification.AskedAt),
+            })
+            .ToDictionaryAsync(row => row.DiscoveredFileId, row => row.Recognition, cancellationToken);
+    }
+
+    /// <summary>
+    /// How far the whole library has got, counted in the database. The screen
+    /// shows two hundred rows and the counts have to be about all of them.
+    /// </summary>
+    /// <param name="ready">
+    /// How many files have finished downloading. Everything with an answer has
+    /// settled — that is when it was asked about — so what is left is what the
+    /// next runs will ask about.
+    /// </param>
+    private async Task<RecognitionSummary> SummariseAsync(int ready, CancellationToken cancellationToken)
+    {
+        var counts = await context.FileIdentifications
+            .AsNoTracking()
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                Answered = group.Count(),
+
+                // Summed rather than counted with a predicate, for the same
+                // reason the scan's counts are: a conditional count inside a
+                // grouping is not a shape EF puts into SQL.
+                Recognised = group.Sum(identification => identification.VideoId != null ? 1 : 0),
+                Ambiguous = group.Sum(identification =>
+                    identification.Confidence == MatchConfidence.Ambiguous ? 1 : 0),
+                SiteOnly = group.Sum(identification =>
+                    identification.VideoId == null && identification.MatchedBy == MatchRung.Site ? 1 : 0),
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (counts is null)
+        {
+            return RecognitionSummary.Nothing with { Waiting = ready };
+        }
+
+        return new RecognitionSummary(
+            counts.Recognised,
+            counts.Ambiguous,
+            counts.SiteOnly,
+            Unrecognised: counts.Answered - counts.Recognised - counts.Ambiguous - counts.SiteOnly,
+            Waiting: Math.Max(0, ready - counts.Answered));
     }
 
     private async Task<int> ScanSourceAsync(
@@ -209,6 +291,8 @@ public sealed class ScanService(
             .Where(file => paths.Contains(file.Path))
             .ToDictionaryAsync(file => file.Path, cancellationToken);
 
+        var changed = new List<int>();
+
         foreach (var observed in batch)
         {
             if (known.TryGetValue(observed.Path, out var file))
@@ -221,6 +305,18 @@ public sealed class ScanService(
                     file.SizeBytes = observed.SizeBytes;
                     file.LastWriteAt = observed.LastWriteAt;
                     file.UnchangedSince = scanAt;
+
+                    // Different bytes, so everything read off the old ones is
+                    // wrong now. A hash of a file that has since grown is worse
+                    // than no hash — it is a wrong answer that looks like a right
+                    // one — and what prdb made of it goes with it.
+                    file.OsHash = null;
+                    file.PerceptualHash = null;
+                    file.PerceptualHashState = null;
+                    file.PerceptualHashAttempts = 0;
+                    file.PerceptualHashAt = null;
+
+                    changed.Add(file.Id);
                 }
 
                 // The path is what identifies a file, and it is unique across the
@@ -248,9 +344,35 @@ public sealed class ScanService(
 
         await context.SaveChangesAsync(cancellationToken);
 
+        await ForgetWhatTheyWereAsync(changed, cancellationToken);
+
         // The next batch has no use for these, and a first pass over a large
         // library would otherwise hold every row it has ever touched.
         context.ChangeTracker.Clear();
+    }
+
+    /// <summary>
+    /// Drops the identifications of files whose bytes have changed, so they are
+    /// asked about again once they have settled.
+    /// </summary>
+    /// <remarks>
+    /// One statement per file rather than one for the list: a delete matching
+    /// against a collection parameter is not a shape the SQLite provider
+    /// translates. That is affordable here because a file that changed between
+    /// two scans is a file being written, and there are a handful of those at a
+    /// time — never the whole library, which is why this is not in the path that
+    /// records a file for the first time.
+    /// </remarks>
+    private async Task ForgetWhatTheyWereAsync(
+        IReadOnlyList<int> changed,
+        CancellationToken cancellationToken)
+    {
+        foreach (var fileId in changed)
+        {
+            await context.FileIdentifications
+                .Where(identification => identification.DiscoveredFileId == fileId)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
     }
 
     /// <summary>

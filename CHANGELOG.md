@@ -44,7 +44,27 @@ written or is still arriving. A file counts as finished only once two scans have
 seen it unchanged, so a download in progress is waited out rather than acted on,
 and a directory that has gone away says so instead of appearing empty. Nothing
 in the download directories is read, moved, renamed or written by this: the tool
-finds files and reports them, and identification and filing are still to come.
+finds files and reports them.
+
+The tool now works out what those files are. Once a download has finished, it
+asks prdb — in batches rather than one request per file, so a library of
+thousands costs a handful of requests — and the Downloads screen says what each
+file was recognised as and which rung of the ladder got there. Four answers are
+possible and they are shown as four different things: the video, several videos
+that fit equally well and no choice made between them, the site alone when the
+scene could not be worked out, and nothing. A file is asked about once; it is
+asked again only if its contents change. prdb being down, refusing the key or
+running out of quota stops the run and says so, and leaves every file exactly as
+it was — nothing is ever written on a partial answer. Perceptual hashes are
+computed in the background, one file at a time, for the files an exact hash did
+not settle, and those files are then asked about again.
+
+Onboarding and the Downloads screen both say plainly that the name, size and
+hashes of every file examined are sent to prdb. That is what identifying them
+is; the files themselves are never uploaded.
+
+Nothing is filed yet: this version works out what it has found and moves
+nothing.
 
 The stack is .NET 10 on the backend, React with Vite in the browser, and SQLite
 for local state. The first release targets Jellyfin; Plex and Emby follow after

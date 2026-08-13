@@ -1,5 +1,7 @@
 using System.Globalization;
 
+using Prdb.Ordeno.Core.Identification;
+
 namespace Prdb.Ordeno.Core.Scanning;
 
 /// <summary>
@@ -29,6 +31,11 @@ public sealed record ScannedSource(
 /// The path below its source directory, which is what a person recognises. The
 /// full path is on the row too, because a bug report quotes that one.
 /// </param>
+/// <param name="Recognised">
+/// What prdb said about it, or <c>null</c> if it has not been asked about yet —
+/// which is every file that has not settled, and every settled one the next run
+/// has not reached.
+/// </param>
 public sealed record ScannedFile(
     int Id,
     int SourceId,
@@ -36,7 +43,8 @@ public sealed record ScannedFile(
     string Name,
     long SizeBytes,
     bool Ready,
-    DateTimeOffset FirstSeenAt);
+    DateTimeOffset FirstSeenAt,
+    Recognition? Recognised = null);
 
 /// <summary>
 /// What the tool currently believes is in the download directories. Built from
@@ -48,10 +56,15 @@ public sealed record ScannedFile(
 /// over an existing library is thousands of rows and a screen full of them helps
 /// nobody — the counts carry the scale, the list carries the examples.
 /// </param>
+/// <param name="Recognition">
+/// How far the files have got with prdb. Counted over the whole table rather
+/// than over <paramref name="Files"/>, which is only the visible end of it.
+/// </param>
 public sealed record Inventory(
     bool OnboardingComplete,
     IReadOnlyList<ScannedSource> Sources,
-    IReadOnlyList<ScannedFile> Files)
+    IReadOnlyList<ScannedFile> Files,
+    RecognitionSummary Recognition)
 {
     /// <summary>How many files the inventory sends to the browser at most.</summary>
     public const int Limit = 200;
@@ -118,15 +131,16 @@ public sealed record Inventory(
     }
 
     /// <summary>
-    /// The tool finds files and stops there in this version. Saying so is not
-    /// modesty — someone who reads a list of their downloads in a tool that
-    /// promises to file them will otherwise conclude that it is filing them, and
-    /// report the absence months later as data loss.
+    /// The tool finds files and asks what they are, and stops there in this
+    /// version. Saying so is not modesty — someone who reads a list of their
+    /// downloads, each with the video it was recognised as next to it, will
+    /// otherwise conclude that it is filing them, and report the absence months
+    /// later as data loss.
     /// </summary>
     private string NotYet =>
         Total == 0
             ? string.Empty
-            : " Nothing is identified or filed yet: this version only reports what it finds.";
+            : " Nothing is filed yet: this version works out what it has found and moves nothing.";
 
     private static string Count(int number, string singular, string? plural = null) =>
         number == 1 ? $"{Number(number)} {singular}" : $"{Number(number)} {plural ?? singular + "s"}";

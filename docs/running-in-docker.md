@@ -15,15 +15,21 @@ Docker itself.
 
 ## Where this stands
 
-**This version sets itself up and looks, and stops there.** It takes a
-password, checks your prdb API key, checks the directories you point it at, and
-from then on it walks your download directories every few minutes and shows you
-the videos it finds. It does not yet identify, rename or move anything — that is
+**This version sets itself up, looks, works out what it found, and stops
+there.** It takes a password, checks your prdb API key, checks the directories
+you point it at, and from then on it walks your download directories every few
+minutes, shows you the videos it finds, and asks prdb what each of them is once
+it has finished downloading. It does not yet rename or move anything — that is
 what the first release adds, and the rest of this document describes the tool
 that release will be.
 
 Nothing in your download directories is written, renamed or deleted by this
-version. It reads directory listings and reports what is in them.
+version. It reads directory listings, reads each file to hash it, and reports
+what it was told.
+
+Working out what a file is means sending its name, its size and hashes of it to
+prdb. That is what identification is, and it happens for every file the tool
+examines; the files themselves are never uploaded.
 
 Running it now still answers something worth knowing: whether it works on your
 hardware. The identity it files under, the mounts, whether the library you
@@ -91,6 +97,18 @@ That screen distinguishes a video that has finished downloading from one that is
 still arriving, and it waits for the second kind rather than acting on it. A
 file counts as finished only once two scans in a row have seen it unchanged, so
 expect a new download to take a few minutes to appear as ready.
+
+Once a file is ready the tool asks prdb what it is, and the answer appears on
+the same screen: the video, several videos that fit equally well with no choice
+made between them, the site alone when the scene could not be worked out, or
+nothing. All four are shown as what they are. If prdb is unreachable or your
+quota is spent, the tool says so, changes nothing, and tries again later.
+
+Behind that, one file at a time, it computes a perceptual hash of the videos an
+exact hash did not identify. That is the one part of this tool that costs real
+CPU — it decodes twenty-five frames per file with `ffmpeg` — so on a first run
+over a large library expect it to be busy in the background for a while. Nothing
+waits for it, and it does not run for files prdb has already recognised.
 
 ## The mounts
 
