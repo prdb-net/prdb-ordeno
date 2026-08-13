@@ -65,6 +65,28 @@ One media server: **Jellyfin**, with its layout validated against a real library
 Emby follow on the same evidence. Sidecar writing gets a seam, not a second
 implementation built for a server nobody has run yet.
 
+That validation is done, and the layout it produced is
+[`docs/jellyfin-layout.md`](docs/jellyfin-layout.md): a Movies library, one
+directory per scene, `movie.nfo`, and a set of rules that are narrower than the
+documentation suggests. Four of them bite hard enough to name here, because a
+writer that misses one produces a library that looks broken rather than one that
+fails:
+
+- `<premiered>` is parsed against **exactly** `yyyy-MM-dd`. An ISO timestamp is
+  silently discarded, along with the production year.
+- A performer must be an `<actor>` element with a `<name>` child, and `<type>`
+  must be `Actor` — text directly inside `<actor>` is dropped, and an
+  unrecognised type produces a person of kind `Unknown`.
+- A second quality must be named `<scene> - [2160p].mkv`. Without the bracketed
+  form the two files become two entries with identical names.
+- The sidecar is XML and a title is arbitrary text, so `&`, `<` and `>` have to
+  be escaped. An unescaped one makes Jellyfin discard the whole file without
+  saying so.
+
+`docs/jellyfin-probe/` is the harness that established all of this against
+Jellyfin 10.11.11. Re-run it before changing anything layout-shaped, and against
+a new Jellyfin before claiming the layout still holds.
+
 ## Watching the download directories
 
 Source directories are walked on a timer, not watched through the filesystem:
@@ -220,6 +242,9 @@ CONTRIBUTING.md   how to report a bug, how to shape a commit
 CHANGELOG.md      Keep a Changelog, Unreleased at the top
 docs/adr/         decisions, and the alternatives they ruled out
 docs/agents/      where issues live, where domain docs live
+
+docs/jellyfin-layout.md  the layout the tool files into, and the evidence for it
+docs/jellyfin-probe/     the harness that produced that evidence, and its output
 
 Dockerfile          frontend, publish, and a Debian runtime with ffmpeg in it
 docker/             the entrypoint, and the test that starts a built image

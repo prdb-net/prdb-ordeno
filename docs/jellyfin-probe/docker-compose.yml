@@ -1,0 +1,26 @@
+# A throwaway Jellyfin for validating the layout in docs/jellyfin-layout.md.
+# Pinned, because the answers are only worth anything next to the version they
+# were observed on.
+#
+# ORDENO_FIXTURES is the directory make-fixtures.sh wrote to. Keep it outside
+# this repository: it is a hundred generated files that the generator can
+# recreate at any time.
+#
+# The fixtures are mounted read-only. Nothing Jellyfin does may change what the
+# observation was made against, and a library that writes metadata back into the
+# media directory would quietly rewrite the evidence.
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:10.11.11
+    container_name: ordeno-jellyfin-probe
+    user: "${ORDENO_PROBE_UID:-1000}:${ORDENO_PROBE_GID:-1000}"
+    ports:
+      - "127.0.0.1:8096:8096"
+    volumes:
+      - ./state/config:/config
+      - ./state/cache:/cache
+      - ${ORDENO_FIXTURES:?set ORDENO_FIXTURES to the directory make-fixtures.sh wrote to}:/fixtures:ro
+    environment:
+      - JELLYFIN_PublishedServerUrl=http://127.0.0.1:8096
+    restart: "no"

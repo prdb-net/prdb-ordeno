@@ -46,3 +46,6 @@ CLAUDE.local.md
 # Logs and temporary files
 *.log
 tmp/
+
+# The throwaway Jellyfin's own state, written by docs/jellyfin-probe
+docs/jellyfin-probe/state/

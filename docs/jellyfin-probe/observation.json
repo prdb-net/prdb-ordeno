@@ -1,0 +1,2085 @@
+{
+  "serverVersion": "10.11.11",
+  "libraries": [
+    {
+      "Name": "Probe Movies",
+      "CollectionType": "movies",
+      "Locations": [
+        "/fixtures/movies"
+      ],
+      "ItemId": "72e61b01be91caa4b1d6180a12444160"
+    },
+    {
+      "Name": "Probe Home Videos",
+      "CollectionType": "homevideos",
+      "Locations": [
+        "/fixtures/homevideos"
+      ],
+      "ItemId": "5c9d906f36a528328994fac8ddf94ff2"
+    }
+  ],
+  "items": [
+    {
+      "Name": "Actor Shapes",
+      "Type": "Movie",
+      "Id": "d988ae7f74bfe79b15989f197f46823f",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-08 - Actor Shapes/Example Studio - 2025-11-08 - Actor Shapes.mkv",
+      "SortName": "actor shapes",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [
+        {
+          "Name": "Shape A Full",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": "34f0c99c8e53bf8aa362d85d1912f39e"
+        },
+        {
+          "Name": "Shape F Ordered Last",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Shape B Name Only",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Shape D Typed Director",
+          "Role": "",
+          "Type": "Director",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Shape E Unknown Type",
+          "Role": "",
+          "Type": "Unknown",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-08 - Actor Shapes",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-08 - Actor Shapes/Example Studio - 2025-11-08 - Actor Shapes.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 01 poster.jpg",
+      "Type": "Movie",
+      "Id": "70613d58e8494fb39988a1f4cbc26e22",
+      "Path": "/fixtures/movies/Art Probe 01 poster.jpg/Art Probe 01 poster.jpg.mkv",
+      "SortName": "art probe 0000000001 poster jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 01 poster.jpg",
+          "Path": "/fixtures/movies/Art Probe 01 poster.jpg/Art Probe 01 poster.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 02 folder.jpg",
+      "Type": "Movie",
+      "Id": "a61f9bec10e15fd1188a19a1850ffd56",
+      "Path": "/fixtures/movies/Art Probe 02 folder.jpg/Art Probe 02 folder.jpg.mkv",
+      "SortName": "art probe 0000000002 folder jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 02 folder.jpg",
+          "Path": "/fixtures/movies/Art Probe 02 folder.jpg/Art Probe 02 folder.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 03 cover.jpg",
+      "Type": "Movie",
+      "Id": "3e16f42b335ddf98fb82bcb8a87c32a0",
+      "Path": "/fixtures/movies/Art Probe 03 cover.jpg/Art Probe 03 cover.jpg.mkv",
+      "SortName": "art probe 0000000003 cover jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 03 cover.jpg",
+          "Path": "/fixtures/movies/Art Probe 03 cover.jpg/Art Probe 03 cover.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 04 default.jpg",
+      "Type": "Movie",
+      "Id": "5362eacf5c82178f653b20a734ee8223",
+      "Path": "/fixtures/movies/Art Probe 04 default.jpg/Art Probe 04 default.jpg.mkv",
+      "SortName": "art probe 0000000004 default jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 04 default.jpg",
+          "Path": "/fixtures/movies/Art Probe 04 default.jpg/Art Probe 04 default.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 05 movie.jpg",
+      "Type": "Movie",
+      "Id": "d7f61babd4306cd94a43be5d3d1a2958",
+      "Path": "/fixtures/movies/Art Probe 05 movie.jpg/Art Probe 05 movie.jpg.mkv",
+      "SortName": "art probe 0000000005 movie jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 05 movie.jpg",
+          "Path": "/fixtures/movies/Art Probe 05 movie.jpg/Art Probe 05 movie.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 06 fanart.jpg",
+      "Type": "Movie",
+      "Id": "d0b4e8dbd581eeb0dd208ad1703995c1",
+      "Path": "/fixtures/movies/Art Probe 06 fanart.jpg/Art Probe 06 fanart.jpg.mkv",
+      "SortName": "art probe 0000000006 fanart jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 1,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 06 fanart.jpg",
+          "Path": "/fixtures/movies/Art Probe 06 fanart.jpg/Art Probe 06 fanart.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 07 backdrop.jpg",
+      "Type": "Movie",
+      "Id": "35f7bcc484e16a0c5f213e940b28c7bd",
+      "Path": "/fixtures/movies/Art Probe 07 backdrop.jpg/Art Probe 07 backdrop.jpg.mkv",
+      "SortName": "art probe 0000000007 backdrop jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 1,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 07 backdrop.jpg",
+          "Path": "/fixtures/movies/Art Probe 07 backdrop.jpg/Art Probe 07 backdrop.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 08 background.jpg",
+      "Type": "Movie",
+      "Id": "fed6852c8292a5c304dfa2a57746e67a",
+      "Path": "/fixtures/movies/Art Probe 08 background.jpg/Art Probe 08 background.jpg.mkv",
+      "SortName": "art probe 0000000008 background jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 1,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 08 background.jpg",
+          "Path": "/fixtures/movies/Art Probe 08 background.jpg/Art Probe 08 background.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 09 art.jpg",
+      "Type": "Movie",
+      "Id": "110da6e08fcba8b18adb37e0eeba91e5",
+      "Path": "/fixtures/movies/Art Probe 09 art.jpg/Art Probe 09 art.jpg.mkv",
+      "SortName": "art probe 0000000009 art jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 1,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 09 art.jpg",
+          "Path": "/fixtures/movies/Art Probe 09 art.jpg/Art Probe 09 art.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 10 logo.png",
+      "Type": "Movie",
+      "Id": "6f641e6ba578cc0e1d14a17735760923",
+      "Path": "/fixtures/movies/Art Probe 10 logo.png/Art Probe 10 logo.png.mkv",
+      "SortName": "art probe 0000000010 logo png",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Logo"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 10 logo.png",
+          "Path": "/fixtures/movies/Art Probe 10 logo.png/Art Probe 10 logo.png.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 11 clearlogo.png",
+      "Type": "Movie",
+      "Id": "2dc6aa72108b5a0cb929c99c6a83e0c8",
+      "Path": "/fixtures/movies/Art Probe 11 clearlogo.png/Art Probe 11 clearlogo.png.mkv",
+      "SortName": "art probe 0000000011 clearlogo png",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Logo"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 11 clearlogo.png",
+          "Path": "/fixtures/movies/Art Probe 11 clearlogo.png/Art Probe 11 clearlogo.png.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 12 clearart.png",
+      "Type": "Movie",
+      "Id": "0cc7518098606bdb304e32fb5645b24a",
+      "Path": "/fixtures/movies/Art Probe 12 clearart.png/Art Probe 12 clearart.png.mkv",
+      "SortName": "art probe 0000000012 clearart png",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Art"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 12 clearart.png",
+          "Path": "/fixtures/movies/Art Probe 12 clearart.png/Art Probe 12 clearart.png.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 13 disc.jpg",
+      "Type": "Movie",
+      "Id": "69d4c3651eb25ed0a969b0351dfd1827",
+      "Path": "/fixtures/movies/Art Probe 13 disc.jpg/Art Probe 13 disc.jpg.mkv",
+      "SortName": "art probe 0000000013 disc jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Disc"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 13 disc.jpg",
+          "Path": "/fixtures/movies/Art Probe 13 disc.jpg/Art Probe 13 disc.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 14 banner.jpg",
+      "Type": "Movie",
+      "Id": "8c817952069ec8afd1203c10cc9327e8",
+      "Path": "/fixtures/movies/Art Probe 14 banner.jpg/Art Probe 14 banner.jpg.mkv",
+      "SortName": "art probe 0000000014 banner jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Banner"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 14 banner.jpg",
+          "Path": "/fixtures/movies/Art Probe 14 banner.jpg/Art Probe 14 banner.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 15 thumb.jpg",
+      "Type": "Movie",
+      "Id": "18e1e46bd387d43982f8bff6363e53f7",
+      "Path": "/fixtures/movies/Art Probe 15 thumb.jpg/Art Probe 15 thumb.jpg.mkv",
+      "SortName": "art probe 0000000015 thumb jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Thumb"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 15 thumb.jpg",
+          "Path": "/fixtures/movies/Art Probe 15 thumb.jpg/Art Probe 15 thumb.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 16 landscape.jpg",
+      "Type": "Movie",
+      "Id": "c7a57809725e43d37401cf51f5de848c",
+      "Path": "/fixtures/movies/Art Probe 16 landscape.jpg/Art Probe 16 landscape.jpg.mkv",
+      "SortName": "art probe 0000000016 landscape jpg",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Thumb"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 16 landscape.jpg",
+          "Path": "/fixtures/movies/Art Probe 16 landscape.jpg/Art Probe 16 landscape.jpg.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 90 suffix form",
+      "Type": "Movie",
+      "Id": "b85090e1efdc40d52e690266fcf7c65f",
+      "Path": "/fixtures/movies/Art Probe 90 suffix form/Art Probe 90 suffix form.mkv",
+      "SortName": "art probe 0000000090 suffix form",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 2,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 90 suffix form",
+          "Path": "/fixtures/movies/Art Probe 90 suffix form/Art Probe 90 suffix form.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Art Probe 91 nothing",
+      "Type": "Movie",
+      "Id": "4498459f689629056fd6704b6079d9b7",
+      "Path": "/fixtures/movies/Art Probe 91 nothing/Art Probe 91 nothing.mkv",
+      "SortName": "art probe 0000000091 nothing",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Art Probe 91 nothing",
+          "Path": "/fixtures/movies/Art Probe 91 nothing/Art Probe 91 nothing.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Baseline Complete",
+      "Type": "Video",
+      "Id": "72214fd82950345720d261c1c12f8e48",
+      "Path": "/fixtures/homevideos/Example Studio - 2025-11-03 - Baseline Complete/Example Studio - 2025-11-03 - Baseline Complete.mkv",
+      "SortName": "baseline complete (sort)",
+      "OriginalTitle": "Baseline Complete (original)",
+      "PremiereDate": "2025-11-03T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 1,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-03 - Baseline Complete",
+          "Path": "/fixtures/homevideos/Example Studio - 2025-11-03 - Baseline Complete/Example Studio - 2025-11-03 - Baseline Complete.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Baseline Complete",
+      "Type": "Movie",
+      "Id": "b5bc1b70ed91a282dec3e023d699bd1c",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-03 - Baseline Complete/Example Studio - 2025-11-03 - Baseline Complete.mkv",
+      "SortName": "baseline complete (sort)",
+      "OriginalTitle": "Baseline Complete (original)",
+      "PremiereDate": "2025-11-03T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [
+        "Art",
+        "Banner",
+        "Logo",
+        "Primary",
+        "Thumb"
+      ],
+      "BackdropCount": 1,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-03 - Baseline Complete",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-03 - Baseline Complete/Example Studio - 2025-11-03 - Baseline Complete.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Accents Amélie Bär Œuvre",
+      "Type": "Movie",
+      "Id": "dc831e2f2b4dd42bf28035cb19804d07",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-13 - Chars Accents Amélie Bär Œuvre/Example Studio - 2025-12-13 - Chars Accents Amélie Bär Œuvre.mkv",
+      "SortName": "chars accents amelie bar oeuvre",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-13 - Chars Accents Amélie Bär Œuvre",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-13 - Chars Accents Amélie Bär Œuvre/Example Studio - 2025-12-13 - Chars Accents Amélie Bär Œuvre.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Ampersand A&B",
+      "Type": "Movie",
+      "Id": "1cc5d755806f8262f4509bc7d68433f0",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-07 - Chars Ampersand A&B/Example Studio - 2025-12-07 - Chars Ampersand A&B.mkv",
+      "SortName": "chars ampersand ab",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-07 - Chars Ampersand A&B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-07 - Chars Ampersand A&B/Example Studio - 2025-12-07 - Chars Ampersand A&B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Angles A<B>C",
+      "Type": "Movie",
+      "Id": "f26db01587619b731b4c7fb14b5ad6d3",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-05 - Chars Angles A<B>C/Example Studio - 2025-12-05 - Chars Angles A<B>C.mkv",
+      "SortName": "chars angles a<b>c",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-05 - Chars Angles A<B>C",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-05 - Chars Angles A<B>C/Example Studio - 2025-12-05 - Chars Angles A<B>C.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Apostrophe A'B",
+      "Type": "Movie",
+      "Id": "d16667099117fb0c518f847f9e8ae646",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-11 - Chars Apostrophe A'B/Example Studio - 2025-12-11 - Chars Apostrophe A'B.mkv",
+      "SortName": "chars apostrophe ab",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-11 - Chars Apostrophe A'B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-11 - Chars Apostrophe A'B/Example Studio - 2025-12-11 - Chars Apostrophe A'B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Asterisk A*B",
+      "Type": "Movie",
+      "Id": "af1850d0bf6f0682f99f1d9a9550c73b",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-03 - Chars Asterisk A*B/Example Studio - 2025-12-03 - Chars Asterisk A*B.mkv",
+      "SortName": "chars asterisk a*b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-03 - Chars Asterisk A*B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-03 - Chars Asterisk A*B/Example Studio - 2025-12-03 - Chars Asterisk A*B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Brackets A[B]C",
+      "Type": "Movie",
+      "Id": "f55147e2f7181f15e2ea173bac42811f",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-12 - Chars Brackets A[B]C/Example Studio - 2025-12-12 - Chars Brackets A[B]C.mkv",
+      "SortName": "chars brackets a[b]c",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-12 - Chars Brackets A[B]C",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-12 - Chars Brackets A[B]C/Example Studio - 2025-12-12 - Chars Brackets A[B]C.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Cjk 日本語のタイトル",
+      "Type": "Movie",
+      "Id": "cc69be16533b1fb465110bdf2dde88e9",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-14 - Chars Cjk 日本語のタイトル/Example Studio - 2025-12-14 - Chars Cjk 日本語のタイトル.mkv",
+      "SortName": "chars cjk ri ben yunotaitoru",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-14 - Chars Cjk 日本語のタイトル",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-14 - Chars Cjk 日本語のタイトル/Example Studio - 2025-12-14 - Chars Cjk 日本語のタイトル.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Colon A:B",
+      "Type": "Movie",
+      "Id": "7d32ddea2cf1d8a3b26a317d4edd7bd7",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-01 - Chars Colon A:B/Example Studio - 2025-12-01 - Chars Colon A:B.mkv",
+      "SortName": "chars colon a:b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-01 - Chars Colon A:B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-01 - Chars Colon A:B/Example Studio - 2025-12-01 - Chars Colon A:B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars DoubleQuote A\"B",
+      "Type": "Movie",
+      "Id": "3ee8f37bcab22e74c7fbe5f1a62e8126",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-06 - Chars DoubleQuote A\"B/Example Studio - 2025-12-06 - Chars DoubleQuote A\"B.mkv",
+      "SortName": "chars doublequote a\"b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-06 - Chars DoubleQuote A\"B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-06 - Chars DoubleQuote A\"B/Example Studio - 2025-12-06 - Chars DoubleQuote A\"B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars EmDash A — B",
+      "Type": "Movie",
+      "Id": "c2ca57b4222d6ddac5294aae7b6c4840",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-16 - Chars EmDash A — B/Example Studio - 2025-12-16 - Chars EmDash A — B.mkv",
+      "SortName": "chars emdash  b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-16 - Chars EmDash A — B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-16 - Chars EmDash A — B/Example Studio - 2025-12-16 - Chars EmDash A — B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Emoji A 🎬 B",
+      "Type": "Movie",
+      "Id": "6c16965209f379c3a8cb0431eec155dd",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-15 - Chars Emoji A 🎬 B/Example Studio - 2025-12-15 - Chars Emoji A 🎬 B.mkv",
+      "SortName": "chars emoji 🎬 b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-15 - Chars Emoji A 🎬 B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-15 - Chars Emoji A 🎬 B/Example Studio - 2025-12-15 - Chars Emoji A 🎬 B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Hash A#B",
+      "Type": "Movie",
+      "Id": "ba46843307f82247e7bf2e7bd014b8b2",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-08 - Chars Hash A#B/Example Studio - 2025-12-08 - Chars Hash A#B.mkv",
+      "SortName": "chars hash a#b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-08 - Chars Hash A#B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-08 - Chars Hash A#B/Example Studio - 2025-12-08 - Chars Hash A#B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Percent A%B",
+      "Type": "Movie",
+      "Id": "c3d1d8c90785db65a21a046c9adca912",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-09 - Chars Percent A%B/Example Studio - 2025-12-09 - Chars Percent A%B.mkv",
+      "SortName": "chars percent a b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-09 - Chars Percent A%B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-09 - Chars Percent A%B/Example Studio - 2025-12-09 - Chars Percent A%B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Pipe A|B",
+      "Type": "Movie",
+      "Id": "496e64838b4d3cc3781833900c539f61",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-04 - Chars Pipe A|B/Example Studio - 2025-12-04 - Chars Pipe A|B.mkv",
+      "SortName": "chars pipe a|b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-04 - Chars Pipe A|B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-04 - Chars Pipe A|B/Example Studio - 2025-12-04 - Chars Pipe A|B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Plus A+B",
+      "Type": "Movie",
+      "Id": "fabca8bd6b630eab2ee42b18b5f1b617",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-10 - Chars Plus A+B/Example Studio - 2025-12-10 - Chars Plus A+B.mkv",
+      "SortName": "chars plus a b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-10 - Chars Plus A+B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-10 - Chars Plus A+B/Example Studio - 2025-12-10 - Chars Plus A+B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Chars Question A?B",
+      "Type": "Movie",
+      "Id": "7c3c84380cbab081b3767fd1a5f03bee",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-02 - Chars Question A?B/Example Studio - 2025-12-02 - Chars Question A?B.mkv",
+      "SortName": "chars question a?b",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-02 - Chars Question A?B",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-02 - Chars Question A?B/Example Studio - 2025-12-02 - Chars Question A?B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Date Format Dots",
+      "Type": "Movie",
+      "Id": "aa58e55ce9a8db335bed1c5e7e03cea2",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format Dots/Example Studio - 2025-11-07 - Date Format Dots.mkv",
+      "SortName": "date format dots",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-07 - Date Format Dots",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format Dots/Example Studio - 2025-11-07 - Date Format Dots.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Date Format Iso",
+      "Type": "Movie",
+      "Id": "d41ed17c4b9bc8016628e917bc6c69dd",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format Iso/Example Studio - 2025-11-07 - Date Format Iso.mkv",
+      "SortName": "date format iso",
+      "OriginalTitle": null,
+      "PremiereDate": "2025-11-07T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-07 - Date Format Iso",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format Iso/Example Studio - 2025-11-07 - Date Format Iso.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Date Format IsoWithTime",
+      "Type": "Movie",
+      "Id": "4abb96a6f67f4ad32dc2f250554725af",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format IsoWithTime/Example Studio - 2025-11-07 - Date Format IsoWithTime.mkv",
+      "SortName": "date format isowithtime",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-07 - Date Format IsoWithTime",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format IsoWithTime/Example Studio - 2025-11-07 - Date Format IsoWithTime.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Date Format LongForm",
+      "Type": "Movie",
+      "Id": "4b48b81649385de3faa673c1c8ded1e8",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format LongForm/Example Studio - 2025-11-07 - Date Format LongForm.mkv",
+      "SortName": "date format longform",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-07 - Date Format LongForm",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format LongForm/Example Studio - 2025-11-07 - Date Format LongForm.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Date Format Slashes",
+      "Type": "Movie",
+      "Id": "b77271d3144a92ceaf0182f5a455404c",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format Slashes/Example Studio - 2025-11-07 - Date Format Slashes.mkv",
+      "SortName": "date format slashes",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-07 - Date Format Slashes",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-07 - Date Format Slashes/Example Studio - 2025-11-07 - Date Format Slashes.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Example Studio - 2025-11-03 - Baseline Complete",
+      "Type": "Folder",
+      "Id": "3050ec4c4ab4d5fefbbdb4eb8fd39111",
+      "Path": "/fixtures/homevideos/Example Studio - 2025-11-03 - Baseline Complete",
+      "SortName": "example studio  0020251103  baseline complete",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 1,
+      "MediaSourceCount": 0,
+      "MediaSources": []
+    },
+    {
+      "Name": "Example Studio - 2025-11-06 - No Sidecar At All",
+      "Type": "Movie",
+      "Id": "0eb371f8dfa3363bbcd0db68f1a90425",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-06 - No Sidecar At All/Example Studio - 2025-11-06 - No Sidecar At All.mkv",
+      "SortName": "example studio  0020251106  no sidecar at all",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-06 - No Sidecar At All",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-06 - No Sidecar At All/Example Studio - 2025-11-06 - No Sidecar At All.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Example Studio - 2025-11-12 - Two Versions Bare",
+      "Type": "Folder",
+      "Id": "1ee85ac700c8bb108c360b15b7ee6489",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-12 - Two Versions Bare",
+      "SortName": "example studio  0020251112  two versions bare",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 0,
+      "MediaSources": []
+    },
+    {
+      "Name": "Example Studio - 2025-11-12 - Two Versions Bare",
+      "Type": "Movie",
+      "Id": "7358a32d5d48be973685611482004241",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-12 - Two Versions Bare/Example Studio - 2025-11-12 - Two Versions Bare 1080p.mkv",
+      "SortName": "example studio  0020251112  two versions bare",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-12 - Two Versions Bare 1080p",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-12 - Two Versions Bare/Example Studio - 2025-11-12 - Two Versions Bare 1080p.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Example Studio - 2025-11-12 - Two Versions Bare",
+      "Type": "Movie",
+      "Id": "b3daf6069b5516fb0564dae48b6b1cba",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-12 - Two Versions Bare/Example Studio - 2025-11-12 - Two Versions Bare 2160p.mkv",
+      "SortName": "example studio  0020251112  two versions bare",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-12 - Two Versions Bare 2160p",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-12 - Two Versions Bare/Example Studio - 2025-11-12 - Two Versions Bare 2160p.mkv",
+          "Width": 3840
+        }
+      ]
+    },
+    {
+      "Name": "Example Studio - 2025-11-13 - Unrelated Pair",
+      "Type": "Movie",
+      "Id": "3b97692262a837b7937a18c3f9cd3cea",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-13 - Unrelated Pair/Example Studio - 2025-11-13 - Unrelated Pair.mkv",
+      "SortName": "example studio  0020251113  unrelated pair",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-13 - Unrelated Pair",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-13 - Unrelated Pair/Example Studio - 2025-11-13 - Unrelated Pair.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Example Studio - 2025-11-13 - Unrelated Pair",
+      "Type": "Folder",
+      "Id": "7c38e1c8b0628a95ec195a5bfdcd91ad",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-13 - Unrelated Pair",
+      "SortName": "example studio  0020251113  unrelated pair",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 0,
+      "MediaSources": []
+    },
+    {
+      "Name": "Example Studio - 2025-11-14 - A Different Scene Entirely",
+      "Type": "Movie",
+      "Id": "6e9f1ac9c7a52cffdcc55f86be6abdec",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-13 - Unrelated Pair/Example Studio - 2025-11-14 - A Different Scene Entirely.mkv",
+      "SortName": "example studio  0020251114  different scene entirely",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-14 - A Different Scene Entirely",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-13 - Unrelated Pair/Example Studio - 2025-11-14 - A Different Scene Entirely.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Example Studio - 2025-11-20 - Movie Nfo Only",
+      "Type": "Video",
+      "Id": "2c78ff13b1cc91f86a54b9a512a4e35f",
+      "Path": "/fixtures/homevideos/Example Studio - 2025-11-20 - Movie Nfo Only/Example Studio - 2025-11-20 - Movie Nfo Only.mkv",
+      "SortName": "example studio  0020251120  movie nfo only",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-20 - Movie Nfo Only",
+          "Path": "/fixtures/homevideos/Example Studio - 2025-11-20 - Movie Nfo Only/Example Studio - 2025-11-20 - Movie Nfo Only.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Example Studio - 2025-11-20 - Movie Nfo Only",
+      "Type": "Folder",
+      "Id": "f981947ab63d3281ab8e1640d6a718a5",
+      "Path": "/fixtures/homevideos/Example Studio - 2025-11-20 - Movie Nfo Only",
+      "SortName": "example studio  0020251120  movie nfo only",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 0,
+      "MediaSources": []
+    },
+    {
+      "Name": "homevideos",
+      "Type": "Folder",
+      "Id": "d244059fef84ebd9b1b47f34d3fff754",
+      "Path": "/fixtures/homevideos",
+      "SortName": "homevideos",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 0,
+      "MediaSources": []
+    },
+    {
+      "Name": "Long Name",
+      "Type": "Movie",
+      "Id": "1e3ad7f810716d0d61cec8f6f8a9adba",
+      "Path": "/fixtures/movies/Example Studio - 2025-12-31 - Long Name xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Example Studio - 2025-12-31 - Long Name xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.mkv",
+      "SortName": "long name",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-12-31 - Long Name xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "Path": "/fixtures/movies/Example Studio - 2025-12-31 - Long Name xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Example Studio - 2025-12-31 - Long Name xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "MOVIE DOT NFO IN A SHARED FOLDER",
+      "Type": "Movie",
+      "Id": "1bb76edee09f56eca8438e0544bd1759",
+      "Path": "/fixtures/movies/Flat Site Directory/Flat Site Directory - 2025-11-09 - Flat Scene One.mkv",
+      "SortName": "movie dot nfo in shared folder",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [
+        "Primary"
+      ],
+      "BackdropCount": 0,
+      "MediaSourceCount": 2,
+      "MediaSources": [
+        {
+          "Name": "2025-11-09 - Flat Scene One",
+          "Path": "/fixtures/movies/Flat Site Directory/Flat Site Directory - 2025-11-09 - Flat Scene One.mkv",
+          "Width": 1920
+        },
+        {
+          "Name": "2025-11-10 - Flat Scene Two",
+          "Path": "/fixtures/movies/Flat Site Directory/Flat Site Directory - 2025-11-10 - Flat Scene Two.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Movie Library Read movie dot nfo",
+      "Type": "Movie",
+      "Id": "7349f20e3a36bc64f759bed4fa28d07c",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-21 - Movie Nfo Only/Example Studio - 2025-11-21 - Movie Nfo Only.mkv",
+      "SortName": "movie library read movie dot nfo",
+      "OriginalTitle": null,
+      "PremiereDate": "2025-11-21T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-21 - Movie Nfo Only",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-21 - Movie Nfo Only/Example Studio - 2025-11-21 - Movie Nfo Only.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "movies",
+      "Type": "Folder",
+      "Id": "b1d7ec2ef1d9c05cc250007c4bd68065",
+      "Path": "/fixtures/movies",
+      "SortName": "movies",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 0,
+      "MediaSources": []
+    },
+    {
+      "Name": "Nested 2025-11-25 - Nested Scene A",
+      "Type": "Movie",
+      "Id": "b9f03811f199affc856a203f6393e5d1",
+      "Path": "/fixtures/movies/Nested Site/Nested Site - 2025-11-25 - Nested Scene A/Nested Site - 2025-11-25 - Nested Scene A.mkv",
+      "SortName": "nested 0000002025-0000000011-0000000025 - nested scene a (sort)",
+      "OriginalTitle": "Nested 2025-11-25 - Nested Scene A (original)",
+      "PremiereDate": "2025-11-25T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Nested Site - 2025-11-25 - Nested Scene A",
+          "Path": "/fixtures/movies/Nested Site/Nested Site - 2025-11-25 - Nested Scene A/Nested Site - 2025-11-25 - Nested Scene A.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Nested 2025-11-26 - Nested Scene B",
+      "Type": "Movie",
+      "Id": "cabbadeca37af9b9502ac67aec2885c6",
+      "Path": "/fixtures/movies/Nested Site/Nested Site - 2025-11-26 - Nested Scene B/Nested Site - 2025-11-26 - Nested Scene B.mkv",
+      "SortName": "nested 0000002025-0000000011-0000000026 - nested scene b (sort)",
+      "OriginalTitle": "Nested 2025-11-26 - Nested Scene B (original)",
+      "PremiereDate": "2025-11-26T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Nested Site - 2025-11-26 - Nested Scene B",
+          "Path": "/fixtures/movies/Nested Site/Nested Site - 2025-11-26 - Nested Scene B/Nested Site - 2025-11-26 - Nested Scene B.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Nested Site",
+      "Type": "Folder",
+      "Id": "6e74272a22fe4070211ba143ffa7b7f4",
+      "Path": "/fixtures/movies/Nested Site",
+      "SortName": "nested site",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 0,
+      "MediaSources": []
+    },
+    {
+      "Name": "Nested Two Versions",
+      "Type": "Movie",
+      "Id": "b5921164eb071e3df6f9d88ceaff19ed",
+      "Path": "/fixtures/movies/Nested Site/Nested Site - 2025-11-27 - Nested Two Versions/Nested Site - 2025-11-27 - Nested Two Versions - [2160p].mkv",
+      "SortName": "nested two versions (sort)",
+      "OriginalTitle": "Nested Two Versions (original)",
+      "PremiereDate": "2025-11-27T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 2,
+      "MediaSources": [
+        {
+          "Name": "[2160p]",
+          "Path": "/fixtures/movies/Nested Site/Nested Site - 2025-11-27 - Nested Two Versions/Nested Site - 2025-11-27 - Nested Two Versions - [2160p].mkv",
+          "Width": 3840
+        },
+        {
+          "Name": "[1080p]",
+          "Path": "/fixtures/movies/Nested Site/Nested Site - 2025-11-27 - Nested Two Versions/Nested Site - 2025-11-27 - Nested Two Versions - [1080p].mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Refresh Before The Edit",
+      "Type": "Movie",
+      "Id": "fc50555a6069a3e4515296cc5aa998d9",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-15 - Refresh Probe/Example Studio - 2025-11-15 - Refresh Probe.mkv",
+      "SortName": "refresh before the edit (sort)",
+      "OriginalTitle": "Refresh Before The Edit (original)",
+      "PremiereDate": "2025-11-15T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-15 - Refresh Probe",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-15 - Refresh Probe/Example Studio - 2025-11-15 - Refresh Probe.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Sidecar Says Something Else",
+      "Type": "Movie",
+      "Id": "f0423e67093bda4d79d0e71d8264627a",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-05 - Filename Says This/Example Studio - 2025-11-05 - Filename Says This.mkv",
+      "SortName": "sidecar says something else (sort)",
+      "OriginalTitle": "Sidecar Says Something Else (original)",
+      "PremiereDate": "2019-01-31T00:00:00.0000000Z",
+      "ProductionYear": 2019,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-05 - Filename Says This",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-05 - Filename Says This/Example Studio - 2025-11-05 - Filename Says This.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "TITLE FROM movie dot nfo",
+      "Type": "Movie",
+      "Id": "80d510826af283f7e9dac73efaa3aa7c",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-04 - Nfo Precedence/Example Studio - 2025-11-04 - Nfo Precedence.mkv",
+      "SortName": "title from movie dot nfo",
+      "OriginalTitle": null,
+      "PremiereDate": null,
+      "ProductionYear": null,
+      "Overview": null,
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [],
+      "Tags": [],
+      "ProviderIds": {},
+      "People": [],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 1,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-04 - Nfo Precedence",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-04 - Nfo Precedence/Example Studio - 2025-11-04 - Nfo Precedence.mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
+      "Name": "Two Versions Bracketed",
+      "Type": "Movie",
+      "Id": "5409cb749120ad01095f16ab3335d81f",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-11 - Two Versions Bracketed/Example Studio - 2025-11-11 - Two Versions Bracketed - [2160p].mkv",
+      "SortName": "two versions bracketed (sort)",
+      "OriginalTitle": "Two Versions Bracketed (original)",
+      "PremiereDate": "2025-11-11T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 2,
+      "MediaSources": [
+        {
+          "Name": "[2160p]",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-11 - Two Versions Bracketed/Example Studio - 2025-11-11 - Two Versions Bracketed - [2160p].mkv",
+          "Width": 3840
+        },
+        {
+          "Name": "[1080p]",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-11 - Two Versions Bracketed/Example Studio - 2025-11-11 - Two Versions Bracketed - [1080p].mkv",
+          "Width": 1920
+        }
+      ]
+    }
+  ],
+  "persons": [
+    {
+      "Name": "Full Shape Performer",
+      "Id": "e85221d5c29a86f60f3854b1a197684b",
+      "ImageTags": []
+    },
+    {
+      "Name": "Name Only Performer",
+      "Id": "880d5151c4d15e83dc85c01a91e04405",
+      "ImageTags": []
+    },
+    {
+      "Name": "Shape A Full",
+      "Id": "62421adf53d95e325ee33bc846d3db1b",
+      "ImageTags": [
+        "Primary"
+      ]
+    },
+    {
+      "Name": "Shape B Name Only",
+      "Id": "83cde41f1e586485be771fcae68bd6f1",
+      "ImageTags": []
+    },
+    {
+      "Name": "Shape D Typed Director",
+      "Id": "6f20459b7ae306a359bbb858fca9526f",
+      "ImageTags": []
+    },
+    {
+      "Name": "Shape E Unknown Type",
+      "Id": "633665aa8f55d1c035f3dd3e9e92611d",
+      "ImageTags": []
+    },
+    {
+      "Name": "Shape F Ordered Last",
+      "Id": "49c98ea990b29171a7e2a8dc16cbd1b9",
+      "ImageTags": []
+    }
+  ],
+  "studios": [
+    "Example Studio"
+  ]
+}
