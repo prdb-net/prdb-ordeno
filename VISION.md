@@ -65,10 +65,11 @@ far as the evidence takes it:
 - **Release name.** prdb knows the scene release names belonging to a video, so
   a file still carrying its original name resolves without a hash match.
 - **Site.** Failing both, the site is often still readable from the filename.
-  That is enough to file the video under the right site even though the specific
-  scene is unknown — which is a much better outcome than leaving it in the
-  download directory, and it is the case that most obviously separates this tool
-  from a naive hash matcher.
+  That is not enough to file the video — the layout needs a title to name a
+  directory after, and a file the tool cannot name stays where it is — but it is
+  the difference between a review queue entry that already knows where the file
+  came from and one that knows nothing at all about it, and it is the case that
+  most obviously separates this tool from a naive hash matcher.
 - **The user.** Everything left over goes to a review queue. Assigning a video
   by hand must be quick, because this is the queue that decides whether someone
   keeps using the tool after the first week.

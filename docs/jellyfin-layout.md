@@ -77,6 +77,12 @@ and, where a second quality of the same scene is kept
 The scene directory name is the unit everything else is derived from: the video
 file repeats it exactly, and the version label is appended to that repetition.
 
+Where prdb knows no release date, the middle segment is left out rather than
+filled — `<Site> - <Title>/` — and the sidecar carries no `<premiered>`. A file
+prdb cannot name at all is not filed. That is
+[ADR 0019](adr/0019-a-missing-date-drops-the-segment.md), decided on the
+measurements below rather than on a further run against the server.
+
 ## 1. Library type: Movies
 
 The library is declared as **Movies**. It is the only one of the candidate types
@@ -579,9 +585,12 @@ what talking to the server would cost, not whether to do it; that is
 [ADR 0018](adr/0018-the-jellyfin-connection-is-optional.md), which decided on an
 optional connection that the filing path never depends on.
 
+What a scene with no known date files as was left open here — every fixture had
+one — and was settled afterwards from these measurements rather than by another
+probe run: [ADR 0019](adr/0019-a-missing-date-drops-the-segment.md).
+
 Not settled, and deliberately out of scope here:
 
-- What a scene with no known date files as. Every fixture had one.
 - Whether the site directory should carry artwork or metadata of its own. It
   resolves as a plain `Folder`, and nothing was written at that level to find
   out what it would do with it.

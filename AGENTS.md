@@ -83,6 +83,12 @@ fails:
   be escaped. An unescaped one makes Jellyfin discard the whole file without
   saying so.
 
+Not every answer fills that shape. A scene with no release date drops the date
+segment from its name and gets a sidecar with no `<premiered>` and no guessed
+year, and a file prdb cannot name — including everything the site rung answered
+for — is **not filed at all** and waits in the review queue
+([ADR 0019](docs/adr/0019-a-missing-date-drops-the-segment.md)).
+
 `docs/jellyfin-probe/` is the harness that established all of this against
 Jellyfin 10.11.11. Re-run it before changing anything layout-shaped, and against
 a new Jellyfin before claiming the layout still holds.
