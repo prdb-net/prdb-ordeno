@@ -88,18 +88,18 @@ public sealed record OrdenoConfiguration(
                     + "library, so videos from them will be copied rather than renamed into place.",
             };
 
-            // A finished path speaks in the future too, and says why. Nothing
-            // watches anything yet: identification and filing are not built, and
-            // a sentence telling someone the tool is already working is one they
-            // act on — they stop watching, and later report as a bug that their
-            // downloads were never touched. Both of these go when filing lands,
-            // and not one release earlier.
+            // A finished setup does watch now — the scan runs on its own — but it
+            // still files nothing, and a sentence that lets someone believe
+            // otherwise is one they act on: they stop looking, and report months
+            // later as a bug that their downloads were never touched. The second
+            // half of this goes when filing lands, and not one release earlier.
             var ending = Complete
-                ? $"prdb-ordeno is set up and will watch {Sources.Count} {directories} and file what it "
+                ? $"prdb-ordeno is watching {Sources.Count} {directories} and will file what it "
                 : $"prdb-ordeno will watch {Sources.Count} {directories} and file what it ";
 
             var notYet = Complete
-                ? " Nothing is filed yet — identification and filing arrive with the first release."
+                ? " Nothing is identified or filed yet — that arrives with the first release. Until "
+                    + "then the tool reports what it finds and leaves it where it is."
                 : string.Empty;
 
             return ending

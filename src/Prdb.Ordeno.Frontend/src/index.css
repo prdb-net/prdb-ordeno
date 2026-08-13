@@ -158,3 +158,63 @@ button.quiet {
 .directories code {
   word-break: break-all;
 }
+
+/* Downloads or settings, once there is more than one thing to look at. */
+.views {
+  border-bottom: 1px solid var(--edge);
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+button.view {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--quiet);
+  margin: 0;
+  padding: 0.5rem 0.2rem;
+}
+
+button.view.chosen {
+  border-bottom-color: currentcolor;
+  color: inherit;
+}
+
+.files {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.files li {
+  border-top: 1px solid var(--edge);
+  padding: 0.5rem 0;
+}
+
+.files .row {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.files code {
+  word-break: break-all;
+}
+
+/* Whether a file has finished being written, said in one word. */
+.chip {
+  border: 1px solid var(--edge);
+  border-radius: 1rem;
+  color: var(--quiet);
+  flex: none;
+  font-size: 0.75rem;
+  padding: 0.05rem 0.5rem;
+}
+
+.chip.ready {
+  border-color: var(--right);
+  color: var(--right);
+}

@@ -244,7 +244,7 @@ public sealed class ConfigurationTests
 
         Assert.True(state.Complete);
         Assert.True(state.ApiKeySet);
-        Assert.Contains("is set up", state.WhatHappensNext, StringComparison.Ordinal);
+        Assert.Contains("is watching", state.WhatHappensNext, StringComparison.Ordinal);
         Assert.Contains("Jellyfin", state.WhatHappensNext, StringComparison.Ordinal);
 
         // Both directories are under one temporary root, so this is the fast

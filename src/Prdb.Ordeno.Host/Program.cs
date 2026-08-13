@@ -8,9 +8,11 @@ using Microsoft.OpenApi;
 
 using Prdb.Ordeno.Host.Access;
 using Prdb.Ordeno.Host.Configuration;
+using Prdb.Ordeno.Host.Scanning;
 using Prdb.Ordeno.Infrastructure.Access;
 using Prdb.Ordeno.Infrastructure.Configuration;
 using Prdb.Ordeno.Infrastructure.Persistence;
+using Prdb.Ordeno.Infrastructure.Scanning;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +24,11 @@ var dataDirectory = builder.Configuration["ORDENO_DATA_DIRECTORY"] ?? "/data";
 builder.Services.AddOrdenoPersistence(dataDirectory);
 builder.Services.AddOrdenoAccess();
 builder.Services.AddOrdenoConfiguration();
+builder.Services.AddOrdenoScanning();
+
+// The tool is set up once and left alone, so looking in the download
+// directories is something it does rather than something it is asked for.
+builder.Services.AddHostedService<ScanWorker>();
 
 // ADR 0014: this describes the API for the build that turns it into the
 // frontend's types. Nothing maps it as an endpoint — the document is written to
@@ -115,6 +122,7 @@ app.MapGet("/api/health", () => TypedResults.Ok(new HealthResponse("ok")))
 
 app.MapAccess();
 app.MapConfiguration();
+app.MapScanning();
 
 // ADR 0006: routing happens in the browser, so unknown paths return index.html
 // and let the frontend decide. Unknown API paths must not — a caller that asked

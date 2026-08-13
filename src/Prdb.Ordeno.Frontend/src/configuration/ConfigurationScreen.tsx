@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import {
   configuration as api,
@@ -15,15 +15,29 @@ type Run = (call: () => Promise<ConfigurationState>) => Promise<string | null>
  * The guided path of ADR 0009, and the settings page afterwards — one screen,
  * because it is one configuration. Before onboarding is finished the steps
  * appear one at a time; after it, they are all just fields that can be changed.
+ *
+ * The configuration arrives from the workspace around it rather than being
+ * fetched here: finishing the setup is what puts the rest of the tool within
+ * reach, so the answer has to be shared with whatever draws the navigation.
  */
-export default function ConfigurationScreen({ onSignedOut }: { onSignedOut: () => void }) {
-  const [state, setState] = useState<ConfigurationState | null>(null)
-  const [problem, setProblem] = useState<string | null>(null)
+export default function ConfigurationScreen({
+  initial,
+  onChanged,
+  onSignedOut,
+}: {
+  initial: ConfigurationState
+  onChanged: (state: ConfigurationState) => void
+  onSignedOut: () => void
+}) {
+  const [state, setState] = useState<ConfigurationState>(initial)
 
   const run = useCallback<Run>(
     async (call) => {
       try {
-        setState(await call())
+        const next = await call()
+        setState(next)
+        onChanged(next)
+
         return null
       } catch (error) {
         if (error instanceof SignedOut) {
@@ -36,6 +50,7 @@ export default function ConfigurationScreen({ onSignedOut }: { onSignedOut: () =
           // screen stays true to the tool even while it shows the complaint.
           if (error.configuration !== undefined) {
             setState(error.configuration)
+            onChanged(error.configuration)
           }
 
           return error.message
@@ -44,16 +59,8 @@ export default function ConfigurationScreen({ onSignedOut }: { onSignedOut: () =
         return 'Something went wrong.'
       }
     },
-    [onSignedOut],
+    [onChanged, onSignedOut],
   )
-
-  useEffect(() => {
-    void run(api.read).then(setProblem)
-  }, [run])
-
-  if (state === null) {
-    return <p className="hint">{problem ?? 'Asking the tool what it knows…'}</p>
-  }
 
   // While the path is being walked, a step appears once the one before it has
   // been answered. Afterwards there is no path left to walk, only settings.

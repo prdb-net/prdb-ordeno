@@ -37,6 +37,15 @@ afterwards the same screen is the settings — where it says plainly that nothin
 is filed yet either, because identification and filing are not built. The stored
 API key is never sent back to the browser and never written to a log.
 
+The tool now looks in the download directories. Every few minutes — and
+whenever the new Downloads screen is asked to — it walks each of them and
+reports the videos it finds, saying for each whether it has finished being
+written or is still arriving. A file counts as finished only once two scans have
+seen it unchanged, so a download in progress is waited out rather than acted on,
+and a directory that has gone away says so instead of appearing empty. Nothing
+in the download directories is read, moved, renamed or written by this: the tool
+finds files and reports them, and identification and filing are still to come.
+
 The stack is .NET 10 on the backend, React with Vite in the browser, and SQLite
 for local state. The first release targets Jellyfin; Plex and Emby follow after
 it.

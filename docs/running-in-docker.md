@@ -15,15 +15,20 @@ Docker itself.
 
 ## Where this stands
 
-**This version sets itself up and stops there.** It takes a password, checks
-your prdb API key, and checks the directories you point it at. It does not yet
-identify, rename or move anything — that is what the first release adds, and
-the rest of this document describes the tool that release will be.
+**This version sets itself up and looks, and stops there.** It takes a
+password, checks your prdb API key, checks the directories you point it at, and
+from then on it walks your download directories every few minutes and shows you
+the videos it finds. It does not yet identify, rename or move anything — that is
+what the first release adds, and the rest of this document describes the tool
+that release will be.
+
+Nothing in your download directories is written, renamed or deleted by this
+version. It reads directory listings and reports what is in them.
 
 Running it now still answers something worth knowing: whether it works on your
 hardware. The identity it files under, the mounts, whether the library you
-pointed it at is really writable — all of that is better found out before it
-starts touching files than after.
+pointed it at is really writable, whether it can actually see your downloads —
+all of that is better found out before it starts touching files than after.
 
 ## Before you start
 
@@ -79,7 +84,13 @@ path nothing is mounted at, a source it may not read and a library it may not
 write to each say so next to the field rather than at three in the morning.
 
 Until that is finished the tool scans nothing. Afterwards the same screen is
-where you change any of it.
+where you change any of it, and a second screen — Downloads — shows what the
+tool has found in the directories you gave it.
+
+That screen distinguishes a video that has finished downloading from one that is
+still arriving, and it waits for the second kind rather than acting on it. A
+file counts as finished only once two scans in a row have seen it unchanged, so
+expect a new download to take a few minutes to appear as ready.
 
 ## The mounts
 

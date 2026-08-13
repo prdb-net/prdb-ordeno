@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import AccessGate from './access/AccessGate'
 import { access, Refused, type AccessState } from './api/client'
-import ConfigurationScreen from './configuration/ConfigurationScreen'
+import Workspace from './Workspace'
 
 type Gate =
   | { state: 'asking' }
@@ -48,7 +48,7 @@ export default function App() {
 
       {gate.state === 'answered' &&
         (gate.access.authenticated ? (
-          <ConfigurationScreen onSignedOut={() => void ask()} />
+          <Workspace onSignedOut={() => void ask()} />
         ) : (
           <AccessGate
             passwordSet={gate.access.passwordSet}

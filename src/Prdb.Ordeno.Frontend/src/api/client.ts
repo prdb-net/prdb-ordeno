@@ -6,6 +6,9 @@ export type AccessState = components['schemas']['AccessState']
 export type ConfigurationState = components['schemas']['ConfigurationState']
 export type SourceState = components['schemas']['SourceState']
 export type LayoutOption = components['schemas']['LayoutOption']
+export type ScanState = components['schemas']['ScanState']
+export type ScannedFileState = components['schemas']['ScannedFileState']
+export type ScannedSourceState = components['schemas']['ScannedSourceState']
 
 type ConfigurationProblem = components['schemas']['ConfigurationProblem']
 type ProblemResponse = components['schemas']['ProblemResponse']
@@ -107,4 +110,15 @@ export const configuration = {
     request<ConfigurationState>('/api/configuration/target', { method: 'PUT', body: body({ path, layout }) }),
 
   finish: () => request<ConfigurationState>('/api/configuration/completion', { method: 'POST' }),
+}
+
+export const scanning = {
+  read: () => request<ScanState>('/api/scan'),
+
+  /**
+   * Asks for a scan. It answers as soon as one is under way rather than when it
+   * has finished — a first pass over an existing library takes minutes — so the
+   * screen keeps reading `read` until `scanning` goes back to false.
+   */
+  now: () => request<ScanState>('/api/scan', { method: 'POST' }),
 }
