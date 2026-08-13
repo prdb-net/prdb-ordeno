@@ -1617,6 +1617,110 @@
       ]
     },
     {
+      "Name": "Mixed Labels Plain First",
+      "Type": "Movie",
+      "Id": "0d5c16eacf71692df9426a2ef6706a15",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-16 - Mixed Labels Plain First/Example Studio - 2025-11-16 - Mixed Labels Plain First.mkv",
+      "SortName": "mixed labels plain first (sort)",
+      "OriginalTitle": "Mixed Labels Plain First (original)",
+      "PremiereDate": "2025-11-16T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 2,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-16 - Mixed Labels Plain First",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-16 - Mixed Labels Plain First/Example Studio - 2025-11-16 - Mixed Labels Plain First.mkv",
+          "Width": 1920
+        },
+        {
+          "Name": "[2160p]",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-16 - Mixed Labels Plain First/Example Studio - 2025-11-16 - Mixed Labels Plain First - [2160p].mkv",
+          "Width": 3840
+        }
+      ]
+    },
+    {
+      "Name": "Mixed Labels Plain Is Higher",
+      "Type": "Movie",
+      "Id": "6a474acec158c2a62bac8ebe907e93e5",
+      "Path": "/fixtures/movies/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher.mkv",
+      "SortName": "mixed labels plain is higher (sort)",
+      "OriginalTitle": "Mixed Labels Plain Is Higher (original)",
+      "PremiereDate": "2025-11-17T00:00:00.0000000Z",
+      "ProductionYear": 2025,
+      "Overview": "Plot text written by the fixture generator.",
+      "Studios": [
+        "Example Studio"
+      ],
+      "Genres": [
+        "Fixture Genre"
+      ],
+      "Tags": [
+        "fixture-tag"
+      ],
+      "ProviderIds": {
+        "prdb": "prdb-0001"
+      },
+      "People": [
+        {
+          "Name": "Full Shape Performer",
+          "Role": "Performer",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        },
+        {
+          "Name": "Name Only Performer",
+          "Role": "",
+          "Type": "Actor",
+          "PrimaryImageTag": null
+        }
+      ],
+      "ImageTags": [],
+      "BackdropCount": 0,
+      "MediaSourceCount": 2,
+      "MediaSources": [
+        {
+          "Name": "Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher.mkv",
+          "Width": 3840
+        },
+        {
+          "Name": "[1080p]",
+          "Path": "/fixtures/movies/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher - [1080p].mkv",
+          "Width": 1920
+        }
+      ]
+    },
+    {
       "Name": "MOVIE DOT NFO IN A SHARED FOLDER",
       "Type": "Movie",
       "Id": "1bb76edee09f56eca8438e0544bd1759",

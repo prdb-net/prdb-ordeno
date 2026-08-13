@@ -255,6 +255,27 @@ nfo_full "$d/movie.nfo" "Two Versions Bare" "2025-11-12"
 say "labels appended with a space and no bracket"
 
 # =======================================================================
+# 9b. One labelled file and one unlabelled one. This is not a hypothetical
+#     shape: a scene is filed once as <scene>.mkv, and a second quality
+#     turns up months later. Either the unlabelled file is accepted as a
+#     version, or the tool has to rename a file it already filed — which is
+#     a very different operation to have to perform.
+# =======================================================================
+echo "case 09b one labelled, one unlabelled"
+d="$movies/Example Studio - 2025-11-16 - Mixed Labels Plain First"
+mkdir -p "$d"
+video   "$d/Example Studio - 2025-11-16 - Mixed Labels Plain First.mkv"
+video4k "$d/Example Studio - 2025-11-16 - Mixed Labels Plain First - [2160p].mkv"
+nfo_full "$d/movie.nfo" "Mixed Labels Plain First" "2025-11-16"
+# And the other way round, in case which one is unlabelled matters.
+d="$movies/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher"
+mkdir -p "$d"
+video4k "$d/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher.mkv"
+video   "$d/Example Studio - 2025-11-17 - Mixed Labels Plain Is Higher - [1080p].mkv"
+nfo_full "$d/movie.nfo" "Mixed Labels Plain Is Higher" "2025-11-17"
+say "the unlabelled file carries the lower quality in one case and the higher in the other"
+
+# =======================================================================
 # 10. Two unrelated scenes sharing a folder: the case that must not merge.
 # =======================================================================
 echo "case 10 two unrelated scenes in one folder"

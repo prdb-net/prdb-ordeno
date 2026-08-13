@@ -15,8 +15,8 @@ running the exercise against a server.
 
 - **Jellyfin 10.11.11**, image `jellyfin/jellyfin:10.11.11`, started from
   `docs/jellyfin-probe/docker-compose.yml`.
-- A fixture library written by `docs/jellyfin-probe/make-fixtures.sh` — 17 groups
-  of cases, 57 directories, 163 files — mounted read-only, so that nothing
+- A fixture library written by `docs/jellyfin-probe/make-fixtures.sh` — 18 groups
+  of cases, 59 directories, 169 files — mounted read-only, so that nothing
   Jellyfin did could change what the observation was made against.
 - Two libraries over that fixture root, one declared **Movies** and one declared
   **Home Videos**, both with remote metadata and image providers switched off,
@@ -307,6 +307,38 @@ stripped when the display name is derived, so the library showed **two separate
 items with identical names** and no way to tell them apart. A writer that
 appends the quality without the ` - [...]` shape produces a library that looks
 broken.
+
+### The second quality arrives later
+
+A scene is filed once, as a plain `<scene>.mkv` with no label, because at that
+point there is only one of it. Months later a second quality turns up. The
+question that decides how much work that is: does the unlabelled file have to be
+renamed first, or is it accepted as a version alongside the labelled newcomer?
+
+**It is accepted, and no rename is needed.** Both orderings were tried — the
+unlabelled file carrying the lower quality, and carrying the higher — and both
+produced one movie with two media sources:
+
+| Directory contains | Result |
+| --- | --- |
+| `<scene>.mkv` (1080) + `<scene> - [2160p].mkv` | one item, two versions |
+| `<scene>.mkv` (2160) + `<scene> - [1080p].mkv` | one item, two versions |
+
+In both cases the **unlabelled file became the primary version**, regardless of
+which resolution it held.
+
+There is a cosmetic cost, and it is worth knowing before choosing. The version
+list shows each source by the part of the name that follows the directory name,
+so a labelled file appears as `[2160p]` while the unlabelled one appears as its
+entire file name — and says nothing about its quality. Where both files are
+labelled the list reads `[2160p], [1080p]`, highest first; where one is not, it
+reads `Example Studio - 2025-11-16 - Mixed Labels Plain First, [2160p]`, with the
+unlabelled one first whatever it contains.
+
+So the choice is between leaving a filed file untouched and a version list that
+does not say which is which, or renaming a file the user already considers filed
+in order to get a tidy one. That is a decision for the filing path rather than a
+property of Jellyfin, and both options work.
 
 ## 7. Refresh
 
