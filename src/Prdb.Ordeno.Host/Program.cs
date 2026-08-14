@@ -13,6 +13,7 @@ using Prdb.Ordeno.Host.Scanning;
 using Prdb.Ordeno.Infrastructure.Access;
 using Prdb.Ordeno.Infrastructure.Configuration;
 using Prdb.Ordeno.Infrastructure.Identification;
+using Prdb.Ordeno.Infrastructure.Library;
 using Prdb.Ordeno.Infrastructure.Persistence;
 using Prdb.Ordeno.Infrastructure.Scanning;
 
@@ -28,6 +29,7 @@ builder.Services.AddOrdenoAccess();
 builder.Services.AddOrdenoConfiguration();
 builder.Services.AddOrdenoScanning();
 builder.Services.AddOrdenoIdentification();
+builder.Services.AddOrdenoLibrary();
 
 // The tool is set up once and left alone, so looking in the download
 // directories is something it does rather than something it is asked for. The
