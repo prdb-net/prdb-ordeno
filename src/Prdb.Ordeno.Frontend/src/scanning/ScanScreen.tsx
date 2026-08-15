@@ -14,6 +14,29 @@ import {
 const WhileWorking = 2000
 
 /**
+ * The last run, in one line — including the two cases that are otherwise
+ * invisible: a run that has not happened yet, and a run that found nothing
+ * ready. The second is what a file being asked about looks like during the
+ * minute it takes to count as finished, and it is the answer to "I pressed the
+ * button and nothing happened".
+ */
+function lastRun(identification: ScanState['identification']): string {
+  if (identification.running) {
+    return 'Asking prdb now.'
+  }
+
+  if (identification.lastRunFinishedAt === null || identification.lastRunFinishedAt === undefined) {
+    return 'Not asked since the tool started. It asks by itself every minute.'
+  }
+
+  const when = new Date(identification.lastRunFinishedAt).toLocaleString()
+
+  return Number(identification.lastRunAsked) === 0
+    ? `Last run ${when}: nothing was ready to ask about. A file counts as ready a minute after it stops changing.`
+    : `Last asked ${when}: ${String(identification.lastRunAsked)} files.`
+}
+
+/**
  * What is in the download directories, and what the tool has made of it. The
  * first screen someone opens once the setup is done, because the question they
  * came with is "is it dealing with my downloads" — and in this version the
@@ -129,6 +152,12 @@ export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void })
         ) : (
           <p>{identification.whatItRecognised}</p>
         )}
+
+        {/* What the last run did, including when it did nothing. Without this a
+            run that found nothing ready and a run that never happened look the
+            same from here — which is what pressing the button during the minute
+            a file takes to settle looks like, and it reads as a broken button. */}
+        <p className="hint">{lastRun(identification)}</p>
 
         {identification.problem !== null && identification.problem !== undefined && (
           <p className="problem">{identification.problem}</p>

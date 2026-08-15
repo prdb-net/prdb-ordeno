@@ -116,7 +116,9 @@ tool has found in the directories you gave it.
 That screen distinguishes a video that has finished downloading from one that is
 still arriving, and it waits for the second kind rather than acting on it. A
 file counts as finished only once two scans in a row have seen it unchanged, so
-expect a new download to take a few minutes to appear as ready.
+expect a new download to take a few minutes to appear as ready. It is asked
+about within a minute of that, and the screen says when the tool last asked and
+what it asked about — including when the answer is that nothing was ready yet.
 
 Once a file is ready the tool asks prdb what it is, and the answer appears on
 the same screen: the video, several videos that fit equally well with no choice

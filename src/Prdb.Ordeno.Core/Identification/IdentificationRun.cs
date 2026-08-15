@@ -23,12 +23,35 @@ public static class IdentificationSchedule
     public const int QuotaReserve = 5;
 
     /// <summary>
-    /// How often a run happens. The same interval as scanning, because a scan is
-    /// what turns a settling file into one worth asking about — a run finds
-    /// nothing to do until one has happened, and does nothing when it finds
-    /// nothing.
+    /// How often a run happens: the quiet period, because that is what decides
+    /// when a file the scan already found becomes one worth asking about.
     /// </summary>
-    public static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
+    /// <remarks>
+    /// <para>
+    /// It used to be the scan's interval, on the reasoning that a scan is what
+    /// produces the work. That is true and it is not enough: the two timers run
+    /// on rasters anchored at container start, and a file settles a minute after
+    /// the scan that found it rather than at a tick of either. A run therefore
+    /// missed the work by anything up to its own interval — measured at four
+    /// seconds on a first installation, which then sat for five minutes showing
+    /// files it had found and said nothing about.
+    /// </para>
+    /// <para>
+    /// A minute is the shortest interval that can find anything a shorter one
+    /// could not, since nothing becomes askable faster than
+    /// <see cref="Scanning.Settling.QuietPeriod"/> allows. A tick with nothing to
+    /// ask about is one query and no request at all, so the cost of the change is
+    /// a query a minute against a table the scan rewrites every five.
+    /// </para>
+    /// <para>
+    /// It spends no more of the quota than the longer interval did. A file is
+    /// asked about once and then excluded by the answer that was stored, so what
+    /// decides the number of requests is how often a file changes — a scan
+    /// noticing a change is what makes it worth asking about again — and not how
+    /// often the question is considered.
+    /// </para>
+    /// </remarks>
+    public static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// Deliberately longer than the scan's first delay: on a fresh start the
