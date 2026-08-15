@@ -23,6 +23,7 @@ public sealed class OrdenoConfigurationTests
             Sources: [],
             Target: null,
             Layout: null,
+            MediaServerUrl: null,
             OnboardingCompletedAt: null);
 
         Assert.False(configuration.ReadyToComplete);
@@ -39,6 +40,7 @@ public sealed class OrdenoConfigurationTests
             Sources: [],
             Target: null,
             Layout: null,
+            MediaServerUrl: null,
             OnboardingCompletedAt: null);
 
         Assert.False(configuration.ReadyToComplete);
@@ -123,6 +125,41 @@ public sealed class OrdenoConfigurationTests
             StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// ADR 0018: the two media server fields may be left blank, and blank is not
+    /// a degraded state. A setup that never filled them in has to be able to
+    /// finish, and the sentence it finishes on must not mention what is missing —
+    /// nothing is missing.
+    /// </summary>
+    [Fact]
+    public void No_media_server_connection_is_a_finished_setup_that_says_nothing_about_one()
+    {
+        var configuration = Configured(Source(FileMovement.Rename));
+
+        Assert.True(configuration.ReadyToComplete);
+        Assert.DoesNotContain("media server", configuration.WhatHappensNext, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// And with one, the last of the three things ADR 0018 buys: onboarding ends
+    /// on "filed, and your media server can see it" rather than on "filed".
+    /// </summary>
+    [Fact]
+    public void A_media_server_connection_is_what_the_setup_ends_on()
+    {
+        var configuration = Configured(Source(FileMovement.Rename)) with
+        {
+            MediaServerUrl = "http://jellyfin.local:8096/",
+        };
+
+        Assert.True(configuration.ReadyToComplete);
+        Assert.Contains(
+            "http://jellyfin.local:8096/",
+            configuration.WhatHappensNext,
+            StringComparison.Ordinal);
+        Assert.Contains("without waiting", configuration.WhatHappensNext, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("Jellyfin")]
     [InlineData("jellyfin")]
@@ -144,5 +181,6 @@ public sealed class OrdenoConfigurationTests
         Sources: [source],
         Target: UsableTarget,
         Layout: LibraryLayout.Jellyfin,
+        MediaServerUrl: null,
         OnboardingCompletedAt: null);
 }

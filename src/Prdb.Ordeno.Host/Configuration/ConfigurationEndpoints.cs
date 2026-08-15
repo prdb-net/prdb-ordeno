@@ -30,6 +30,14 @@ public sealed record SourceState(
 public sealed record LayoutOption(string Name, string Description);
 
 /// <summary>
+/// The optional media server connection (ADR 0018), as far as the browser is
+/// told about it: where it points, and nothing else. The key is a credential and
+/// is never sent back, so an address being here is what "a connection is
+/// configured" means.
+/// </summary>
+public sealed record MediaServerState(string Url);
+
+/// <summary>
 /// Everything onboarding has collected so far. The API key is not part of it and
 /// never will be: the tool stores it and tells the browser only that it has one
 /// (ADR 0009).
@@ -40,6 +48,7 @@ public sealed record ConfigurationState(
     DirectoryState? Target,
     string? Layout,
     IReadOnlyList<LayoutOption> AvailableLayouts,
+    MediaServerState? MediaServer,
     bool Complete,
     bool ReadyToComplete,
     string WhatHappensNext);
@@ -51,11 +60,38 @@ public sealed record ConfigurationState(
 /// </summary>
 public sealed record ConfigurationProblem(string Message, ConfigurationState Configuration);
 
+/// <summary>
+/// What the connection test found, in words for the person who is standing in
+/// front of it, and as a status the screen can pick a colour from.
+/// </summary>
+/// <param name="Status">
+/// One of <c>Working</c>, <c>Unproven</c>, <c>Unmatched</c> or
+/// <c>DatesDiscarded</c>. The two that never arrive here are <c>Refused</c> and
+/// <c>Unreachable</c>: nothing is stored for those, so they come back as a
+/// refusal instead.
+/// </param>
+/// <param name="Working">
+/// Everything was proved rather than assumed — the key works, the dates will be
+/// read, and the server holds something this tool filed.
+/// </param>
+public sealed record MediaServerCheckState(
+    string Status,
+    string Message,
+    bool Working,
+    ConfigurationState Configuration);
+
 public sealed record SetApiKeyRequest(string ApiKey);
 
 public sealed record AddSourceRequest(string Path);
 
 public sealed record SetTargetRequest(string Path, string Layout);
+
+/// <summary>
+/// Both fields together, because neither is any use alone. Sending them empty is
+/// not how a connection is removed — that is the <c>DELETE</c>, which says what
+/// it means.
+/// </summary>
+public sealed record SetMediaServerRequest(string Url, string ApiKey);
 
 internal static class ConfigurationEndpoints
 {
@@ -100,6 +136,27 @@ internal static class ConfigurationEndpoints
             CancellationToken cancellationToken) =>
             Answer(await service.SetTargetAsync(request.Path, request.Layout, cancellationToken)));
 
+        // ADR 0018's two optional fields. Nothing here is on the filing path, and
+        // a setup that never touches these endpoints is a finished setup.
+        configuration.MapPut("/media-server", async Task<Results<Ok<MediaServerCheckState>, BadRequest<ConfigurationProblem>>> (
+            SetMediaServerRequest request,
+            ConfigurationService service,
+            CancellationToken cancellationToken) =>
+            Answer(await service.SetMediaServerAsync(request.Url, request.ApiKey, cancellationToken)));
+
+        // Worth asking again later: a key can be revoked and a library can be
+        // pointed elsewhere without anybody touching this tool.
+        configuration.MapPost("/media-server/test", async Task<Results<Ok<MediaServerCheckState>, BadRequest<ConfigurationProblem>>> (
+            ConfigurationService service,
+            CancellationToken cancellationToken) =>
+            Answer(await service.CheckMediaServerAsync(cancellationToken)));
+
+        // Back to blank, which is what most installations run as.
+        configuration.MapDelete("/media-server", async Task<Results<Ok<ConfigurationState>, BadRequest<ConfigurationProblem>>> (
+            ConfigurationService service,
+            CancellationToken cancellationToken) =>
+            Answer(await service.ForgetMediaServerAsync(cancellationToken)));
+
         // The end of the guided path. It answers 400 while anything is missing,
         // carrying the sentence that says what — the same sentence the screen
         // was already showing.
@@ -117,6 +174,25 @@ internal static class ConfigurationEndpoints
 
         return change.Accepted
             ? TypedResults.Ok(state)
+            : TypedResults.BadRequest(new ConfigurationProblem(change.Message!, state));
+    }
+
+    /// <summary>
+    /// A stored connection answers with what the server said, and a refused one
+    /// with why — including a server that answered "no", which is a change that
+    /// was not made rather than a report about one that was.
+    /// </summary>
+    private static Results<Ok<MediaServerCheckState>, BadRequest<ConfigurationProblem>> Answer(
+        MediaServerChange change)
+    {
+        var state = StateOf(change.Configuration);
+
+        return change.Accepted
+            ? TypedResults.Ok(new MediaServerCheckState(
+                change.Check!.Status.ToString(),
+                change.Check.Message,
+                change.Check.Working,
+                state))
             : TypedResults.BadRequest(new ConfigurationProblem(change.Message!, state));
     }
 
@@ -140,6 +216,7 @@ internal static class ConfigurationEndpoints
         [
             .. LibraryLayouts.All.Select(choice => new LayoutOption(choice.Name, choice.Description)),
         ],
+        MediaServer: configuration.MediaServerUrl is { } url ? new MediaServerState(url) : null,
         Complete: configuration.Complete,
         ReadyToComplete: configuration.ReadyToComplete,
         WhatHappensNext: configuration.WhatHappensNext);

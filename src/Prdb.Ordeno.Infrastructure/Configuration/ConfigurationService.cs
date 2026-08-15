@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.MediaServer;
+using Prdb.Ordeno.Infrastructure.MediaServer;
 using Prdb.Ordeno.Infrastructure.Persistence;
 
 namespace Prdb.Ordeno.Infrastructure.Configuration;
@@ -23,6 +25,7 @@ public sealed class ConfigurationService(
     OrdenoDbContext context,
     IDirectoryInspector inspector,
     IPrdbApiKeyCheck apiKeyCheck,
+    MediaServerService mediaServer,
     TimeProvider time,
     ILogger<ConfigurationService> logger)
 {
@@ -165,6 +168,93 @@ public sealed class ConfigurationService(
     }
 
     /// <summary>
+    /// Stores where the media server is and the key that gets in — the two
+    /// optional fields of ADR 0018 — and only after the server has answered for
+    /// them.
+    /// </summary>
+    /// <remarks>
+    /// The check does more than reach the server: it reads back the one setting
+    /// that would silently discard every date the tool writes, and it looks for
+    /// something the tool has filed. Neither of those refuses the change. What
+    /// refuses it is the same pair as everywhere else — an address that is not
+    /// one, and a server that answered "no" or did not answer at all.
+    /// </remarks>
+    public async Task<MediaServerChange> SetMediaServerAsync(
+        string? url,
+        string? apiKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (MediaServerConnection.From(url, apiKey, out var problem) is not { } connection)
+        {
+            return MediaServerChange.Refused(await BuildAsync(cancellationToken), problem!);
+        }
+
+        var check = await mediaServer.CheckAsync(connection, cancellationToken);
+
+        if (!check.Answered)
+        {
+            return MediaServerChange.Refused(await BuildAsync(cancellationToken), check.Message, check);
+        }
+
+        var configuration = await SingleConfigurationAsync(cancellationToken);
+        configuration.MediaServerUrl = connection.Address;
+        configuration.MediaServerApiKey = connection.ApiKey;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        // The address, never the key. Both halves of that are the rule in
+        // ADR 0009, applied to the second credential the tool now holds.
+        logger.LogInformation("A media server connection was stored for {Address}.", connection.Address);
+
+        return MediaServerChange.Made(await BuildAsync(cancellationToken), check);
+    }
+
+    /// <summary>
+    /// Asks the stored connection the same questions again. Worth its own call
+    /// because two of the three answers change without anybody touching this
+    /// tool: a key can be revoked, and a library can be pointed somewhere else.
+    /// </summary>
+    public async Task<MediaServerChange> CheckMediaServerAsync(CancellationToken cancellationToken = default)
+    {
+        if (await mediaServer.ConnectionAsync(cancellationToken) is not { } connection)
+        {
+            return MediaServerChange.Refused(
+                await BuildAsync(cancellationToken),
+                "No media server connection is stored, so there was nothing to test. That is a "
+                + "complete setup — the tool files and writes its metadata files either way.");
+        }
+
+        var check = await mediaServer.CheckAsync(connection, cancellationToken);
+
+        return check.Answered
+            ? MediaServerChange.Made(await BuildAsync(cancellationToken), check)
+            : MediaServerChange.Refused(await BuildAsync(cancellationToken), check.Message, check);
+    }
+
+    /// <summary>
+    /// Forgets the connection, address and key together. It is how a user goes
+    /// back to the state everything else is built for, so it is not an error and
+    /// nothing else changes with it.
+    /// </summary>
+    public async Task<ConfigurationChange> ForgetMediaServerAsync(CancellationToken cancellationToken = default)
+    {
+        var configuration = await SingleConfigurationAsync(cancellationToken);
+        var had = configuration.MediaServerUrl is not null;
+
+        configuration.MediaServerUrl = null;
+        configuration.MediaServerApiKey = null;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        if (had)
+        {
+            logger.LogInformation("The media server connection was forgotten.");
+        }
+
+        return ConfigurationChange.Made(await BuildAsync(cancellationToken));
+    }
+
+    /// <summary>
     /// Ends the guided path. It is refused while anything is missing or broken,
     /// because finishing is what tells the rest of the tool it may start —
     /// ADR 0009.
@@ -231,6 +321,9 @@ public sealed class ConfigurationService(
             Sources: sources,
             Target: target,
             Layout: LibraryLayouts.Parse(configuration.Layout),
+            MediaServerUrl: string.IsNullOrWhiteSpace(configuration.MediaServerApiKey)
+                ? null
+                : configuration.MediaServerUrl,
             OnboardingCompletedAt: configuration.OnboardingCompletedAt);
     }
 

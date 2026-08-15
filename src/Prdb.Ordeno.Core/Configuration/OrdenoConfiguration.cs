@@ -10,14 +10,22 @@ public sealed record ConfiguredSource(int Id, DirectoryInspection Inspection, Fi
 /// the weekend shows up the next time the page is opened.
 /// </summary>
 /// <remarks>
-/// The API key is not on it. The tool stores the key and never hands it back to
+/// Neither API key is on it. The tool stores them and never hands them back to
 /// the browser — whether one is set is all the UI is told.
 /// </remarks>
+/// <param name="MediaServerUrl">
+/// Where the optional media server connection points, or <c>null</c> because
+/// there is none — which is the default and not a degraded state (ADR 0018).
+/// The key that goes with it is not here, for the reason above; an address is
+/// only ever stored together with one, so this being set is what "a connection
+/// is configured" means.
+/// </param>
 public sealed record OrdenoConfiguration(
     bool ApiKeySet,
     IReadOnlyList<ConfiguredSource> Sources,
     DirectoryInspection? Target,
     LibraryLayout? Layout,
+    string? MediaServerUrl,
     DateTimeOffset? OnboardingCompletedAt)
 {
     /// <summary>
@@ -103,9 +111,17 @@ public sealed record OrdenoConfiguration(
                     + "by itself until there is a way to undo a run that went wrong."
                 : string.Empty;
 
+            // Said only when there is something to say. A setup that left the two
+            // fields blank is the ordinary one, and a sentence about what it is
+            // missing would turn a deliberate choice into a warning — ADR 0018.
+            var connected = MediaServerUrl is null
+                ? string.Empty
+                : $" Each video it files is shown to {MediaServerUrl} straight away, so a new scene "
+                    + "appears there without waiting for the next library scan.";
+
             return ending
                 + $"recognises into {Target.Path}, in the layout {LibraryLayouts.NameOf(Layout.Value)} "
-                + "reads." + speed + notYet;
+                + "reads." + speed + notYet + connected;
         }
     }
 }

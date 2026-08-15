@@ -319,6 +319,101 @@
         }
       }
     },
+    "/api/configuration/media-server": {
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMediaServerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaServerCheckState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Configuration"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/configuration/media-server/test": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaServerCheckState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/configuration/completion": {
       "post": {
         "tags": [
@@ -776,6 +871,7 @@
           "target",
           "layout",
           "availableLayouts",
+          "mediaServer",
           "complete",
           "readyToComplete",
           "whatHappensNext"
@@ -812,6 +908,16 @@
             "items": {
               "$ref": "#/components/schemas/LayoutOption"
             }
+          },
+          "mediaServer": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MediaServerState"
+              }
+            ]
           },
           "complete": {
             "type": "boolean"
@@ -1136,6 +1242,40 @@
             "type": "string"
           },
           "description": {
+            "type": "string"
+          }
+        }
+      },
+      "MediaServerCheckState": {
+        "required": [
+          "status",
+          "message",
+          "working",
+          "configuration"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "working": {
+            "type": "boolean"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/ConfigurationState"
+          }
+        }
+      },
+      "MediaServerState": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
             "type": "string"
           }
         }
@@ -1857,6 +1997,21 @@
         ],
         "type": "object",
         "properties": {
+          "apiKey": {
+            "type": "string"
+          }
+        }
+      },
+      "SetMediaServerRequest": {
+        "required": [
+          "url",
+          "apiKey"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
           "apiKey": {
             "type": "string"
           }

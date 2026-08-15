@@ -421,6 +421,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/configuration/media-server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetMediaServerRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MediaServerCheckState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationProblem"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationProblem"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/configuration/media-server/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MediaServerCheckState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationProblem"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/configuration/completion": {
         parameters: {
             query?: never;
@@ -927,6 +1047,7 @@ export interface components {
             target: null | components["schemas"]["DirectoryState"];
             layout: null | string;
             availableLayouts: components["schemas"]["LayoutOption"][];
+            mediaServer: null | components["schemas"]["MediaServerState"];
             complete: boolean;
             readyToComplete: boolean;
             whatHappensNext: string;
@@ -997,6 +1118,15 @@ export interface components {
         LayoutOption: {
             name: string;
             description: string;
+        };
+        MediaServerCheckState: {
+            status: string;
+            message: string;
+            working: boolean;
+            configuration: components["schemas"]["ConfigurationState"];
+        };
+        MediaServerState: {
+            url: string;
         };
         PlannedFileState: {
             /** Format: int32 */
@@ -1153,6 +1283,10 @@ export interface components {
             identification: components["schemas"]["IdentificationState"];
         };
         SetApiKeyRequest: {
+            apiKey: string;
+        };
+        SetMediaServerRequest: {
+            url: string;
             apiKey: string;
         };
         SetPasswordRequest: {
