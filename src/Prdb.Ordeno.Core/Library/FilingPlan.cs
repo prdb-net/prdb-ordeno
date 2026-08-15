@@ -45,6 +45,74 @@ public enum FilingOutcome
 /// </summary>
 public sealed record FilingRelabel(string From, string To);
 
+/// <summary>What filing would do with the sidecar next to the video.</summary>
+public enum SidecarAction
+{
+    /// <summary>Nothing is written, because nothing is filed.</summary>
+    None,
+
+    /// <summary>There is no sidecar in that directory, and one is written.</summary>
+    Write,
+
+    /// <summary>
+    /// There is one this tool wrote, and it is replaced with what prdb says now.
+    /// </summary>
+    Replace,
+
+    /// <summary>
+    /// There is one this tool did not write, or one it could not read. It stays
+    /// exactly as it is and nothing is written.
+    /// </summary>
+    Keep,
+}
+
+/// <summary>
+/// What would happen to the sidecar, worked out with the rest of the plan and
+/// carried out after the video has moved.
+/// </summary>
+/// <remarks>
+/// <para>
+/// It is on the plan for the reason everything else is: a write path that cannot
+/// be asked what it would do is a write path the user cannot read before
+/// approving it. This one writes a small file rather than moving a large one, and
+/// it is still capable of destroying something — a sidecar somebody wrote by hand
+/// — which is what <see cref="SidecarAction.Keep"/> exists for.
+/// </para>
+/// <para>
+/// <em>When</em> a sidecar is refreshed is deliberately not settled here. This
+/// says what happens as part of filing a video, which is the only thing that
+/// writes one today.
+/// </para>
+/// </remarks>
+/// <param name="Path">Where the sidecar is, or <c>null</c> when nothing is filed.</param>
+/// <param name="Message">
+/// Why it is being left alone, when it is. <c>null</c> everywhere else, where the
+/// action speaks for itself.
+/// </param>
+public sealed record SidecarPlan(SidecarAction Action, string? Path = null, string? Message = null)
+{
+    public static readonly SidecarPlan None = new(SidecarAction.None);
+
+    public bool Writes => Action is SidecarAction.Write or SidecarAction.Replace;
+
+    /// <summary>
+    /// What the row says about the sidecar, or <c>null</c> when there is nothing
+    /// to say.
+    /// </summary>
+    public string? InWords => Message ?? Action switch
+    {
+        SidecarAction.Write =>
+            $"A '{ScenePath.SidecarFileName}' is written next to it, carrying what prdb says the "
+            + "scene is. Without one the media server shows the file name and nothing else.",
+
+        SidecarAction.Replace =>
+            $"The '{ScenePath.SidecarFileName}' already in that directory was written by this tool, "
+            + "and is written again from what prdb says now.",
+
+        _ => null,
+    };
+}
+
 /// <summary>
 /// What would happen to one video, worked out without touching anything.
 /// </summary>
@@ -74,6 +142,13 @@ public sealed record FilingRelabel(string From, string To);
 /// relabel — which is every filing except a second quality arriving next to an
 /// unlabelled first one.
 /// </param>
+/// <param name="Sidecar">
+/// What happens to the <c>movie.nfo</c> in that directory once the video is
+/// there. Written after the move rather than before it: a sidecar written first
+/// would leave metadata in a directory holding no video if the move then failed,
+/// and would make the scene's own directory look occupied to the run that tried
+/// again.
+/// </param>
 public sealed record FilingPlan(
     FilingOutcome Outcome,
     int FileId,
@@ -85,7 +160,8 @@ public sealed record FilingPlan(
     string? TargetPath,
     FilingRelabel? Relabel,
     FileMovement Movement,
-    string? Message)
+    string? Message,
+    SidecarPlan Sidecar)
 {
     /// <summary>Whether carrying this plan out moves a file at all.</summary>
     public bool Moves => TargetPath is not null;
@@ -113,7 +189,8 @@ public sealed record FilingPlan(
             TargetPath: null,
             Relabel: null,
             FileMovement.Unknown,
-            message);
+            message,
+            SidecarPlan.None);
 }
 
 /// <summary>
@@ -143,7 +220,17 @@ public enum FilingResultState
 
 /// <param name="Plan">The plan as it was at the moment of the run, which is what was carried out.</param>
 /// <param name="Message">What to tell the user, whether it worked or not.</param>
-public sealed record FilingResult(FilingResultState State, FilingPlan Plan, string? Message = null)
+/// <param name="Sidecar">
+/// What became of the sidecar, when that is worth saying: it was left alone, or
+/// it could not be written, or prdb could not be asked what to put in it. Silent
+/// when it was written, because the plan already said it would be and the video
+/// is what the row is about.
+/// </param>
+public sealed record FilingResult(
+    FilingResultState State,
+    FilingPlan Plan,
+    string? Message = null,
+    string? Sidecar = null)
 {
     public bool Filed => State is FilingResultState.Filed;
 }
