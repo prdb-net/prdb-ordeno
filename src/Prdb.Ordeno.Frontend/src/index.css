@@ -225,3 +225,94 @@ button.view.chosen {
   font-size: 0.9rem;
   margin: 0.4rem 0;
 }
+
+/* The review queue. Rows rather than cards: this is a list somebody has to get
+   to the end of, and a card each would put three files on a screen. */
+.queue {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.queue > li {
+  border-top: 1px solid var(--edge);
+  padding: 0.7rem 0;
+}
+
+.queue .row {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.queue code {
+  word-break: break-all;
+}
+
+/* The file name and the checkbox that selects it are one target. */
+label.pick {
+  align-items: baseline;
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+label.pick input {
+  display: inline;
+  margin: 0;
+  width: auto;
+}
+
+/* Three candidates are three buttons — the queue's fastest case. */
+.candidates {
+  list-style: none;
+  margin: 0.4rem 0;
+  padding: 0;
+}
+
+.candidates li {
+  align-items: baseline;
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.15rem 0;
+}
+
+.candidates button {
+  flex: none;
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+}
+
+.search {
+  border-left: 2px solid var(--edge);
+  margin: 0.5rem 0;
+  padding-left: 0.8rem;
+}
+
+/* Which site's downloads to work through. One site is one naming convention. */
+.sites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.8rem 0;
+}
+
+button.chip {
+  background: none;
+  cursor: pointer;
+  margin: 0;
+}
+
+button.chip.chosen {
+  border-color: currentcolor;
+  color: inherit;
+}
+
+.pager {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
