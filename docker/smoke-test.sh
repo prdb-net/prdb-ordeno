@@ -9,6 +9,11 @@
 #   4. `docker stop` stops it, rather than the daemon killing it once the
 #      timeout runs out.
 #
+# And one claim about the entrypoint rather than about ADR 0013:
+#
+#   5. A variable with a dot in its name survives the shell it runs under, so
+#      that the log levels can be raised at all.
+#
 # Usage: docker/smoke-test.sh <image> [host-port]
 
 set -euo pipefail
@@ -18,6 +23,10 @@ port="${2:-18080}"
 
 readonly test_uid=1234
 readonly test_gid=5678
+
+# The shape every .NET logging setting has, and the shape a POSIX shell is
+# entitled to drop: the name is not a valid shell identifier.
+readonly dotted_variable="Logging__LogLevel__Prdb.Ordeno"
 readonly startup_timeout_seconds=180
 readonly stop_timeout_seconds=10
 
@@ -61,6 +70,7 @@ container="$(docker run --detach \
     --env PUID="$test_uid" \
     --env PGID="$test_gid" \
     --env UMASK=002 \
+    --env "$dotted_variable=Debug" \
     --volume "$workspace/data:/data" \
     --volume "$workspace/media:/media" \
     --publish "$port:8080" \
@@ -114,6 +124,20 @@ media_owner_after="$(stat --format '%u:%g' "$workspace/media/keep.mkv")"
 [ "$media_owner_after" = "$media_owner_before" ] \
     || fail "the entrypoint changed the owner of a mounted media file from $media_owner_before to $media_owner_after."
 echo "  the mounted media file still belongs to $media_owner_before"
+
+# Asked of the application's own process rather than of the container. `docker
+# exec env` reports the environment the container was configured with, which is
+# not the question: what matters is what survived the entrypoint's shell, and
+# only PID 1 knows that. Readable as the identity it runs as, hence --user.
+application_environment="$(docker exec --user "$test_uid" "$container" \
+    sh -c 'cat /proc/1/environ | tr "\0" "\n"' 2>/dev/null)" \
+    || fail "could not read the environment of the application process."
+
+# Fixed strings and whole lines: the name being matched contains the dot this
+# test is about, and as a pattern it would match anything in that position.
+echo "$application_environment" | grep --quiet --fixed-strings --line-regexp "$dotted_variable=Debug" \
+    || fail "$dotted_variable did not reach the application; the entrypoint's shell dropped it."
+echo "  $dotted_variable arrived intact"
 
 echo "Stopping it"
 stop_started="$(date +%s)"

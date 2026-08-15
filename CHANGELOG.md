@@ -159,5 +159,11 @@ the version on a release; [docs/running-in-docker.md](docs/running-in-docker.md)
 covers the mounts and the settings people get wrong, and there is a Compose
 example to copy.
 
+The log can be turned up, which until now it could not. Settings whose name
+contains a dot — which is every one of them, since they name a logging category
+— were discarded by the shell the container starts under before the application
+ever saw them, with nothing said about it anywhere. `Logging__LogLevel__Prdb.Ordeno=Debug`
+now reaches the tool and does what it says.
+
 Configuration and the single password are set up in the browser on first run
 rather than through the container environment.
