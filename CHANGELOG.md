@@ -89,6 +89,26 @@ A video whose quality cannot be read is not filed, because without it the tool
 cannot tell a second quality from a second copy. Neither is one prdb could not
 name: that waits for the review queue.
 
+There is now a review queue, on a screen of its own, holding everything prdb
+could not settle: the files several videos fit equally well, the ones only the
+site could be read from, and the ones nothing matched. Where prdb named
+candidates they are buttons — one press and the file is settled. Where it named
+none, a search box opens already filled in with the file's own name, and
+whatever prdb has under it can be picked from the results. Saying no is an
+answer too: a file that is not a video, or one you do not want filed, is left
+alone and stops coming back, without being deleted or hidden from what the tool
+found.
+
+Settling a file does not move it. It says what the video is, and filing is still
+the button on the Downloads screen — from then on the file is filed like any
+other, under what you said it is. Your answer outranks anything prdb says later,
+and the only thing that forgets it is the file's contents changing, because at
+that point it is a different video at the same name.
+
+The first day is thousands of files, so the queue is worked a page at a time,
+can be narrowed to one site, and a whole page of samples can be left alone in one
+go. Every decision can be undone.
+
 The stack is .NET 10 on the backend, React with Vite in the browser, and SQLite
 for local state. The first release targets Jellyfin; Plex and Emby follow after
 it.

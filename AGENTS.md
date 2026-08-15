@@ -157,6 +157,42 @@ Three rules that a plausible refactor would quietly break:
   a part file left by a killed container would make a scene's own directory look
   like somebody else's the next time round.
 
+## The review queue
+
+What prdb could not settle waits for a person: several videos that fit equally
+well, the site alone, or nothing at all. **A person's answer is stored in a table
+of its own and outranks prdb's**
+([ADR 0023](docs/adr/0023-a-persons-answer-is-kept-beside-prdbs.md)) — filing
+reads the two in that fixed order, and nothing else may be added to the list
+without another decision.
+
+Four rules that a plausible refactor would quietly break:
+
+- **The decision does not live on the identification row.** That row is replaced
+  whole every time a file is asked about again, which is what keeps prdb's answer
+  honest; a decision stored there survives until the next perceptual hash
+  arrives. The scan forgets a decision in exactly one case, in the same statement
+  that forgets the identification: **the bytes changed**. A decision about last
+  week's file naming this week's is how the wrong scene ends up in the library
+  under a deliberate-looking name.
+- **A resolution arrives as a video id and nothing else.** The title, site and
+  date on the row are fetched here, from prdb, because they become a directory
+  name — a path built from what a page posted is a path built from unvalidated
+  input.
+- **Dismissal is an answer, not a deletion.** The file stays on disk, stays in
+  the inventory and stays counted; it stops being offered, and it is never filed.
+  Nothing in the queue may become a way to make files disappear.
+- **Candidates are described once.** The identify endpoint names them as ids, so
+  the words come from `POST /videos/batch` the first time a row is shown and are
+  kept next to the id — ADR 0017's bargain, applied to the part of an answer that
+  arrives without words. A candidate prdb does not know is still stamped as
+  asked-about, or it would be asked about on every page view forever.
+
+The queue is paged rather than capped, unlike the downloads screen: this is work
+somebody has to get to the end of. The first day is thousands of files, so it is
+narrowed by site and dismissed by the page, and resolving something never moves
+it — filing is still the run somebody asks for (ADR 0022).
+
 ## Language
 
 **Everything in this repository is in English** — code, comments, documentation,
