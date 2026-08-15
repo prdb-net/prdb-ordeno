@@ -1,0 +1,430 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.Identification;
+using Prdb.Ordeno.Core.Library;
+using Prdb.Ordeno.Core.Scanning;
+using Prdb.Ordeno.Infrastructure.Persistence;
+
+namespace Prdb.Ordeno.Infrastructure.Library;
+
+/// <summary>
+/// The third step of the loop in <c>VISION.md</c>: what has been found and
+/// recognised goes where the layout says.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Two entry points that are the same code. <see cref="PlanAsync"/> works out
+/// what would happen and touches nothing; <see cref="FileAsync"/> works the same
+/// thing out again and carries it out. ADR 0022 turns on that being one
+/// computation rather than two that agree, and on the second one being made
+/// fresh: a directory can be occupied in the seconds between reading a screen
+/// and pressing a button.
+/// </para>
+/// <para>
+/// Nothing here decides where a file goes. That is <see cref="FilingPlanner"/>,
+/// which writes nothing, and <see cref="LibraryMoves"/>, which decides nothing.
+/// What this adds is the database either side of them: which files are worth
+/// planning for, and what the library holds once one of them has moved.
+/// </para>
+/// </remarks>
+public sealed class FilingService(
+    OrdenoDbContext context,
+    IDirectoryInspector inspector,
+    IVideoQualities qualities,
+    FilingPlanner planner,
+    LibraryMoves moves,
+    TimeProvider time,
+    ILogger<FilingService> logger)
+{
+    /// <summary>
+    /// How many videos are looked up at a time when asking what the library
+    /// already holds of them. The same reason the scan batches: a parameter list
+    /// has a limit, and a first pass over a library is thousands of files.
+    /// </summary>
+    private const int BatchSize = 500;
+
+    /// <summary>
+    /// What would happen, without anything happening. This is what the user
+    /// reads before pressing the button.
+    /// </summary>
+    public async Task<FilingPreview> PlanAsync(CancellationToken cancellationToken = default)
+    {
+        var library = await ReadLibraryAsync(cancellationToken);
+
+        if (library.Problem is not null)
+        {
+            return new FilingPreview([], library.Problem);
+        }
+
+        var candidates = await CandidatesAsync(cancellationToken);
+        var filed = await FiledAsync(library.Root!, candidates, cancellationToken);
+        var plans = new List<FilingPlan>(candidates.Count);
+
+        foreach (var candidate in candidates)
+        {
+            plans.Add(await PlanForAsync(library, candidate, filed, cancellationToken));
+        }
+
+        return new FilingPreview(plans);
+    }
+
+    /// <summary>
+    /// Carries the plan out, one file at a time, working each one out again as
+    /// it gets to it.
+    /// </summary>
+    /// <remarks>
+    /// One file at a time on purpose. A cross-filesystem move is minutes of
+    /// copying, and doing several at once on a NAS turns one slow filing into
+    /// several slower ones while somebody is trying to watch something off the
+    /// same disks.
+    /// </remarks>
+    public async Task<FilingReport> FileAsync(CancellationToken cancellationToken = default)
+    {
+        var library = await ReadLibraryAsync(cancellationToken);
+
+        if (library.Problem is not null)
+        {
+            return new FilingReport([], library.Problem);
+        }
+
+        // What a container killed mid-copy left behind, before anything new is
+        // written next to it.
+        moves.ClearStaging(library.Root!);
+
+        var candidates = await CandidatesAsync(cancellationToken);
+        var filed = await FiledAsync(library.Root!, candidates, cancellationToken);
+        var results = new List<FilingResult>(candidates.Count);
+
+        for (var index = 0; index < candidates.Count; index++)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // The container is stopping. Whatever was in flight either
+                // finished or left the original where it was; what is left is
+                // reported as not reached rather than silently dropped.
+                results.AddRange(candidates.Skip(index).Select(NotReached));
+
+                return new FilingReport(results, "Filing was stopped before it finished.");
+            }
+
+            results.Add(await CarryOutAsync(library, candidates[index], filed, cancellationToken));
+        }
+
+        return new FilingReport(results);
+    }
+
+    private async Task<FilingResult> CarryOutAsync(
+        Library library,
+        Candidate candidate,
+        Dictionary<Guid, List<FiledCopy>> filed,
+        CancellationToken cancellationToken)
+    {
+        // Worked out again, now, rather than taken from the preview: ADR 0022.
+        var plan = await PlanForAsync(library, candidate, filed, cancellationToken);
+
+        if (!plan.Moves)
+        {
+            return new FilingResult(FilingResultState.Skipped, plan, plan.Message);
+        }
+
+        try
+        {
+            // ADR 0020: the file that is already filed carries a label before
+            // the second quality is put next to it, and if that does not happen
+            // then nothing else does either. The other order would leave a
+            // directory where only half of what is in it is labelled.
+            if (plan.Relabel is { } relabel)
+            {
+                var renamed = moves.Relabel(relabel.From, relabel.To);
+
+                if (!renamed.Moved)
+                {
+                    return new FilingResult(FilingResultState.Failed, plan, renamed.Problem);
+                }
+
+                await RecordRelabelAsync(relabel, cancellationToken);
+            }
+
+            var outcome = await moves.FileAsync(
+                plan.SourcePath,
+                plan.TargetPath!,
+                library.Root!,
+                plan.Movement,
+                cancellationToken);
+
+            if (!outcome.Moved)
+            {
+                return new FilingResult(FilingResultState.Failed, plan, outcome.Problem);
+            }
+
+            await RecordFilingAsync(library, plan, filed, cancellationToken);
+
+            return new FilingResult(FilingResultState.Filed, plan, outcome.Problem);
+        }
+        catch (OperationCanceledException)
+        {
+            return new FilingResult(
+                FilingResultState.Stopped,
+                plan,
+                "The tool was asked to stop while this file was being moved. It was left exactly "
+                + "as it was.");
+        }
+        catch (Exception exception)
+        {
+            // One file that goes wrong in a way nothing foresaw is one file. A
+            // run that stops here would leave the rest of somebody's library
+            // unfiled and no report of why.
+            logger.LogError(exception, "Filing {Path} failed.", plan.SourcePath);
+
+            return new FilingResult(
+                FilingResultState.Failed,
+                plan,
+                "Something went wrong while filing this one. The container's log has the details.");
+        }
+    }
+
+    private async Task<FilingPlan> PlanForAsync(
+        Library library,
+        Candidate candidate,
+        Dictionary<Guid, List<FiledCopy>> filed,
+        CancellationToken cancellationToken)
+    {
+        var scene = Scene.From(candidate.Recognition);
+        var quality = await qualities.ReadAsync(candidate.Path, cancellationToken);
+
+        return planner.Plan(
+            candidate.Id,
+            candidate.Path,
+            candidate.Name,
+            library.Root!,
+            library.MovementFrom(candidate.Path, inspector),
+            scene,
+            quality,
+            scene is null ? [] : filed.GetValueOrDefault(scene.VideoId, []));
+    }
+
+    /// <summary>
+    /// The library now holds this file. The row is what the next filing of the
+    /// same scene reads in order to tell a second quality from a second copy.
+    /// </summary>
+    private async Task RecordFilingAsync(
+        Library library,
+        FilingPlan plan,
+        Dictionary<Guid, List<FiledCopy>> filed,
+        CancellationToken cancellationToken)
+    {
+        var videoId = plan.Scene!.VideoId;
+        var directory = plan.Directory!;
+        var fileName = System.IO.Path.GetFileName(plan.TargetPath!);
+
+        if (plan.Outcome is not FilingOutcome.SecondQuality)
+        {
+            // The planner found no copy of this scene still on disk, so any rows
+            // saying otherwise describe files the user has since moved or
+            // deleted. They are not history — this table says what is true now,
+            // and the operation log (#19) is what keeps the rest.
+            await context.FiledVideos
+                .Where(row => row.VideoId == videoId && row.LibraryRoot == library.Root)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        context.FiledVideos.Add(new FiledVideo
+        {
+            VideoId = videoId,
+            LibraryRoot = library.Root!,
+            Directory = directory,
+            FileName = fileName,
+            QualityLabel = plan.QualityLabel!,
+            FiledAt = time.GetUtcNow(),
+        });
+
+        // The file is not in the download directory any more, so neither is the
+        // tool's memory of having seen it there. Waiting for the next scan to
+        // notice would leave a row that a second filing run would try to move
+        // again and report as missing.
+        await context.DiscoveredFiles
+            .Where(file => file.Id == plan.FileId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+        context.ChangeTracker.Clear();
+
+        var copies = filed.TryGetValue(videoId, out var existing) ? existing : filed[videoId] = [];
+
+        if (plan.Outcome is not FilingOutcome.SecondQuality)
+        {
+            copies.Clear();
+        }
+
+        copies.Add(new FiledCopy(videoId, directory, fileName, plan.QualityLabel!));
+    }
+
+    /// <summary>
+    /// The file that was already filed is called something else now (ADR 0020),
+    /// and the row that says where this scene lives has to say so too — before
+    /// the second quality lands, so that an interruption between the two leaves
+    /// a record that matches the disk.
+    /// </summary>
+    private async Task RecordRelabelAsync(FilingRelabel relabel, CancellationToken cancellationToken)
+    {
+        var directory = System.IO.Path.GetDirectoryName(relabel.From)!;
+        var was = System.IO.Path.GetFileName(relabel.From);
+        var now = System.IO.Path.GetFileName(relabel.To);
+
+        await context.FiledVideos
+            .Where(row => row.Directory == directory && row.FileName == was)
+            .ExecuteUpdateAsync(row => row.SetProperty(filed => filed.FileName, now), cancellationToken);
+    }
+
+    /// <summary>
+    /// Everything that has finished downloading and that prdb named a video
+    /// for. A file it could not name is the review queue's
+    /// (<see href="https://github.com/prdb-net/prdb-ordeno/issues/16">#16</see>)
+    /// and never appears here — ADR 0019.
+    /// </summary>
+    private async Task<IReadOnlyList<Candidate>> CandidatesAsync(CancellationToken cancellationToken)
+    {
+        var settled = Settling.SettledIfUnchangedSince(time.GetUtcNow());
+
+        var sources = await context.SourceDirectories
+            .AsNoTracking()
+            .ToDictionaryAsync(source => source.Id, source => source.Path, cancellationToken);
+
+        var rows = await context.DiscoveredFiles
+            .AsNoTracking()
+            .Where(file => file.SizeBytes > 0 && file.UnchangedSince <= settled)
+            .Join(
+                context.FileIdentifications.AsNoTracking().Where(row => row.VideoId != null),
+                file => file.Id,
+                identification => identification.DiscoveredFileId,
+                (file, identification) => new
+                {
+                    file.Id,
+                    file.SourceDirectoryId,
+                    file.Path,
+                    Recognition = new Recognition(
+                        identification.Confidence,
+                        identification.MatchedBy,
+                        identification.VideoId,
+                        identification.Title,
+                        identification.ReleaseDate,
+                        identification.SiteTitle,
+                        identification.Candidates.Count,
+                        identification.AskedAt),
+                })
+            .OrderBy(row => row.Id)
+            .ToListAsync(cancellationToken);
+
+        return
+        [
+            .. rows.Select(row => new Candidate(
+                row.Id,
+                row.Path,
+                Below(sources.GetValueOrDefault(row.SourceDirectoryId), row.Path),
+                row.Recognition)),
+        ];
+    }
+
+    /// <summary>
+    /// What the library already holds of the scenes these files were recognised
+    /// as. One lookup for the whole run rather than one per file, and none at
+    /// all on a library that has never filed anything.
+    /// </summary>
+    private async Task<Dictionary<Guid, List<FiledCopy>>> FiledAsync(
+        string libraryRoot,
+        IReadOnlyList<Candidate> candidates,
+        CancellationToken cancellationToken)
+    {
+        var wanted = candidates
+            .Select(candidate => candidate.Recognition.VideoId)
+            .OfType<Guid>()
+            .Distinct()
+            .ToList();
+
+        var copies = new Dictionary<Guid, List<FiledCopy>>();
+
+        foreach (var batch in wanted.Chunk(BatchSize))
+        {
+            var rows = await context.FiledVideos
+                .AsNoTracking()
+                .Where(row => row.LibraryRoot == libraryRoot && batch.Contains(row.VideoId))
+                .OrderBy(row => row.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var row in rows)
+            {
+                if (!copies.TryGetValue(row.VideoId, out var list))
+                {
+                    copies[row.VideoId] = list = [];
+                }
+
+                list.Add(new FiledCopy(row.VideoId, row.Directory, row.FileName, row.QualityLabel));
+            }
+        }
+
+        return copies;
+    }
+
+    private async Task<Library> ReadLibraryAsync(CancellationToken cancellationToken)
+    {
+        var configuration = await context.Configuration.AsNoTracking().SingleAsync(cancellationToken);
+
+        if (configuration.OnboardingCompletedAt is null || configuration.TargetDirectory is null)
+        {
+            return new Library(null, "Nothing is filed until the setup is finished.");
+        }
+
+        var inspection = inspector.Inspect(configuration.TargetDirectory, DirectoryRole.Target);
+
+        return inspection.Usable
+            ? new Library(inspection.Path, null)
+            : new Library(null, $"Nothing can be filed while the library is unusable: {inspection.Message}");
+    }
+
+    private FilingResult NotReached(Candidate candidate) =>
+        new(
+            FilingResultState.Stopped,
+            FilingPlan.Blocked(
+                candidate.Id,
+                candidate.Path,
+                candidate.Name,
+                Scene.From(candidate.Recognition),
+                "The tool was asked to stop before this one was reached. Nothing happened to it."),
+            "Not reached before the tool stopped.");
+
+    /// <summary>The path below its source directory, which is what a person recognises.</summary>
+    private static string Below(string? source, string path) =>
+        source is not null && path.StartsWith(source, StringComparison.Ordinal)
+            ? path[source.Length..].TrimStart(
+                System.IO.Path.DirectorySeparatorChar,
+                System.IO.Path.AltDirectorySeparatorChar)
+            : System.IO.Path.GetFileName(path);
+
+    private sealed record Candidate(int Id, string Path, string Name, Recognition Recognition);
+
+    /// <param name="Root">Where the library is, or <c>null</c> when it cannot be filed into.</param>
+    private sealed record Library(string? Root, string? Problem)
+    {
+        private readonly Dictionary<string, FileMovement> movements = [];
+
+        /// <summary>
+        /// Whether a video from this directory is renamed or copied, asked once
+        /// per download directory. Working it out reads the mount table, and a
+        /// first pass over a library would otherwise read it a thousand times to
+        /// get a thousand identical answers.
+        /// </summary>
+        public FileMovement MovementFrom(string filePath, IDirectoryInspector inspector)
+        {
+            var directory = System.IO.Path.GetDirectoryName(filePath) ?? filePath;
+
+            if (!movements.TryGetValue(directory, out var movement))
+            {
+                movements[directory] = movement = inspector.MovementBetween(directory, Root!);
+            }
+
+            return movement;
+        }
+    }
+}

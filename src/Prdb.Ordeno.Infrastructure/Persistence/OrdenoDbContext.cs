@@ -20,6 +20,8 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
 
     public DbSet<FileIdentification> FileIdentifications => Set<FileIdentification>();
 
+    public DbSet<FiledVideo> FiledVideos => Set<FiledVideo>();
+
     public DbSet<Session> Sessions => Set<Session>();
 
     /// <summary>
@@ -129,6 +131,28 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
             candidate.ToTable("IdentificationCandidates");
             candidate.HasKey(row => row.Id);
             candidate.HasIndex(row => row.FileIdentificationId);
+        });
+
+        modelBuilder.Entity<FiledVideo>(filed =>
+        {
+            filed.HasKey(row => row.Id);
+            filed.Property(row => row.LibraryRoot).IsRequired();
+            filed.Property(row => row.Directory).IsRequired();
+            filed.Property(row => row.FileName).IsRequired();
+            filed.Property(row => row.QualityLabel).IsRequired().HasMaxLength(16);
+
+            filed.Property(row => row.FiledAt).HasConversion(UtcTimestamp);
+
+            // What every filing asks: is this scene already in this library, and
+            // at which qualities. Not unique — that is the whole point of
+            // ADR 0003, which keeps a 1080p and a 2160p copy side by side.
+            filed.HasIndex(row => new { row.VideoId, row.LibraryRoot });
+
+            // One file is one row. Two rows claiming one path would be two
+            // answers to "what is at this name", with no way to tell which is
+            // current — the state this tool must never be in about a file it
+            // has moved.
+            filed.HasIndex(row => new { row.Directory, row.FileName }).IsUnique();
         });
 
         modelBuilder.Entity<Session>(session =>
