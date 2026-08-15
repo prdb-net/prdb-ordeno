@@ -34,6 +34,19 @@ internal sealed class FakePrdb(Func<HttpRequestMessage, HttpResponseMessage> ans
     /// <summary>Answers the way prdb does for a key it has never seen.</summary>
     public static FakePrdb Refusing() => new(_ => Unauthorized());
 
+    /// <summary>
+    /// Lets the key through when it is checked and refuses it everywhere else.
+    /// That is not a contrived state: <c>GET /user-identity</c> answers for any
+    /// key prdb knows, and the endpoints that read the corpus want a subscription
+    /// behind it.
+    /// </summary>
+    public static FakePrdb AcceptingOnlyTheKeyCheck(string apiKey) => new(request =>
+        request.RequestUri?.AbsolutePath.EndsWith("/user-identity", StringComparison.Ordinal) == true
+        && request.Headers.TryGetValues(ApiKeyHeader, out var values)
+        && values.Contains(apiKey, StringComparer.Ordinal)
+            ? Json(HttpStatusCode.OK, """{"userHash":"a-stable-hash","activeSubscriptions":[]}""")
+            : Forbidden());
+
     /// <summary>prdb is not there at all: no DNS, no route, a proxy that swallowed it.</summary>
     public static FakePrdb Unreachable() =>
         new(_ => throw new HttpRequestException("Name or service not known."));
@@ -46,6 +59,10 @@ internal sealed class FakePrdb(Func<HttpRequestMessage, HttpResponseMessage> ans
 
         return Task.FromResult(answer(request));
     }
+
+    private static HttpResponseMessage Forbidden() => Json(
+        HttpStatusCode.Forbidden,
+        """{"type":"about:blank","title":"Forbidden","status":403,"detail":"No API plan."}""");
 
     private static HttpResponseMessage Unauthorized() => Json(
         HttpStatusCode.Unauthorized,

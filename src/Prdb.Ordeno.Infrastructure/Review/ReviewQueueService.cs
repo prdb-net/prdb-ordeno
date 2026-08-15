@@ -52,7 +52,10 @@ public sealed class ReviewQueueService(
 
         if (configuration.OnboardingCompletedAt is null)
         {
-            return ReviewQueue.Empty("Nothing is in the queue until the setup is finished.");
+            return ReviewQueue.Empty(
+                filter,
+                site,
+                "Nothing is in the queue until the setup is finished.");
         }
 
         var wanted = Math.Max(1, page);

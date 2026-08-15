@@ -643,6 +643,265 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    filter?: string;
+                    site?: string;
+                    noSite?: boolean;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewQueueState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/queue/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    site?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VideoSearchState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/queue/{fileId}/assignment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    fileId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AssignRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/queue/{fileId}/dismissal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    fileId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/queue/dismissals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DismissManyRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/queue/{fileId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    fileId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionState"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -653,6 +912,10 @@ export interface components {
         };
         AddSourceRequest: {
             path: string;
+        };
+        AssignRequest: {
+            /** Format: uuid */
+            videoId: string;
         };
         ConfigurationProblem: {
             message: string;
@@ -672,6 +935,9 @@ export interface components {
             path: string;
             usable: boolean;
             problem: null | string;
+        };
+        DismissManyRequest: {
+            fileIds: (number | string)[];
         };
         FiledFileState: {
             /** Format: int32 */
@@ -761,6 +1027,83 @@ export interface components {
             /** Format: date-time */
             askedAt: string;
         };
+        ResolutionState: {
+            kind: string;
+            from: null | string;
+            /** Format: date-time */
+            decidedAt: string;
+            answer: string;
+            /** Format: uuid */
+            videoId: null | string;
+            title: null | string;
+            /** Format: date */
+            releaseDate: null | string;
+            siteTitle: null | string;
+        };
+        ReviewCandidateState: {
+            /** Format: uuid */
+            videoId: string;
+            answer: string;
+            video: null | components["schemas"]["VideoState"];
+        };
+        ReviewDecisionState: {
+            made: boolean;
+            entry: null | components["schemas"]["ReviewEntryState"];
+            summary: components["schemas"]["ReviewSummaryState"];
+            problem: null | string;
+        };
+        ReviewEntryState: {
+            /** Format: int32 */
+            fileId: number | string;
+            name: string;
+            path: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            /** Format: date-time */
+            firstSeenAt: string;
+            recognised: null | components["schemas"]["RecognisedState"];
+            candidates: components["schemas"]["ReviewCandidateState"][];
+            decision: null | components["schemas"]["ResolutionState"];
+        };
+        ReviewQueueState: {
+            filter: string;
+            /** Format: uuid */
+            site: null | string;
+            entries: components["schemas"]["ReviewEntryState"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pages: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            summary: components["schemas"]["ReviewSummaryState"];
+            sites: components["schemas"]["ReviewSiteState"][];
+            problem: null | string;
+        };
+        ReviewSiteState: {
+            /** Format: uuid */
+            siteId: null | string;
+            name: string;
+            /** Format: int32 */
+            waiting: number | string;
+        };
+        ReviewSummaryState: {
+            /** Format: int32 */
+            waiting: number | string;
+            /** Format: int32 */
+            ambiguous: number | string;
+            /** Format: int32 */
+            siteOnly: number | string;
+            /** Format: int32 */
+            unrecognised: number | string;
+            /** Format: int32 */
+            assigned: number | string;
+            /** Format: int32 */
+            dismissed: number | string;
+            whatIsWaiting: string;
+        };
         ScannedFileState: {
             /** Format: int32 */
             id: number | string;
@@ -828,6 +1171,25 @@ export interface components {
             problem: null | string;
             movement: string;
             movementExplained: string;
+        };
+        VideoSearchState: {
+            answered: boolean;
+            videos: components["schemas"]["VideoState"][];
+            /** Format: int32 */
+            total: number | string;
+            problem: null | string;
+        };
+        VideoState: {
+            /** Format: uuid */
+            videoId: string;
+            answer: string;
+            title: null | string;
+            /** Format: date */
+            releaseDate: null | string;
+            /** Format: uuid */
+            siteId: null | string;
+            siteTitle: null | string;
+            performers: null | string;
         };
     };
     responses: never;
