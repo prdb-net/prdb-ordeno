@@ -58,9 +58,11 @@ public static class MovieNfo
     /// <summary>
     /// The one format <c>&lt;premiered&gt;</c> is parsed against by a default
     /// installation. It is a server setting rather than a constant, which is one
-    /// of the three things a configured Jellyfin connection buys (ADR 0018).
+    /// of the three things a configured Jellyfin connection buys (ADR 0018) — so
+    /// the connection test compares what the server is set to against this, and
+    /// the two must be the same string rather than two constants that agree.
     /// </summary>
-    private const string ReleaseDateFormat = "yyyy-MM-dd";
+    public const string ReleaseDateFormat = "yyyy-MM-dd";
 
     private static readonly string Notice = string.Join(
         '\n',

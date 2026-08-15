@@ -31,6 +31,23 @@ public sealed class StoredConfiguration
     /// </summary>
     public string? Layout { get; set; }
 
+    /// <summary>
+    /// Where the media server answers, or <c>null</c> because it was left blank —
+    /// which is the default and not a degraded state (ADR 0018). Stored
+    /// normalised, so that what onboarding reads back is what the tool will send
+    /// to rather than what somebody typed.
+    /// </summary>
+    public string? MediaServerUrl { get; set; }
+
+    /// <summary>
+    /// The key that gets into it, under the same rule as
+    /// <see cref="PrdbApiKey"/>: never logged, never returned to the browser once
+    /// saved. It is only ever set together with <see cref="MediaServerUrl"/> — a
+    /// key with no address reaches nothing, and an address with no key is
+    /// refused by everything worth asking.
+    /// </summary>
+    public string? MediaServerApiKey { get; set; }
+
     public DateTimeOffset? OnboardingCompletedAt { get; set; }
 
     /// <summary>
