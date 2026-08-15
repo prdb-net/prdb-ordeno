@@ -9,7 +9,7 @@ import {
   type ReviewEntryState,
   type ReviewFilter,
   type ReviewQueueState,
-  type VideoState,
+  type VideoSearchState,
 } from '../api/client'
 
 /**
@@ -301,20 +301,17 @@ function Row({
   chosen: boolean
   onChosen: (fileId: number, picked: boolean) => void
   onDecided: (fileId: number, decide: () => Promise<ReviewDecisionState>) => Promise<void>
-  onSearch: (query: string, site?: string) => Promise<{ videos: VideoState[]; problem?: string | null } | null>
+  onSearch: (query: string, site?: string) => Promise<VideoSearchState | null>
 }) {
   const fileId = Number(entry.fileId)
   const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState(() => searchable(entry.name))
-  const [found, setFound] = useState<VideoState[] | null>(null)
+  const [found, setFound] = useState<VideoSearchState | null>(null)
   const [asking, setAsking] = useState(false)
 
   const search = async () => {
     setAsking(true)
-
-    const answer = await onSearch(query)
-
-    setFound(answer === null ? [] : answer.videos)
+    setFound(await onSearch(query))
     setAsking(false)
   }
 
@@ -422,12 +419,20 @@ function Row({
                 {asking ? 'Asking prdb…' : 'Search'}
               </button>
 
+              {/* prdb refusing and prdb having nothing are different answers,
+                  and showing the first as the second would send somebody
+                  looking for a video that is there. */}
+              {found !== null && !found.answered && (
+                <p className="problem">{found.problem ?? 'prdb could not be asked.'}</p>
+              )}
+
               {found !== null &&
-                (found.length === 0 ? (
+                found.answered &&
+                (found.videos.length === 0 ? (
                   <p className="hint">Nothing under that. Try fewer words.</p>
                 ) : (
                   <ul className="candidates">
-                    {found.map((video) => (
+                    {found.videos.map((video) => (
                       <li key={video.videoId}>
                         <button
                           type="button"
