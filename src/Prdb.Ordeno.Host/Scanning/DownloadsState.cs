@@ -174,7 +174,12 @@ internal static class DownloadsState
             PerceptualBacklog: backlog,
             WhatItRecognised: inventory.Recognition.WhatItRecognised));
 
-    private static RecognisedState? Recognised(Recognition? recognition) =>
+    /// <summary>
+    /// What prdb said, for a row. Shared with the review queue rather than
+    /// written twice: the four answers have to read the same on both screens, and
+    /// two copies of that mapping is how they stop doing so.
+    /// </summary>
+    public static RecognisedState? Recognised(Recognition? recognition) =>
         recognition is null
             ? null
             : new RecognisedState(

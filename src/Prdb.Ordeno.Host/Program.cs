@@ -10,12 +10,14 @@ using Prdb.Ordeno.Host.Access;
 using Prdb.Ordeno.Host.Configuration;
 using Prdb.Ordeno.Host.Identification;
 using Prdb.Ordeno.Host.Library;
+using Prdb.Ordeno.Host.Review;
 using Prdb.Ordeno.Host.Scanning;
 using Prdb.Ordeno.Infrastructure.Access;
 using Prdb.Ordeno.Infrastructure.Configuration;
 using Prdb.Ordeno.Infrastructure.Identification;
 using Prdb.Ordeno.Infrastructure.Library;
 using Prdb.Ordeno.Infrastructure.Persistence;
+using Prdb.Ordeno.Infrastructure.Review;
 using Prdb.Ordeno.Infrastructure.Scanning;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +33,7 @@ builder.Services.AddOrdenoConfiguration();
 builder.Services.AddOrdenoScanning();
 builder.Services.AddOrdenoIdentification();
 builder.Services.AddOrdenoLibrary();
+builder.Services.AddOrdenoReview();
 
 // The tool is set up once and left alone, so looking in the download
 // directories is something it does rather than something it is asked for. The
@@ -136,6 +139,7 @@ app.MapConfiguration();
 app.MapScanning();
 app.MapIdentification();
 app.MapFiling();
+app.MapReview();
 
 // ADR 0006: routing happens in the browser, so unknown paths return index.html
 // and let the frontend decide. Unknown API paths must not — a caller that asked

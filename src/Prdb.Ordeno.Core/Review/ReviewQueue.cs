@@ -168,8 +168,16 @@ public sealed record ReviewQueue(
     /// </summary>
     public const int PageSize = 50;
 
-    public static ReviewQueue Empty(string? problem = null) =>
-        new(ReviewFilter.Waiting, null, [], 1, 0, ReviewSummary.Nothing, [], problem);
+    /// <summary>
+    /// Nothing to work through, for a reason. It keeps the filter and the site it
+    /// was asked with: the screen shows which list it is on, and a tab that jumps
+    /// back to the first one is a screen arguing with the person using it.
+    /// </summary>
+    public static ReviewQueue Empty(
+        ReviewFilter filter = ReviewFilter.Waiting,
+        Guid? site = null,
+        string? problem = null) =>
+        new(filter, site, [], 1, 0, ReviewSummary.Nothing, [], problem);
 
     public int Pages => Total == 0 ? 1 : (Total + PageSize - 1) / PageSize;
 }
