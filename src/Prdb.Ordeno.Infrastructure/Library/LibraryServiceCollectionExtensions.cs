@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Prdb.Ordeno.Core.Library;
 using Prdb.Ordeno.Core.Review;
 using Prdb.Ordeno.Infrastructure.Configuration;
+using Prdb.Ordeno.Infrastructure.MediaServer;
 using Prdb.Ordeno.Infrastructure.Review;
 
 namespace Prdb.Ordeno.Infrastructure.Library;
@@ -49,6 +50,12 @@ public static class LibraryServiceCollectionExtensions
 
         services.TryAddSingleton<FilingRunner>();
         services.TryAddScoped<FilingService>();
+
+        // The optional half: a run that has finished tells the media server what
+        // it wrote, if there is one to tell. Registered here because the runner
+        // reaches for it, and doing nothing when nothing is configured is the
+        // service's own answer rather than a wiring decision.
+        services.AddOrdenoMediaServer();
 
         return services;
     }

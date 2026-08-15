@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Ordeno.Core.Library;
+using Prdb.Ordeno.Infrastructure.MediaServer;
 
 namespace Prdb.Ordeno.Infrastructure.Library;
 
@@ -90,6 +91,13 @@ public sealed class FilingRunner(
                     report.Results.Count);
 
                 Publish(Status.Filed(time.GetUtcNow(), report.Results, report.Problem));
+
+                // Only now, and only after the run has been reported. Everything
+                // above is the filing path and ADR 0018 keeps the media server
+                // out of it: the files have moved, the rows are written and the
+                // screen already says so before anything is asked of a server
+                // that may be switched off.
+                await TellTheMediaServerAsync(scope.ServiceProvider, report, cancellationToken);
             }
             else
             {
@@ -118,6 +126,53 @@ public sealed class FilingRunner(
         finally
         {
             gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Asks the media server to read the sidecars this run has just written, so
+    /// that a rewritten one appears without waiting out the tolerance window a
+    /// scan obeys.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Nothing in here can fail a filing. It runs after the report is published,
+    /// it swallows everything, and a configured connection that is down is a line
+    /// in the log — the entry the operation log
+    /// (<see href="https://github.com/prdb-net/prdb-ordeno/issues/19">#19</see>)
+    /// will carry — and never a file that did not get filed.
+    /// </para>
+    /// <para>
+    /// A shutdown skips it altogether. The container is going away and the videos
+    /// are already in the library; the next scan over there finds them, which is
+    /// what happens for everyone who left the connection blank.
+    /// </para>
+    /// </remarks>
+    private async Task TellTheMediaServerAsync(
+        IServiceProvider services,
+        FilingReport report,
+        CancellationToken cancellationToken)
+    {
+        // Only the ones that came out of this run with a sidecar next to them.
+        // A video filed without one has nothing new for the server to read.
+        var filed = report.Results
+            .Where(result => result.Filed && result.Plan.Sidecar.Writes && result.Sidecar is null)
+            .Select(result => result.Plan.TargetPath)
+            .OfType<string>()
+            .ToList();
+
+        if (filed.Count == 0 || cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await services.GetRequiredService<MediaServerService>().RefreshAsync(filed, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "The media server could not be told what was filed.");
         }
     }
 
