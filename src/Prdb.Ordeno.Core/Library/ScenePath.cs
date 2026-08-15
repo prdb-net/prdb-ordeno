@@ -36,6 +36,33 @@ public sealed record ScenePath(string SiteDirectory, string SceneDirectory, stri
     /// </summary>
     public const string SidecarFileName = "movie.nfo";
 
+    /// <summary>
+    /// The names read back off a scene directory the tool filed into earlier,
+    /// rather than computed from a scene.
+    /// </summary>
+    /// <remarks>
+    /// A second quality goes next to the first, so its name is derived from the
+    /// directory that is <em>there</em> — which may carry a scene id from a
+    /// broken collision, or be truncated differently from what the layout would
+    /// produce for the same scene today. Recomputing it would put a file into
+    /// that directory whose name does not begin with the directory's own, and
+    /// section 6 of the layout document is what that costs: two entries with
+    /// identical names instead of one with two versions.
+    /// </remarks>
+    /// <param name="sceneDirectory">The absolute path of the scene directory.</param>
+    /// <param name="extension">The extension of the file being named, with its dot.</param>
+    public static ScenePath At(string sceneDirectory, string extension)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sceneDirectory);
+
+        var trimmed = sceneDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        return new ScenePath(
+            Path.GetFileName(Path.GetDirectoryName(trimmed)) ?? string.Empty,
+            Path.GetFileName(trimmed),
+            extension);
+    }
+
     /// <summary>The video file, as it is named when there is only one of it.</summary>
     public string VideoFileName => SceneDirectory + Extension;
 

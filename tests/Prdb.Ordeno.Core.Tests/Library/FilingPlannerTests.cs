@@ -1,0 +1,324 @@
+using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.Library;
+
+using Xunit;
+
+namespace Prdb.Ordeno.Core.Tests.Library;
+
+/// <summary>
+/// Every decision filing makes, made without touching anything. What is tested
+/// here is what the user is shown before they press the button and what the run
+/// then carries out — one answer, which is the whole point of ADR 0022.
+/// </summary>
+public sealed class FilingPlannerTests
+{
+    private const string Root = "/library";
+    private const string Directory = "/library/Example Studio/Example Studio - 2025-11-03 - Scene Title";
+
+    private static readonly Guid VideoId = Guid.Parse("0f3a1c2b-4d5e-6f70-8192-a3b4c5d6e7f8");
+
+    private static readonly Scene Scene =
+        new(VideoId, "Example Studio", "Scene Title", new DateOnly(2025, 11, 3));
+
+    /// <summary>What is at each path, for the paths a test cares about; free everywhere else.</summary>
+    private sealed class Directories : ISceneDirectories
+    {
+        private readonly Dictionary<string, SceneDirectoryState> answers = [];
+
+        public List<string> Asked { get; } = [];
+
+        public Directories With(string path, SceneDirectoryState state)
+        {
+            answers[path] = state;
+
+            return this;
+        }
+
+        public SceneDirectoryState StateOf(string absolutePath)
+        {
+            Asked.Add(absolutePath);
+
+            return answers.GetValueOrDefault(absolutePath, SceneDirectoryState.Free);
+        }
+    }
+
+    private static FilingPlan Plan(
+        Directories directories,
+        VideoQualityReading? quality = null,
+        Scene? scene = null,
+        IReadOnlyList<FiledCopy>? filed = null,
+        string sourceName = "some.release.1080p.mkv",
+        FileMovement movement = FileMovement.Rename) =>
+        new FilingPlanner(new TargetPaths(directories), directories).Plan(
+            fileId: 7,
+            sourcePath: "/downloads/" + sourceName,
+            sourceName,
+            Root,
+            movement,
+            scene ?? Scene,
+            quality ?? VideoQualityReading.Of(1920, 1080),
+            filed ?? []);
+
+    [Fact]
+    public void A_scene_the_library_does_not_hold_is_filed_where_the_layout_says()
+    {
+        var plan = Plan(new Directories());
+
+        Assert.Equal(FilingOutcome.Filed, plan.Outcome);
+        Assert.Equal(Directory, plan.Directory);
+        Assert.Equal($"{Directory}/Example Studio - 2025-11-03 - Scene Title.mkv", plan.TargetPath);
+        Assert.Equal("1080p", plan.QualityLabel);
+        Assert.Null(plan.Relabel);
+        Assert.Null(plan.Message);
+        Assert.True(plan.Moves);
+    }
+
+    /// <summary>
+    /// The first copy carries no label. There is only one of it, and ADR 0020
+    /// puts one on it when that stops being true rather than in anticipation.
+    /// </summary>
+    [Fact]
+    public void The_first_copy_of_a_scene_is_not_labelled() =>
+        Assert.Equal("Example Studio - 2025-11-03 - Scene Title.mkv", Plan(new Directories()).TargetName);
+
+    /// <summary>
+    /// #20's answer, reached through the planner: a taken name is stepped around
+    /// with prdb's scene id rather than written into, because two scenes in one
+    /// directory become one entry and one of them stops existing.
+    /// </summary>
+    [Fact]
+    public void A_name_taken_by_something_else_is_stepped_around()
+    {
+        var plan = Plan(new Directories().With(Directory, SceneDirectoryState.Occupied));
+
+        Assert.Equal(FilingOutcome.CollisionBroken, plan.Outcome);
+        Assert.Contains(VideoId.ToString("d"), plan.Directory);
+        Assert.NotNull(plan.Message);
+        Assert.True(plan.Moves);
+    }
+
+    [Fact]
+    public void A_library_that_cannot_be_looked_at_stops_the_filing()
+    {
+        var plan = Plan(new Directories().With(Directory, SceneDirectoryState.Unknown));
+
+        Assert.Equal(FilingOutcome.Blocked, plan.Outcome);
+        Assert.Null(plan.TargetPath);
+        Assert.False(plan.Moves);
+    }
+
+    /// <summary>
+    /// ADR 0003, and the case the tool exists to handle: a download directory
+    /// holding the same scene three times. Nothing is moved and nothing is
+    /// deleted.
+    /// </summary>
+    [Fact]
+    public void A_second_copy_at_the_same_quality_is_not_filed()
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var plan = Plan(new Directories().With(filed[0].Path, SceneDirectoryState.Occupied), filed: filed);
+
+        Assert.Equal(FilingOutcome.AlreadyFiled, plan.Outcome);
+        Assert.False(plan.Moves);
+        Assert.Null(plan.Relabel);
+        Assert.Contains("1080p", plan.Message);
+        Assert.Contains("not deleted", plan.Message);
+    }
+
+    /// <summary>
+    /// The same scene at a quality the library does not hold. It joins the copy
+    /// that is there — one directory, or Jellyfin shows two entries instead of
+    /// one with two versions — and that copy is relabelled first (ADR 0020).
+    /// </summary>
+    [Fact]
+    public void A_second_quality_joins_the_copy_that_is_there_and_relabels_it()
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var plan = Plan(
+            new Directories().With(filed[0].Path, SceneDirectoryState.Occupied),
+            VideoQualityReading.Of(3840, 2160),
+            filed: filed,
+            sourceName: "some.release.2160p.mkv");
+
+        Assert.Equal(FilingOutcome.SecondQuality, plan.Outcome);
+        Assert.Equal(Directory, plan.Directory);
+        Assert.Equal(
+            $"{Directory}/Example Studio - 2025-11-03 - Scene Title - [2160p].mkv",
+            plan.TargetPath);
+
+        Assert.Equal($"{Directory}/Example Studio - 2025-11-03 - Scene Title.mkv", plan.Relabel?.From);
+        Assert.Equal(
+            $"{Directory}/Example Studio - 2025-11-03 - Scene Title - [1080p].mkv",
+            plan.Relabel?.To);
+    }
+
+    /// <summary>
+    /// Once every copy carries a label there is nothing to rename, and a third
+    /// quality is a pure addition.
+    /// </summary>
+    [Fact]
+    public void A_third_quality_next_to_two_labelled_ones_renames_nothing()
+    {
+        var directories = new Directories();
+        var filed = new List<FiledCopy>
+        {
+            Copy("Example Studio - 2025-11-03 - Scene Title - [1080p].mkv", "1080p"),
+            Copy("Example Studio - 2025-11-03 - Scene Title - [2160p].mkv", "2160p"),
+        };
+
+        foreach (var copy in filed)
+        {
+            directories.With(copy.Path, SceneDirectoryState.Occupied);
+        }
+
+        var plan = Plan(
+            directories,
+            VideoQualityReading.Of(1280, 720),
+            filed: filed,
+            sourceName: "some.release.720p.mkv");
+
+        Assert.Equal(FilingOutcome.SecondQuality, plan.Outcome);
+        Assert.Null(plan.Relabel);
+        Assert.Equal(
+            $"{Directory}/Example Studio - 2025-11-03 - Scene Title - [720p].mkv",
+            plan.TargetPath);
+    }
+
+    /// <summary>
+    /// The directory that is there is what the newcomer is named after, even
+    /// where the layout would name that scene something else today — a collision
+    /// was broken there, or a title was truncated differently. Recomputing the
+    /// name would break the prefix rule section 6 rests on.
+    /// </summary>
+    [Fact]
+    public void A_second_quality_is_named_after_the_directory_that_is_there()
+    {
+        const string broken = "/library/Example Studio/Example Studio - 2025-11-03 - Scene Title "
+            + "[0f3a1c2b-4d5e-6f70-8192-a3b4c5d6e7f8]";
+
+        var filed = new List<FiledCopy>
+        {
+            new(VideoId, broken, "Example Studio - 2025-11-03 - Scene Title "
+                + "[0f3a1c2b-4d5e-6f70-8192-a3b4c5d6e7f8].mkv", "1080p"),
+        };
+
+        var plan = Plan(
+            new Directories().With(filed[0].Path, SceneDirectoryState.Occupied),
+            VideoQualityReading.Of(3840, 2160),
+            filed: filed);
+
+        Assert.Equal(broken, plan.Directory);
+        Assert.Equal(
+            broken + "/Example Studio - 2025-11-03 - Scene Title "
+            + "[0f3a1c2b-4d5e-6f70-8192-a3b4c5d6e7f8] - [2160p].mkv",
+            plan.TargetPath);
+        Assert.StartsWith(
+            System.IO.Path.GetFileName(broken),
+            System.IO.Path.GetFileName(plan.TargetPath!),
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A record of a file the user has since deleted is out of date, not a
+    /// library that holds the scene. The scene is filed again as though for the
+    /// first time.
+    /// </summary>
+    [Fact]
+    public void A_copy_that_is_no_longer_there_does_not_hold_the_scene()
+    {
+        var plan = Plan(
+            new Directories(),
+            filed: Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p"));
+
+        Assert.Equal(FilingOutcome.Filed, plan.Outcome);
+        Assert.Equal($"{Directory}/Example Studio - 2025-11-03 - Scene Title.mkv", plan.TargetPath);
+    }
+
+    /// <summary>
+    /// Not being able to look is not the same as nothing being there. Filing on
+    /// the strength of it would put a second copy next to one the tool cannot
+    /// see, or rename a file it cannot find.
+    /// </summary>
+    [Fact]
+    public void A_copy_that_cannot_be_looked_at_stops_the_filing()
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var plan = Plan(
+            new Directories().With(filed[0].Path, SceneDirectoryState.Unknown),
+            filed: filed);
+
+        Assert.Equal(FilingOutcome.Blocked, plan.Outcome);
+        Assert.False(plan.Moves);
+    }
+
+    /// <summary>
+    /// ADR 0020: without a quality neither the skip nor the label can be
+    /// decided, and the hard rule says nothing is written on a partial answer.
+    /// </summary>
+    [Fact]
+    public void A_file_whose_quality_could_not_be_read_is_not_filed()
+    {
+        var plan = Plan(new Directories(), new VideoQualityReading(VideoQualityState.Unreadable));
+
+        Assert.Equal(FilingOutcome.Blocked, plan.Outcome);
+        Assert.False(plan.Moves);
+        Assert.NotNull(plan.Message);
+    }
+
+    /// <summary>
+    /// ADR 0019: a file prdb cannot name is not filed at all. The planner is
+    /// given the answer to that question rather than asking it, and says so
+    /// rather than throwing.
+    /// </summary>
+    [Fact]
+    public void A_file_prdb_could_not_name_is_not_filed()
+    {
+        var directories = new Directories();
+
+        var plan = new FilingPlanner(new TargetPaths(directories), directories).Plan(
+            fileId: 7,
+            sourcePath: "/downloads/some.release.mkv",
+            sourceName: "some.release.mkv",
+            Root,
+            FileMovement.Rename,
+            scene: null,
+            VideoQualityReading.Of(1920, 1080),
+            []);
+
+        Assert.Equal(FilingOutcome.Blocked, plan.Outcome);
+        Assert.False(plan.Moves);
+        Assert.Contains("review queue", plan.Message);
+    }
+
+    /// <summary>
+    /// The preview and the run are the same call, so asking twice with nothing
+    /// changed has to answer the same thing. A plan that drifted would be a
+    /// preview of something else.
+    /// </summary>
+    [Fact]
+    public void Asking_twice_answers_the_same_thing()
+    {
+        var directories = new Directories().With(Directory, SceneDirectoryState.Occupied);
+
+        Assert.Equal(Plan(directories), Plan(directories));
+    }
+
+    /// <summary>
+    /// Whether this is an instant rename or an hour of copying is known before
+    /// anything happens, because it is the sentence the user reads while
+    /// deciding.
+    /// </summary>
+    [Fact]
+    public void The_plan_says_how_the_file_would_travel() =>
+        Assert.Equal(
+            FileMovement.CopyThenDelete,
+            Plan(new Directories(), movement: FileMovement.CopyThenDelete).Movement);
+
+    private static List<FiledCopy> Held(string fileName, string quality) => [Copy(fileName, quality)];
+
+    private static FiledCopy Copy(string fileName, string quality) =>
+        new(VideoId, Directory, fileName, quality);
+}
