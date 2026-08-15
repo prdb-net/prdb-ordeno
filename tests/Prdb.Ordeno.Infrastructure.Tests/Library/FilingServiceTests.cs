@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Prdb.Ordeno.Core.Configuration;
 using Prdb.Ordeno.Core.Identification;
 using Prdb.Ordeno.Core.Library;
+using Prdb.Ordeno.Core.Review;
 using Prdb.Ordeno.Core.Scanning;
 using Prdb.Ordeno.Infrastructure.Identification;
 using Prdb.Ordeno.Infrastructure.Library;
@@ -273,6 +274,92 @@ public sealed class FilingServiceTests : IAsyncLifetime
         await ReadyAsync();
 
         Assert.Empty((await PlanAsync()).Plans);
+    }
+
+    /// <summary>
+    /// ADR 0023: a video a person named is filed exactly as one prdb named. The
+    /// queue answers what a file is; this is still the run that moves it.
+    /// </summary>
+    [Fact]
+    public async Task A_video_a_person_named_is_filed_like_any_other()
+    {
+        var source = await ArrivedAsync("mystery.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        await DecidedAsync("mystery.1080p.mkv", ResolutionKind.Assigned, Guid.NewGuid());
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.Equal(FilingResultState.Filed, result.State);
+        Assert.Equal(
+            Path.Combine(library, SceneDirectory, "Example Studio - 2024-05-01 - Scene Title.mkv"),
+            result.Plan.TargetPath);
+        Assert.False(File.Exists(source));
+    }
+
+    /// <summary>
+    /// A person's answer outranks prdb's wherever both exist. prdb naming
+    /// something else afterwards is not a reason to undo somebody's decision.
+    /// </summary>
+    [Fact]
+    public async Task A_persons_answer_is_the_one_that_is_filed()
+    {
+        prdb.Recognises(Guid.NewGuid(), "What prdb Called It", "Some Other Site");
+        await ArrivedAsync("disputed.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        await DecidedAsync("disputed.1080p.mkv", ResolutionKind.Assigned, Guid.NewGuid());
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.Equal(FilingResultState.Filed, result.State);
+        Assert.Equal(Path.Combine(library, SceneDirectory), result.Plan.Directory);
+    }
+
+    /// <summary>
+    /// Saying no is an answer, and the answer is "leave it alone". A dismissed
+    /// file is not a candidate, not a failure, and still on disk.
+    /// </summary>
+    [Fact]
+    public async Task A_file_somebody_dismissed_is_not_filed()
+    {
+        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        var source = await ArrivedAsync("sample.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        await DecidedAsync("sample.1080p.mkv", ResolutionKind.Dismissed, videoId: null);
+
+        Assert.Empty((await PlanAsync()).Plans);
+        Assert.Empty((await FileAsync()).Results);
+        Assert.True(File.Exists(source));
+        Assert.Empty(Directory.GetDirectories(library));
+    }
+
+    /// <summary>
+    /// What the queue writes when somebody answers, written straight to the
+    /// database: what is under test here is what filing makes of it.
+    /// </summary>
+    private async Task DecidedAsync(string relative, ResolutionKind kind, Guid? videoId)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<OrdenoDbContext>();
+
+        var path = Path.Combine(downloads, relative);
+        var file = await context.DiscoveredFiles.SingleAsync(row => row.Path == path);
+
+        context.FileResolutions.Add(new FileResolution
+        {
+            DiscoveredFileId = file.Id,
+            DecidedAt = time.GetUtcNow(),
+            Kind = kind,
+            From = kind is ResolutionKind.Assigned ? ResolvedFrom.Search : null,
+            VideoId = videoId,
+            Title = videoId is null ? null : Title,
+            SiteTitle = videoId is null ? null : Site,
+            ReleaseDate = videoId is null ? null : new DateOnly(2024, 5, 1),
+        });
+
+        await context.SaveChangesAsync();
     }
 
     /// <summary>

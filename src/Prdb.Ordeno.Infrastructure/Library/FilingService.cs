@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Prdb.Ordeno.Core.Configuration;
 using Prdb.Ordeno.Core.Identification;
 using Prdb.Ordeno.Core.Library;
+using Prdb.Ordeno.Core.Review;
 using Prdb.Ordeno.Core.Scanning;
 using Prdb.Ordeno.Infrastructure.Persistence;
 
@@ -191,7 +192,7 @@ public sealed class FilingService(
         Dictionary<Guid, List<FiledCopy>> filed,
         CancellationToken cancellationToken)
     {
-        var scene = Scene.From(candidate.Recognition);
+        var scene = candidate.Scene;
         var quality = await qualities.ReadAsync(candidate.Path, cancellationToken);
 
         return planner.Plan(
@@ -300,11 +301,21 @@ public sealed class FilingService(
     }
 
     /// <summary>
-    /// Everything that has finished downloading and that prdb named a video
-    /// for. A file it could not name is the review queue's
+    /// Everything that has finished downloading and that something named a video
+    /// for: a person, or failing that prdb.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Two sources of truth in a fixed order — ADR 0023. A person's answer
+    /// outranks prdb's wherever both exist, and a file somebody dismissed is
+    /// named by neither: it is here, it is settled, and it stays where it is.
+    /// </para>
+    /// <para>
+    /// A file nothing has named is the review queue's
     /// (<see href="https://github.com/prdb-net/prdb-ordeno/issues/16">#16</see>)
     /// and never appears here — ADR 0019.
-    /// </summary>
+    /// </para>
+    /// </remarks>
     private async Task<IReadOnlyList<Candidate>> CandidatesAsync(CancellationToken cancellationToken)
     {
         var settled = Settling.SettledIfUnchangedSince(time.GetUtcNow());
@@ -313,19 +324,27 @@ public sealed class FilingService(
             .AsNoTracking()
             .ToDictionaryAsync(source => source.Id, source => source.Path, cancellationToken);
 
-        var rows = await context.DiscoveredFiles
-            .AsNoTracking()
-            .Where(file => file.SizeBytes > 0 && file.UnchangedSince <= settled)
-            .Join(
-                context.FileIdentifications.AsNoTracking().Where(row => row.VideoId != null),
-                file => file.Id,
-                identification => identification.DiscoveredFileId,
-                (file, identification) => new
-                {
-                    file.Id,
-                    file.SourceDirectoryId,
-                    file.Path,
-                    Recognition = new Recognition(
+        var rows = await (
+            from file in context.DiscoveredFiles.AsNoTracking()
+            join answer in context.FileIdentifications.AsNoTracking()
+                on file.Id equals answer.DiscoveredFileId into answers
+            from identification in answers.DefaultIfEmpty()
+            join written in context.FileResolutions.AsNoTracking()
+                on file.Id equals written.DiscoveredFileId into decisions
+            from decision in decisions.DefaultIfEmpty()
+            where file.SizeBytes > 0 && file.UnchangedSince <= settled
+            where decision == null
+                ? identification != null && identification.VideoId != null
+                : decision.Kind == ResolutionKind.Assigned
+            orderby file.Id
+            select new
+            {
+                file.Id,
+                file.SourceDirectoryId,
+                file.Path,
+                Recognition = identification == null
+                    ? null
+                    : new Recognition(
                         identification.Confidence,
                         identification.MatchedBy,
                         identification.VideoId,
@@ -334,9 +353,17 @@ public sealed class FilingService(
                         identification.SiteTitle,
                         identification.Candidates.Count,
                         identification.AskedAt),
-                })
-            .OrderBy(row => row.Id)
-            .ToListAsync(cancellationToken);
+                Decision = decision == null
+                    ? null
+                    : new Resolution(
+                        decision.Kind,
+                        decision.From,
+                        decision.DecidedAt,
+                        decision.VideoId,
+                        decision.Title,
+                        decision.ReleaseDate,
+                        decision.SiteTitle),
+            }).ToListAsync(cancellationToken);
 
         return
         [
@@ -344,9 +371,18 @@ public sealed class FilingService(
                 row.Id,
                 row.Path,
                 Below(sources.GetValueOrDefault(row.SourceDirectoryId), row.Path),
-                row.Recognition)),
+                Named(row.Recognition, row.Decision))),
         ];
     }
+
+    /// <summary>
+    /// What this file is, in the order ADR 0023 fixes: what a person decided,
+    /// and only then what prdb answered.
+    /// </summary>
+    private static Scene? Named(Recognition? recognition, Resolution? decision) =>
+        decision is not null
+            ? Scene.From(decision)
+            : recognition is null ? null : Scene.From(recognition);
 
     /// <summary>
     /// What the library already holds of the scenes these files were recognised
@@ -359,7 +395,7 @@ public sealed class FilingService(
         CancellationToken cancellationToken)
     {
         var wanted = candidates
-            .Select(candidate => candidate.Recognition.VideoId)
+            .Select(candidate => candidate.Scene?.VideoId)
             .OfType<Guid>()
             .Distinct()
             .ToList();
@@ -411,7 +447,7 @@ public sealed class FilingService(
                 candidate.Id,
                 candidate.Path,
                 candidate.Name,
-                Scene.From(candidate.Recognition),
+                candidate.Scene,
                 "The tool was asked to stop before this one was reached. Nothing happened to it."),
             "Not reached before the tool stopped.");
 
@@ -423,7 +459,11 @@ public sealed class FilingService(
                 System.IO.Path.AltDirectorySeparatorChar)
             : System.IO.Path.GetFileName(path);
 
-    private sealed record Candidate(int Id, string Path, string Name, Recognition Recognition);
+    /// <param name="Scene">
+    /// What this file is, or <c>null</c> when what named it does not amount to
+    /// one — which the planner turns into a reason rather than a move.
+    /// </param>
+    private sealed record Candidate(int Id, string Path, string Name, Scene? Scene);
 
     /// <param name="Root">Where the library is, or <c>null</c> when it cannot be filed into.</param>
     private sealed record Library(string? Root, string? Problem)
