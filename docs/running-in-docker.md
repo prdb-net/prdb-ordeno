@@ -219,6 +219,25 @@ here. What is left is what has to exist before the application starts.
 | `ASPNETCORE_HTTP_PORTS` | `8080` | The port inside the container. To reach it on another port, remap it on the host side (`-p 9000:8080`) instead. |
 | `ORDENO_RESET_PASSWORD` | unset | See below. |
 
+## Turning the log up
+
+The container writes what it did and why at a level that suits a tool left
+alone. When something needs explaining — and particularly when the answer is
+"nothing happened", which is the hard case to tell from a failure — the tool's
+own reasoning can be turned on:
+
+```
+-e 'Logging__LogLevel__Prdb.Ordeno=Debug'
+```
+
+That adds the lines that say why a run did nothing: a scan that was already
+under way, files not yet counted as finished, a file left for the next run
+because it could not be read. To see whether requests from the browser arrive at
+all, add `-e 'Logging__LogLevel__Microsoft.AspNetCore=Information'`.
+
+Both are worth turning off again afterwards. Debug is a great deal of log for a
+tool that runs for months.
+
 ## If you have lost the password
 
 Start the container once with `ORDENO_RESET_PASSWORD=true`. That clears the

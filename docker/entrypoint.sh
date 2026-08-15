@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # ADR 0013: the container starts as root and does not stay there. This works out
 # which identity the user's files should belong to, hands the tool's own data
@@ -7,6 +7,16 @@
 # exec, not a supervisor: the application ends up as PID 1, so `docker stop`
 # reaches it and a move in progress is interrupted properly rather than the
 # container being killed once the timeout runs out.
+#
+# bash rather than sh, although nothing below is a bashism: /bin/sh here is dash,
+# and dash drops environment variables whose names are not valid shell
+# identifiers instead of passing them on. Every .NET logging category has a dot
+# in it — `Logging__LogLevel__Microsoft.AspNetCore`, `Logging__LogLevel__Prdb.Ordeno`
+# — so under dash the one setting anybody is asked to change while diagnosing a
+# problem never reaches the application, and nothing says so. `docker exec env`
+# still shows it, because that is the container's configured environment rather
+# than the process's; /proc/1/environ is where it is missing. smoke-test.sh
+# checks that it arrives.
 
 set -eu
 
