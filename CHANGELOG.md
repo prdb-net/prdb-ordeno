@@ -89,6 +89,23 @@ A video whose quality cannot be read is not filed, because without it the tool
 cannot tell a second quality from a second copy. Neither is one prdb could not
 name: that waits for the review queue.
 
+A filed video now arrives with its metadata. A `movie.nfo` goes in next to it,
+carrying the title, the release date, the studio and the cast, so the media
+server shows the scene rather than a file name — and the performers are people
+you can browse by rather than a line of text. What it says is fetched from prdb
+at the moment it is written, so a title or a cast entry corrected since the file
+was first recognised is what ends up in the library.
+
+It is written when a video is filed, and at no other time. A `movie.nfo` you
+wrote yourself is never touched: the video is filed next to it and your file
+stays exactly as it is. The tool recognises its own by a comment at the top of
+the file, so deleting that one line is how you take the file back. Replacing one
+of its own is a write and a rename, so an interrupted run leaves either the old
+file or the new one and never half of either, and prdb being unreachable means a
+video that is filed with no metadata beside it rather than one filed with the
+wrong metadata beside it. The plan on the Downloads screen says which of those
+would happen before anything is written.
+
 There is now a review queue, on a screen of its own, holding everything prdb
 could not settle: the files several videos fit equally well, the ones only the
 site could be read from, and the ones nothing matched. Where prdb named

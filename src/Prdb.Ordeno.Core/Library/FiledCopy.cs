@@ -9,8 +9,9 @@ namespace Prdb.Ordeno.Core.Library;
 /// to tell a second quality of a scene it filed last year — which goes
 /// <em>into</em> that directory — from two different scenes the layout gives one
 /// name, which must not. Nothing on disk carries that answer: the names are
-/// lossy by the time they are legal, and the sidecar that would carry an id is
-/// #18 and would still be missing from every directory somebody else made.
+/// lossy by the time they are legal, and the sidecar that carries prdb's id is
+/// written by this tool and is therefore missing from every directory somebody
+/// else made.
 /// </para>
 /// <para>
 /// It is deliberately the smallest record that answers it, and it is not the

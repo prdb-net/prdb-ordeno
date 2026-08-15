@@ -157,6 +157,40 @@ Three rules that a plausible refactor would quietly break:
   a part file left by a killed container would make a scene's own directory look
   like somebody else's the next time round.
 
+## The sidecar
+
+A filed video with a tidy name and no metadata next to it is not what anyone came
+for: what the media server shows comes out of a `movie.nfo` in the scene
+directory. **It is written as part of filing a video and at no other time**
+([ADR 0024](docs/adr/0024-the-sidecar-is-written-by-filing-and-only-over-its-own.md)),
+and *when* an existing one is refreshed is still an open question rather than an
+omission.
+
+`MovieNfo` builds the document and touches nothing; `Sidecars` puts it on disk and
+decides nothing except what it finds at the path the moment before it writes.
+Four rules that a plausible refactor would quietly break:
+
+- **It goes in after the video, never before.** A sidecar written first leaves
+  metadata in a directory holding no video when the move fails — and a directory
+  with anything in it counts as occupied, so the retry would file the scene
+  around its own directory.
+- **The tool writes over its own and nothing else.** Its own is the one carrying
+  the comment `Written by prdb-ordeno`; anything else, including a file that could
+  not be read, is left exactly where it is. A hand-written sidecar is at the same
+  name — `movie.nfo` is what a Movies library reads — so there is nothing to step
+  around, and deleting that comment line is how a user takes the file back.
+- **What it says is fetched when it is written**, in batches of fifty, not read
+  off the identification row (ADR 0017) — a corrected title is most of the reason
+  the file is worth writing. A lookup that fails writes nothing at all and the
+  video is still filed.
+- **A rewrite is a write and a rename.** Jellyfin does not care which way the
+  change arrived (section 7), but a truncating write killed halfway leaves a
+  document that parses nowhere, and an unparseable sidecar is discarded in silence.
+
+The three shapes that fail silently — the date format, the actor element, the
+escaping — are in `MovieNfoTests` rather than in comments, because none of them
+produces an error anywhere.
+
 ## The review queue
 
 What prdb could not settle waits for a person: several videos that fit equally

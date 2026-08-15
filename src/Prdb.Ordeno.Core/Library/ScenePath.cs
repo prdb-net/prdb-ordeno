@@ -31,9 +31,14 @@ public sealed record ScenePath(string SiteDirectory, string SceneDirectory, stri
     /// <summary>
     /// The sidecar's name, which is the same in every scene directory — section 4:
     /// a Movies library reads <c>movie.nfo</c>, and the per-file form collides
-    /// with the version grouping. Writing it is #18; knowing where it goes is
-    /// here, because it is a path and this is what holds paths.
+    /// with the version grouping. <see cref="MovieNfo"/> is what goes in it;
+    /// knowing where it goes is here, because it is a path and this is what holds
+    /// paths.
     /// </summary>
+    /// <remarks>
+    /// One name in every directory is also why a hand-written sidecar cannot be
+    /// stepped around the way a taken directory name can — ADR 0024.
+    /// </remarks>
     public const string SidecarFileName = "movie.nfo";
 
     /// <summary>
