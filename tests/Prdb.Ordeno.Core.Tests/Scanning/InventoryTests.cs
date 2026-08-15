@@ -48,15 +48,18 @@ public sealed class InventoryTests
     /// <summary>
     /// The claim the tool must never make by implication. Someone who reads a
     /// list of their downloads, each with the video it was recognised as beside
-    /// it, concludes it is filing them, and reports the absence months later as
-    /// data loss.
+    /// it, concludes it is filing them on its own, and finds months later that
+    /// nothing moved.
     /// </summary>
     [Fact]
-    public void Anything_found_is_reported_as_untouched()
+    public void Anything_found_is_reported_as_untouched_until_it_is_asked_for()
     {
         var inventory = Found(Source(1, ready: 1, settling: 0));
 
-        Assert.Contains("Nothing is filed yet", inventory.WhatItFound, StringComparison.Ordinal);
+        Assert.Contains(
+            "only when you ask it to",
+            inventory.WhatItFound,
+            StringComparison.Ordinal);
     }
 
     [Fact]

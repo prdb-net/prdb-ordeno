@@ -402,6 +402,61 @@
           }
         }
       }
+    },
+    "/api/filing": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/filing/plan": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingState"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -517,6 +572,144 @@
             "type": "boolean"
           },
           "problem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FiledFileState": {
+        "required": [
+          "fileId",
+          "name",
+          "state",
+          "scene",
+          "targetName",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "scene": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FilingState": {
+        "required": [
+          "running",
+          "filing",
+          "plannedAt",
+          "filedAt",
+          "problem",
+          "plan",
+          "planTotal",
+          "wouldFile",
+          "whatItWouldDo",
+          "results",
+          "resultTotal",
+          "whatItDid"
+        ],
+        "type": "object",
+        "properties": {
+          "running": {
+            "type": "boolean"
+          },
+          "filing": {
+            "type": "boolean"
+          },
+          "plannedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "filedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "problem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plan": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlannedFileState"
+            }
+          },
+          "planTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "wouldFile": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "whatItWouldDo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FiledFileState"
+            }
+          },
+          "resultTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "whatItDid": {
             "type": [
               "null",
               "string"
@@ -651,6 +844,91 @@
           },
           "description": {
             "type": "string"
+          }
+        }
+      },
+      "PlannedFileState": {
+        "required": [
+          "fileId",
+          "name",
+          "path",
+          "outcome",
+          "scene",
+          "quality",
+          "directory",
+          "targetName",
+          "relabelFrom",
+          "relabelTo",
+          "movement",
+          "moves",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "scene": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quality": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "directory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relabelFrom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relabelTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "movement": {
+            "type": "string"
+          },
+          "moves": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -1020,6 +1298,9 @@
     },
     {
       "name": "Identification"
+    },
+    {
+      "name": "Filing"
     }
   ]
 }

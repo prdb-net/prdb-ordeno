@@ -10,6 +10,9 @@ export type ScanState = components['schemas']['ScanState']
 export type ScannedFileState = components['schemas']['ScannedFileState']
 export type ScannedSourceState = components['schemas']['ScannedSourceState']
 export type RecognisedState = components['schemas']['RecognisedState']
+export type FilingState = components['schemas']['FilingState']
+export type PlannedFileState = components['schemas']['PlannedFileState']
+export type FiledFileState = components['schemas']['FiledFileState']
 
 type ConfigurationProblem = components['schemas']['ConfigurationProblem']
 type ProblemResponse = components['schemas']['ProblemResponse']
@@ -130,4 +133,18 @@ export const scanning = {
    * `identification.running` goes back to false.
    */
   identify: () => request<ScanState>('/api/identification', { method: 'POST' }),
+}
+
+/**
+ * Nothing here moves a file except `file`, and nothing moves one without it —
+ * ADR 0022. `plan` is what the user reads first, and both answer as soon as a
+ * run is under way rather than when it has finished, so the screen keeps
+ * reading `read` until `running` goes back to false.
+ */
+export const filing = {
+  read: () => request<FilingState>('/api/filing'),
+
+  plan: () => request<FilingState>('/api/filing/plan', { method: 'POST' }),
+
+  file: () => request<FilingState>('/api/filing', { method: 'POST' }),
 }

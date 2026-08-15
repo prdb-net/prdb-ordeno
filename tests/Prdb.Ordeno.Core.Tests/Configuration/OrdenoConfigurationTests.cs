@@ -97,8 +97,14 @@ public sealed class OrdenoConfigurationTests
     /// nothing, so it claims exactly the first two and disclaims the third.
     /// Someone told their downloads are being handled stops looking at them.
     /// </summary>
+    /// <summary>
+    /// A finished setup watches on its own and files nothing on its own —
+    /// ADR 0022. The sentence has to carry both halves, because someone who
+    /// reads only the first goes away expecting their downloads to be dealt
+    /// with while they sleep.
+    /// </summary>
     [Fact]
-    public void A_finished_path_claims_no_filing_that_has_not_been_built()
+    public void A_finished_path_says_that_filing_waits_to_be_asked()
     {
         var configuration = Configured(Source(FileMovement.Rename)) with
         {
@@ -108,7 +114,11 @@ public sealed class OrdenoConfigurationTests
         Assert.True(configuration.Complete);
         Assert.Contains("is watching", configuration.WhatHappensNext, StringComparison.Ordinal);
         Assert.Contains(
-            "Nothing is filed yet",
+            "Filing happens when you ask for it",
+            configuration.WhatHappensNext,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "will not move anything by itself",
             configuration.WhatHappensNext,
             StringComparison.Ordinal);
     }

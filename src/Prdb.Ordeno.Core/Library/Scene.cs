@@ -20,6 +20,15 @@ namespace Prdb.Ordeno.Core.Library;
 public sealed record Scene(Guid VideoId, string Site, string Title, DateOnly? ReleaseDate = null)
 {
     /// <summary>
+    /// The scene in one line, for a row that is about what would happen to a
+    /// file. It names the scene rather than the path, because the path is the
+    /// answer and the scene is what the user recognises.
+    /// </summary>
+    public string InWords => ReleaseDate is { } date
+        ? $"{Title} — {Site}, {date:yyyy-MM-dd}"
+        : $"{Title} — {Site}";
+
+    /// <summary>
     /// The scene an answer from prdb names, or <c>null</c> when it names none
     /// well enough to file. This is the whole of the question "may this file go
     /// into the library", asked in one place so that the filing path reads a rule

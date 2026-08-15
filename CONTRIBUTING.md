@@ -8,10 +8,12 @@ commit messages, branch names and PR descriptions. No exceptions.
 ## Where the project stands
 
 This is an early repository. The backend stack is settled — .NET 10 — and what
-exists so far is the shape of the application rather than the feature it is for:
-the projects, the database, the password everything sits behind, and the API
-contract the browser side is built against. Nothing is identified, moved or
-filed yet.
+exists so far is the shape of the application and the first half of what it is
+for: the projects, the database, the password everything sits behind, the API
+contract the browser side is built against, and a tool that watches the
+download directories, asks prdb what it found, and files what it recognised
+when somebody asks it to. Sidecars, the review queue and the operation log are
+still ahead of it.
 
 `VISION.md` describes what the tool is meant to become — a self-hosted web
 application that files downloads into a library a media server can read — and,

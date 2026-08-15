@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import FilingCard from '../library/FilingCard'
 import {
   Refused,
   SignedOut,
@@ -16,7 +17,8 @@ const WhileWorking = 2000
  * What is in the download directories, and what the tool has made of it. The
  * first screen someone opens once the setup is done, because the question they
  * came with is "is it dealing with my downloads" — and in this version the
- * honest answer is "it has found them and knows what they are".
+ * honest answer is "it has found them, it knows what they are, and it will file
+ * them when you say so".
  */
 export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void }) {
   const [state, setState] = useState<ScanState | null>(null)
@@ -161,6 +163,8 @@ export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void })
           {identification.running ? 'Asking prdb…' : 'Identify now'}
         </button>
       </section>
+
+      <FilingCard onSignedOut={onSignedOut} />
 
       {state.files.length > 0 && (
         <section className="card">

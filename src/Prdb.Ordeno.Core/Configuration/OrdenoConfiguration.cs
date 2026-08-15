@@ -88,18 +88,19 @@ public sealed record OrdenoConfiguration(
                     + "library, so videos from them will be copied rather than renamed into place.",
             };
 
-            // A finished setup does watch now — the scan runs on its own — but it
-            // still files nothing, and a sentence that lets someone believe
-            // otherwise is one they act on: they stop looking, and report months
-            // later as a bug that their downloads were never touched. The second
-            // half of this goes when filing lands, and not one release earlier.
+            // A finished setup watches on its own and files nothing on its own,
+            // and a sentence that lets someone believe otherwise is one they act
+            // on: they stop looking, and report months later as a bug that their
+            // downloads were never touched. This half goes when a filing timer
+            // lands, which ADR 0022 puts with the operation log and not before.
             var ending = Complete
                 ? $"prdb-ordeno is watching {Sources.Count} {directories} and will file what it "
                 : $"prdb-ordeno will watch {Sources.Count} {directories} and file what it ";
 
             var notYet = Complete
-                ? " Nothing is filed yet — that arrives with the first release. Until then the tool "
-                    + "reports what it finds, works out what it is, and leaves it where it is."
+                ? " Filing happens when you ask for it: the Downloads screen shows what would "
+                    + "happen to each video, and a button carries it out. It will not move anything "
+                    + "by itself until there is a way to undo a run that went wrong."
                 : string.Empty;
 
             return ending

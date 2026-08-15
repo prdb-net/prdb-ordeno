@@ -118,6 +118,45 @@ does every few minutes for years. A scan writes to the tool's own tables and to
 nothing else; the download directories are read-only to it, whatever comes
 later.
 
+## Filing
+
+**Nothing is filed until somebody asks for it** —
+[ADR 0022](docs/adr/0022-filing-happens-when-it-is-asked-for.md). There is no
+filing timer, and its absence is a decision rather than an omission: the
+unattended run arrives with the operation log and its undo
+([#19](https://github.com/prdb-net/prdb-ordeno/issues/19)) and not one release
+earlier. What makes that a schedule rather than a rewrite is that **the preview
+is produced by the code that performs the run** — `FilingPlanner` decides
+everything and writes nothing, `LibraryMoves` writes and decides nothing, and
+the run works the plan out again as it reaches each file.
+
+A filesystem cannot say whose a directory is, so the tool keeps one row per
+filed video — scene, directory, name, quality. It is what tells a second quality
+of a scene filed last year, which goes *into* that directory, from two different
+scenes the layout gives one name, which must not. It is **not** the operation
+log: it says what is true of the library now, a row whose file has gone is
+deleted rather than kept, and the log lands next to it rather than out of it.
+
+Three rules that a plausible refactor would quietly break:
+
+- **A second quality relabels what is already there**
+  ([ADR 0020](docs/adr/0020-a-second-quality-relabels-the-filed-file.md)). The
+  filed file is renamed to carry its own label first, then the newcomer goes in
+  next to it — that order, so an interruption leaves one correctly labelled file
+  rather than a directory where only half of what is in it is labelled. Quality
+  is compared as the **label** and never as the dimensions, and a file whose
+  quality cannot be read is not filed at all.
+- **A cross-filesystem copy is verified by size and `osHash`**
+  ([ADR 0021](docs/adr/0021-a-copy-is-verified-by-size-and-os-hash.md)),
+  computed fresh on both sides after the copy is flushed — never taken from what
+  identification stored, which was read before the copy happened. A rename is
+  only used where the tool can prove the two are on one filesystem: `File.Move`
+  turns a cross-device rename into an unverified copy of its own.
+- **A copy is staged in `.prdb-ordeno-incoming/` under the library root**, not
+  in the scene directory. A directory with anything in it counts as occupied, so
+  a part file left by a killed container would make a scene's own directory look
+  like somebody else's the next time round.
+
 ## Language
 
 **Everything in this repository is in English** — code, comments, documentation,

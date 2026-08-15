@@ -102,7 +102,7 @@ public sealed class ScanningTests
 
         var state = await ScannedAsync(client);
 
-        Assert.Contains("Nothing is filed yet", state.WhatItFound, StringComparison.Ordinal);
+        Assert.Contains("only when you ask it to", state.WhatItFound, StringComparison.Ordinal);
     }
 
     /// <summary>

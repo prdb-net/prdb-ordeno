@@ -554,6 +554,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/filing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FilingState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FilingState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/filing/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FilingState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -584,6 +673,34 @@ export interface components {
             usable: boolean;
             problem: null | string;
         };
+        FiledFileState: {
+            /** Format: int32 */
+            fileId: number | string;
+            name: string;
+            state: string;
+            scene: null | string;
+            targetName: null | string;
+            message: null | string;
+        };
+        FilingState: {
+            running: boolean;
+            filing: boolean;
+            /** Format: date-time */
+            plannedAt: null | string;
+            /** Format: date-time */
+            filedAt: null | string;
+            problem: null | string;
+            plan: components["schemas"]["PlannedFileState"][];
+            /** Format: int32 */
+            planTotal: number | string;
+            /** Format: int32 */
+            wouldFile: number | string;
+            whatItWouldDo: null | string;
+            results: components["schemas"]["FiledFileState"][];
+            /** Format: int32 */
+            resultTotal: number | string;
+            whatItDid: null | string;
+        };
         HealthResponse: {
             status: string;
         };
@@ -613,6 +730,22 @@ export interface components {
         LayoutOption: {
             name: string;
             description: string;
+        };
+        PlannedFileState: {
+            /** Format: int32 */
+            fileId: number | string;
+            name: string;
+            path: string;
+            outcome: string;
+            scene: null | string;
+            quality: null | string;
+            directory: null | string;
+            targetName: null | string;
+            relabelFrom: null | string;
+            relabelTo: null | string;
+            movement: string;
+            moves: boolean;
+            message: null | string;
         };
         ProblemResponse: {
             message: string;

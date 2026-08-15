@@ -131,16 +131,18 @@ public sealed record Inventory(
     }
 
     /// <summary>
-    /// The tool finds files and asks what they are, and stops there in this
-    /// version. Saying so is not modesty — someone who reads a list of their
-    /// downloads, each with the video it was recognised as next to it, will
-    /// otherwise conclude that it is filing them, and report the absence months
-    /// later as data loss.
+    /// The tool files what it recognises, and does it only when asked —
+    /// ADR 0022, until the operation log gives the unattended version a way
+    /// back. Saying so is not modesty: someone who reads a list of their
+    /// downloads with the video each was recognised as next to it will otherwise
+    /// conclude that it is filing them on its own, and find months later that
+    /// nothing moved.
     /// </summary>
     private string NotYet =>
         Total == 0
             ? string.Empty
-            : " Nothing is filed yet: this version works out what it has found and moves nothing.";
+            : " Nothing is filed on its own yet: the tool works out what it would do, and moves a "
+                + "file only when you ask it to.";
 
     private static string Count(int number, string singular, string? plural = null) =>
         number == 1 ? $"{Number(number)} {singular}" : $"{Number(number)} {plural ?? singular + "s"}";
