@@ -34,8 +34,10 @@ public sealed class FilingService(
     OrdenoDbContext context,
     IDirectoryInspector inspector,
     IVideoQualities qualities,
+    IVideoLookup videos,
     FilingPlanner planner,
     LibraryMoves moves,
+    Sidecars sidecars,
     TimeProvider time,
     ILogger<FilingService> logger)
 {
@@ -96,6 +98,7 @@ public sealed class FilingService(
 
         var candidates = await CandidatesAsync(cancellationToken);
         var filed = await FiledAsync(library.Root!, candidates, cancellationToken);
+        var described = await DescribeAsync(library, candidates, cancellationToken);
         var results = new List<FilingResult>(candidates.Count);
 
         for (var index = 0; index < candidates.Count; index++)
@@ -110,7 +113,7 @@ public sealed class FilingService(
                 return new FilingReport(results, "Filing was stopped before it finished.");
             }
 
-            results.Add(await CarryOutAsync(library, candidates[index], filed, cancellationToken));
+            results.Add(await CarryOutAsync(library, candidates[index], filed, described, cancellationToken));
         }
 
         return new FilingReport(results);
@@ -120,6 +123,7 @@ public sealed class FilingService(
         Library library,
         Candidate candidate,
         Dictionary<Guid, List<FiledCopy>> filed,
+        Descriptions described,
         CancellationToken cancellationToken)
     {
         // Worked out again, now, rather than taken from the preview: ADR 0022.
@@ -162,7 +166,14 @@ public sealed class FilingService(
 
             await RecordFilingAsync(library, plan, filed);
 
-            return new FilingResult(FilingResultState.Filed, plan, outcome.Problem);
+            // Last, and only now: the video is where the sidecar describes it,
+            // and a sidecar that fails to be written costs the library a title
+            // rather than a file.
+            return new FilingResult(
+                FilingResultState.Filed,
+                plan,
+                outcome.Problem,
+                WriteSidecar(plan, described));
         }
         catch (OperationCanceledException)
         {
@@ -204,6 +215,121 @@ public sealed class FilingService(
             scene,
             quality,
             scene is null ? [] : filed.GetValueOrDefault(scene.VideoId, []));
+    }
+
+    /// <summary>
+    /// The sidecar, once the video it describes is in place.
+    /// </summary>
+    /// <returns>
+    /// What to tell the user about it, or <c>null</c> when it was written and
+    /// there is nothing to say.
+    /// </returns>
+    /// <remarks>
+    /// Nothing here can undo the move above, and nothing here is allowed to try.
+    /// A video in the library with no sidecar shows its file name until the next
+    /// filing writes one, which is a state the media server handles; a filing
+    /// reported as failed because a small file could not be written would leave
+    /// the user looking for a video that is already filed.
+    /// </remarks>
+    private string? WriteSidecar(FilingPlan plan, Descriptions described)
+    {
+        if (!plan.Sidecar.Writes)
+        {
+            // Somebody else's, or unreadable. The planner has already said so in
+            // words, and the row after the run says the same thing.
+            return plan.Sidecar.Message;
+        }
+
+        if (described.Of(plan.Scene!.VideoId) is not { } metadata)
+        {
+            // Nothing is written on the strength of a partial or failed lookup.
+            // The absence of a sidecar is a state the media server handles; one
+            // built from half an answer is a state it reads and believes.
+            return described.Problem
+                ?? "prdb no longer knows the video this file was recognised as, so no "
+                    + $"'{ScenePath.SidecarFileName}' was written next to it. The video is filed.";
+        }
+
+        return sidecars.Write(plan.Sidecar.Path!, MovieNfo.For(metadata)).Problem;
+    }
+
+    /// <summary>
+    /// What prdb says the scenes about to be filed are, asked now rather than
+    /// read off the identification rows.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The stored answer is for putting a name on a screen (ADR 0017). What goes
+    /// into a sidecar is fetched when the sidecar is written, because that answer
+    /// may be months old and a corrected title is most of what a user came here
+    /// for.
+    /// </para>
+    /// <para>
+    /// Once for the whole run, in batches of fifty, before anything moves: a
+    /// library of thousands costs a handful of requests rather than one per file.
+    /// It asks about every candidate rather than only the ones that turn out to
+    /// move, because which ones those are is worked out file by file as the run
+    /// reaches them — and finding out first would mean reading the header of
+    /// every video twice.
+    /// </para>
+    /// <para>
+    /// prdb being unreachable does not stop the run. The videos are filed and
+    /// carry no sidecar, and each row says so.
+    /// </para>
+    /// </remarks>
+    private async Task<Descriptions> DescribeAsync(
+        Library library,
+        IReadOnlyList<Candidate> candidates,
+        CancellationToken cancellationToken)
+    {
+        var wanted = candidates
+            .Select(candidate => candidate.Scene?.VideoId)
+            .OfType<Guid>()
+            .Distinct()
+            .ToList();
+
+        if (wanted.Count == 0)
+        {
+            return Descriptions.Nothing;
+        }
+
+        if (library.ApiKey is not { } apiKey)
+        {
+            return Descriptions.Stopped(
+                "There is no prdb API key stored, so nothing could be asked about the scenes and "
+                + $"no '{ScenePath.SidecarFileName}' was written. The videos are filed.");
+        }
+
+        var known = new Dictionary<Guid, SceneMetadata>();
+
+        foreach (var batch in wanted.Chunk(IVideoLookup.MaxBatch))
+        {
+            var answer = await videos.DescribeAsync(apiKey, batch, cancellationToken);
+
+            if (!answer.Answered)
+            {
+                logger.LogWarning(
+                    "Filing could not ask prdb what it is filing: {Problem}",
+                    answer.Message);
+
+                return new Descriptions(
+                    known,
+                    $"{answer.Message} Nothing was written next to it: the video is in the library, "
+                    + "and the next filing into that scene writes the metadata file.");
+            }
+
+            foreach (var video in answer.Videos)
+            {
+                // An answer with no title is left out rather than written badly,
+                // and the row it belongs to says the video was filed without one.
+                if (SceneMetadata.From(video) is { } metadata)
+                {
+                    known[metadata.VideoId] = metadata;
+                }
+            }
+        }
+
+        return new Descriptions(known);
     }
 
     /// <summary>
@@ -436,7 +562,10 @@ public sealed class FilingService(
         var inspection = inspector.Inspect(configuration.TargetDirectory, DirectoryRole.Target);
 
         return inspection.Usable
-            ? new Library(inspection.Path, null)
+            ? new Library(
+                inspection.Path,
+                null,
+                string.IsNullOrWhiteSpace(configuration.PrdbApiKey) ? null : configuration.PrdbApiKey)
             : new Library(null, $"Nothing can be filed while the library is unusable: {inspection.Message}");
     }
 
@@ -465,8 +594,29 @@ public sealed class FilingService(
     /// </param>
     private sealed record Candidate(int Id, string Path, string Name, Scene? Scene);
 
+    /// <summary>
+    /// What prdb said about the scenes this run is filing.
+    /// </summary>
+    /// <param name="Problem">
+    /// Why some of it is missing, in words a row can carry. <c>null</c> when
+    /// everything that could be asked about was.
+    /// </param>
+    private sealed record Descriptions(IReadOnlyDictionary<Guid, SceneMetadata> Known, string? Problem = null)
+    {
+        public static readonly Descriptions Nothing = new(new Dictionary<Guid, SceneMetadata>());
+
+        /// <summary>Nothing came back, and this is what to say about it.</summary>
+        public static Descriptions Stopped(string problem) => Nothing with { Problem = problem };
+
+        public SceneMetadata? Of(Guid videoId) => Known.GetValueOrDefault(videoId);
+    }
+
     /// <param name="Root">Where the library is, or <c>null</c> when it cannot be filed into.</param>
-    private sealed record Library(string? Root, string? Problem)
+    /// <param name="ApiKey">
+    /// The stored key, because what a sidecar says is asked for at the moment it
+    /// is written rather than remembered from the identification.
+    /// </param>
+    private sealed record Library(string? Root, string? Problem, string? ApiKey = null)
     {
         private readonly Dictionary<string, FileMovement> movements = [];
 

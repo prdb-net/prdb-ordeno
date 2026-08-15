@@ -168,10 +168,26 @@ public sealed record FilingRun(
             var failed = Results.Count(result => result.State is FilingResultState.Failed);
             var stopped = Results.Count(result => result.State is FilingResultState.Stopped);
 
+            // Filed, and the sidecar that was to go in next to it did not: prdb
+            // could not be asked, or the file could not be written. The rows say
+            // which, but a run of thousands shows two hundred of them, and prdb
+            // being down is a thing about the run rather than about one file.
+            var bare = Results.Count(result =>
+                result.Filed && result.Plan.Sidecar.Writes && result.Sidecar is not null);
+
             var parts = new List<string>
             {
                 filed == 1 ? "1 video was filed" : $"{Number(filed)} videos were filed",
             };
+
+            if (bare > 0)
+            {
+                parts.Add(bare == filed
+                    ? "none of them could be given the metadata file the media server reads, and the "
+                        + "rows say why"
+                    : $"{Number(bare)} of them could not be given the metadata file the media server "
+                        + "reads");
+            }
 
             if (failed > 0)
             {
