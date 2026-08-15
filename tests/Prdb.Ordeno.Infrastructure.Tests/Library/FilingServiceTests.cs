@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,6 +15,7 @@ using Prdb.Ordeno.Infrastructure.Library;
 using Prdb.Ordeno.Infrastructure.Persistence;
 using Prdb.Ordeno.Infrastructure.Scanning;
 using Prdb.Ordeno.Infrastructure.Tests.Identification;
+using Prdb.Ordeno.Infrastructure.Tests.Review;
 using Prdb.Ordeno.Infrastructure.Tests.Scanning;
 
 using Xunit;
@@ -41,6 +44,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     private readonly TempDirectory directory = new();
     private readonly TestTime time = new();
     private readonly FakePrdbIdentification prdb = new();
+    private readonly FakeVideoLookup videos = new();
     private readonly TestFileHashes hashes = new();
     private readonly StoppingQualities stopping = new();
 
@@ -57,6 +61,12 @@ public sealed class FilingServiceTests : IAsyncLifetime
         collection.AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning));
         collection.AddSingleton<TimeProvider>(time);
         collection.AddSingleton<IVideoIdentification>(prdb);
+
+        // The other question the tool asks prdb: not what a file is, but what
+        // the video it was recognised as says — which is what goes in the
+        // sidecar, fetched at the moment it is written rather than read off the
+        // identification row.
+        collection.AddSingleton<IVideoLookup>(videos);
         collection.AddSingleton<IFileHashes>(hashes);
 
         // Registered before the slice, whose registrations are TryAdd. It is the
@@ -89,7 +99,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_recognised_video_ends_up_where_the_layout_says()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         var source = await ArrivedAsync("Example.Studio.24.05.01.Scene.Title.1080p.mkv", 1920, 1080);
         await ReadyAsync();
 
@@ -114,7 +124,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task The_preview_is_what_the_run_carries_out()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("Example.Studio.24.05.01.Scene.Title.1080p.mkv", 1920, 1080);
         await ReadyAsync();
 
@@ -135,7 +145,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task Working_out_what_would_happen_moves_nothing()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         var source = await ArrivedAsync("scene.1080p.mkv", 1280, 720);
         await ReadyAsync();
 
@@ -154,7 +164,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_second_copy_at_the_same_quality_is_left_where_it_is()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("first.1080p.mkv", 1920, 1080);
         await ReadyAsync();
         await FileAsync();
@@ -169,8 +179,8 @@ public sealed class FilingServiceTests : IAsyncLifetime
         Assert.True(File.Exists(second));
         Assert.Contains("not deleted", result.Message);
 
-        // One directory, one file: the library did not gain a second entry.
-        Assert.Single(Directory.GetFiles(Path.Combine(library, SceneDirectory)));
+        // One directory, one video: the library did not gain a second entry.
+        Assert.Single(VideosIn(Path.Combine(library, SceneDirectory)));
     }
 
     /// <summary>
@@ -181,7 +191,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_second_quality_joins_the_first_and_both_end_up_labelled()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("first.1080p.mkv", 1920, 1080);
         await ReadyAsync();
         await FileAsync();
@@ -201,7 +211,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
                 "Example Studio - 2024-05-01 - Scene Title - [1080p].mkv",
                 "Example Studio - 2024-05-01 - Scene Title - [2160p].mkv",
             ],
-            Directory.GetFiles(scene).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+            VideosIn(scene).Select(Path.GetFileName));
 
         // And the record was rewritten with it, or the next filing would look
         // for a file that is no longer called that.
@@ -215,14 +225,20 @@ public sealed class FilingServiceTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Section 6 is what this protects: every file in a scene directory has to
+    /// Section 6 is what this protects: every video in a scene directory has to
     /// begin with the directory's own name, or the library shows two entries
     /// with identical names instead of one with two versions.
     /// </summary>
+    /// <remarks>
+    /// The sidecar is the one file in there that does not, and section 4 is why:
+    /// a Movies library reads <c>movie.nfo</c> and the per-file form loses to it
+    /// — and being a per-file name is exactly what would drag it into the
+    /// version grouping this test is about.
+    /// </remarks>
     [Fact]
-    public async Task Every_file_in_a_scene_directory_begins_with_its_name()
+    public async Task Every_video_in_a_scene_directory_begins_with_its_name()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("first.720p.mkv", 1280, 720);
         await ReadyAsync();
         await FileAsync();
@@ -234,11 +250,211 @@ public sealed class FilingServiceTests : IAsyncLifetime
         var scene = Path.Combine(library, SceneDirectory);
 
         Assert.All(
-            Directory.GetFiles(scene),
+            VideosIn(scene),
             file => Assert.StartsWith(
                 Path.GetFileName(scene),
                 Path.GetFileName(file),
                 StringComparison.Ordinal));
+
+        Assert.True(File.Exists(Path.Combine(scene, "movie.nfo")));
+    }
+
+    /// <summary>
+    /// #18, and the point of the whole tool: a tidy filename is not what the
+    /// user came for. What the media server shows comes out of the sidecar.
+    /// </summary>
+    [Fact]
+    public async Task A_filed_video_gets_a_sidecar_carrying_what_prdb_knows()
+    {
+        Recognised(performers: ["Someone Real", "Somebody Else"]);
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.Null(result.Sidecar);
+
+        var movie = Sidecar(Path.Combine(library, SceneDirectory));
+
+        Assert.Equal(Title, movie.Element("title")?.Value);
+        Assert.Equal("2024-05-01", movie.Element("premiered")?.Value);
+        Assert.Equal(Site, movie.Element("studio")?.Value);
+
+        Assert.Equal(
+            ["Someone Real", "Somebody Else"],
+            movie.Elements("actor").Select(actor => actor.Element("name")?.Value));
+    }
+
+    /// <summary>
+    /// The rule in <c>AGENTS.md</c> about what the stored answer is for: it is
+    /// read to put a name on a screen, and what a sidecar says is asked for
+    /// again when the sidecar is written. A title prdb has corrected since is
+    /// most of what somebody came here for.
+    /// </summary>
+    /// <remarks>
+    /// The directory keeps the name the identification produced, and that is
+    /// correct rather than a compromise: a path is what the library holds, and
+    /// renaming somebody's directories because a title was edited is a different
+    /// decision from writing what is true into the file that carries the
+    /// metadata.
+    /// </remarks>
+    [Fact]
+    public async Task The_sidecar_says_what_prdb_says_now_rather_than_what_it_said_then()
+    {
+        var videoId = Recognised();
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        // prdb has corrected the title since the file was identified.
+        videos.Knows(new VideoSummary(
+            videoId,
+            "The Title As prdb Has It Now",
+            new DateOnly(2024, 5, 1),
+            Guid.NewGuid(),
+            Site,
+            []));
+
+        await FileAsync();
+
+        var scene = Path.Combine(library, SceneDirectory);
+
+        Assert.Equal("The Title As prdb Has It Now", Sidecar(scene).Element("title")?.Value);
+        Assert.Single(VideosIn(scene));
+    }
+
+    /// <summary>
+    /// Nothing is written on the strength of a failed lookup. The video is filed
+    /// — that decision was made from what the tool already knew — and the row
+    /// says why there is nothing next to it.
+    /// </summary>
+    [Fact]
+    public async Task prdb_being_unreachable_files_the_video_and_writes_no_sidecar()
+    {
+        Recognised();
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        videos.Stopped = "prdb could not be reached, so nothing could be asked about.";
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.False(File.Exists(Path.Combine(library, SceneDirectory, "movie.nfo")));
+        Assert.Contains("prdb could not be reached", result.Sidecar);
+    }
+
+    /// <summary>
+    /// A video prdb has merged away since it was identified. The lookup leaves
+    /// an id it does not know out of the answer rather than failing it, so this
+    /// is one file with no sidecar rather than a run that stopped.
+    /// </summary>
+    [Fact]
+    public async Task A_video_prdb_no_longer_knows_is_filed_without_a_sidecar()
+    {
+        // Only the endpoint that names the file knows this video, deliberately.
+        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.False(File.Exists(Path.Combine(library, SceneDirectory, "movie.nfo")));
+        Assert.Contains("no longer knows", result.Sidecar);
+    }
+
+    /// <summary>
+    /// A <c>movie.nfo</c> somebody wrote by hand is not the tool's to overwrite,
+    /// and it is at the very name the tool wants — there is no stepping around
+    /// it. The video still goes in next to it.
+    /// </summary>
+    [Fact]
+    public async Task A_sidecar_somebody_else_wrote_is_left_exactly_as_it_is()
+    {
+        Recognised();
+        await ArrivedAsync("first.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+        await FileAsync();
+
+        var scene = Path.Combine(library, SceneDirectory);
+        var sidecar = Path.Combine(scene, "movie.nfo");
+        const string ByHand = "<movie><title>The Name I Gave It</title></movie>";
+
+        await File.WriteAllTextAsync(sidecar, ByHand);
+
+        await ArrivedAsync("second.2160p.mkv", 3840, 2160);
+        await ReadyAsync();
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.Equal(ByHand, await File.ReadAllTextAsync(sidecar));
+        Assert.Contains("did not write", result.Plan.Sidecar.Message);
+        Assert.Equal(2, VideosIn(scene).Count);
+
+        // And nothing was left lying about next to it while finding that out.
+        Assert.Equal(3, Directory.GetFileSystemEntries(scene).Length);
+    }
+
+    /// <summary>
+    /// Its own, on the other hand, is replaced — and replaced by a write and a
+    /// rename, so that an interruption leaves the old document or the new one
+    /// and never half of either.
+    /// </summary>
+    [Fact]
+    public async Task A_sidecar_the_tool_wrote_is_written_again_when_a_second_quality_arrives()
+    {
+        var videoId = Recognised();
+        await ArrivedAsync("first.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+        await FileAsync();
+
+        videos.Knows(new VideoSummary(
+            videoId,
+            "The Title As prdb Has It Now",
+            new DateOnly(2024, 5, 1),
+            Guid.NewGuid(),
+            Site,
+            []));
+
+        await ArrivedAsync("second.2160p.mkv", 3840, 2160);
+        await ReadyAsync();
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.Equal(SidecarAction.Replace, result.Plan.Sidecar.Action);
+        Assert.Null(result.Sidecar);
+
+        var scene = Path.Combine(library, SceneDirectory);
+
+        Assert.Equal("The Title As prdb Has It Now", Sidecar(scene).Element("title")?.Value);
+        Assert.Equal(3, Directory.GetFileSystemEntries(scene).Length);
+    }
+
+    /// <summary>
+    /// The sidecar is a write, so ADR 0022 covers it: the plan says it would be
+    /// written, and working out a plan writes nothing.
+    /// </summary>
+    /// <remarks>
+    /// It also asks prdb nothing. A preview over a first pass at somebody's
+    /// library is thousands of files, and spending a rate-limited quota to
+    /// produce a sentence the user may not act on is the request pattern
+    /// ADR 0001 exists to avoid.
+    /// </remarks>
+    [Fact]
+    public async Task Working_out_what_would_happen_writes_no_sidecar_and_asks_prdb_nothing()
+    {
+        Recognised();
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        var plan = Assert.Single((await PlanAsync()).Plans);
+
+        Assert.Equal(SidecarAction.Write, plan.Sidecar.Action);
+        Assert.Equal(Path.Combine(library, SceneDirectory, "movie.nfo"), plan.Sidecar.Path);
+        Assert.Empty(Directory.GetDirectories(library));
+        Assert.Empty(videos.Described);
     }
 
     /// <summary>
@@ -248,7 +464,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_file_whose_quality_cannot_be_read_is_not_filed()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
 
         var path = Path.Combine(downloads, "truncated.mkv");
         await File.WriteAllBytesAsync(path, new byte[64 * 1024]);
@@ -304,7 +520,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_persons_answer_is_the_one_that_is_filed()
     {
-        prdb.Recognises(Guid.NewGuid(), "What prdb Called It", "Some Other Site");
+        Recognised("What prdb Called It", "Some Other Site");
         await ArrivedAsync("disputed.1080p.mkv", 1920, 1080);
         await ReadyAsync();
 
@@ -323,7 +539,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_file_somebody_dismissed_is_not_filed()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         var source = await ArrivedAsync("sample.1080p.mkv", 1920, 1080);
         await ReadyAsync();
 
@@ -336,11 +552,55 @@ public sealed class FilingServiceTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// One video, known to both halves of prdb that a test replaces: the
+    /// endpoint that names a file, and the lookup a sidecar is written from.
+    /// </summary>
+    /// <remarks>
+    /// Both, always. A test where only the first knows the video is a test where
+    /// the file is filed and nothing is written next to it, which is a real
+    /// state — <see cref="A_video_prdb_no_longer_knows_is_filed_without_a_sidecar"/>
+    /// is where it is arranged deliberately rather than by forgetting.
+    /// </remarks>
+    private Guid Recognised(
+        string title = Title,
+        string site = Site,
+        Guid? videoId = null,
+        params string[] performers)
+    {
+        var id = videoId ?? Guid.NewGuid();
+
+        prdb.Recognises(id, title, site);
+
+        videos.Knows(new VideoSummary(
+            id,
+            title,
+            new DateOnly(2024, 5, 1),
+            Guid.NewGuid(),
+            site,
+            performers));
+
+        return id;
+    }
+
+    /// <summary>
     /// What the queue writes when somebody answers, written straight to the
     /// database: what is under test here is what filing makes of it.
     /// </summary>
     private async Task DecidedAsync(string relative, ResolutionKind kind, Guid? videoId)
     {
+        if (videoId is { } named)
+        {
+            // The queue fetched this from prdb when the decision was recorded,
+            // and filing fetches it again when it writes the sidecar.
+            videos.Knows(new VideoSummary(
+                named,
+                Title,
+                new DateOnly(2024, 5, 1),
+                Guid.NewGuid(),
+                Site,
+                []));
+        }
+
         await using var scope = services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<OrdenoDbContext>();
 
@@ -369,7 +629,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_file_that_has_not_settled_is_not_filed()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("still.arriving.mkv", 1280, 720);
         await ReadyAsync();
 
@@ -387,7 +647,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task Nothing_is_filed_before_the_setup_is_finished()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("scene.mkv", 1280, 720);
         await ReadyAsync();
 
@@ -414,7 +674,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_library_that_cannot_be_written_to_stops_the_run()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         var source = await ArrivedAsync("scene.mkv", 1280, 720);
         await ReadyAsync();
 
@@ -435,7 +695,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_video_that_has_been_filed_is_no_longer_a_download()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
         await ReadyAsync();
         await FileAsync();
@@ -456,7 +716,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_scene_the_user_deleted_from_the_library_is_filed_again()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("first.1080p.mkv", 1920, 1080);
         await ReadyAsync();
         await FileAsync();
@@ -489,12 +749,12 @@ public sealed class FilingServiceTests : IAsyncLifetime
     {
         var second = Guid.NewGuid();
 
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         await ArrivedAsync("first.1080p.mkv", 1920, 1080);
         await ReadyAsync();
         await FileAsync();
 
-        prdb.Recognises(second, Title, Site);
+        Recognised(videoId: second);
         await ArrivedAsync("other.scene.1080p.mkv", 1920, 1080);
         await ReadyAsync();
 
@@ -530,7 +790,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     [Fact]
     public async Task A_run_stopped_partway_files_what_it_reached_and_leaves_the_rest()
     {
-        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        Recognised();
         var first = await ArrivedAsync("first.1080p.mkv", 1920, 1080);
         var second = await ArrivedAsync("second.1080p.mkv", 1920, 1080);
         await ReadyAsync();
@@ -578,6 +838,21 @@ public sealed class FilingServiceTests : IAsyncLifetime
             .GetRequiredService<FilingService>()
             .FileAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// The videos in a scene directory, which is everything in it that is not
+    /// the sidecar.
+    /// </summary>
+    private static IReadOnlyList<string> VideosIn(string sceneDirectory) =>
+    [
+        .. Directory.GetFiles(sceneDirectory)
+            .Where(file => Path.GetFileName(file) != "movie.nfo")
+            .Order(StringComparer.Ordinal),
+    ];
+
+    /// <summary>The sidecar in a scene directory, parsed — which is half of what is under test.</summary>
+    private static XElement Sidecar(string sceneDirectory) =>
+        XDocument.Load(Path.Combine(sceneDirectory, "movie.nfo")).Root!;
 
     /// <summary>A real video of the given size, in the download directory.</summary>
     private async Task<string> ArrivedAsync(string relative, int width, int height)

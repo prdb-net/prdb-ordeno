@@ -24,6 +24,16 @@ internal sealed class FakeVideoLookup : IVideoLookup
 
     public List<string> ApiKeys { get; } = [];
 
+    /// <summary>One video, as the caller has already decided it looks.</summary>
+    public VideoSummary Knows(VideoSummary video)
+    {
+        ArgumentNullException.ThrowIfNull(video);
+
+        videos[video.VideoId] = video;
+
+        return video;
+    }
+
     public VideoSummary Knows(
         string title,
         string site = "A Site",

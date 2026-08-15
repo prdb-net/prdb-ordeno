@@ -947,6 +947,7 @@ export interface components {
             scene: null | string;
             targetName: null | string;
             message: null | string;
+            sidecar: null | string;
         };
         FilingState: {
             running: boolean;
@@ -1012,6 +1013,7 @@ export interface components {
             movement: string;
             moves: boolean;
             message: null | string;
+            sidecar: null | string;
         };
         ProblemResponse: {
             message: string;

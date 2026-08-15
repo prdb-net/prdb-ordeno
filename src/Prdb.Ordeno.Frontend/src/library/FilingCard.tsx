@@ -208,6 +208,11 @@ function Planned({ plan }: { plan: PlannedFileState }) {
         </p>
       )}
 
+      {/* The second thing a filing writes. It is the metadata the media server
+          actually shows, and it can land next to a file somebody wrote
+          themselves — so it says what it would do before it does it. */}
+      {plan.sidecar !== null && plan.sidecar !== undefined && <p className="hint">{plan.sidecar}</p>}
+
       {plan.message !== null && plan.message !== undefined && <p className="hint">{plan.message}</p>}
     </li>
   )
@@ -229,6 +234,13 @@ function Filed({ result }: { result: FiledFileState }) {
 
       {result.message !== null && result.message !== undefined && (
         <p className={result.state === 'failed' ? 'problem' : 'hint'}>{result.message}</p>
+      )}
+
+      {/* Only ever present when something is worth saying: the sidecar was left
+          alone, or it could not be written. A video that got one says so by
+          this being absent. */}
+      {result.sidecar !== null && result.sidecar !== undefined && (
+        <p className="hint">{result.sidecar}</p>
       )}
     </li>
   )

@@ -22,6 +22,11 @@ namespace Prdb.Ordeno.Host.Library;
 /// the user already considers filed, so it is on the row rather than in a
 /// sentence.
 /// </param>
+/// <param name="Sidecar">
+/// What would happen to the <c>movie.nfo</c> in that directory, in words, or
+/// <c>null</c> when nothing would. It is the second thing a filing writes, and
+/// the one that can land next to a file somebody wrote themselves.
+/// </param>
 public sealed record PlannedFileState(
     int FileId,
     string Name,
@@ -35,19 +40,26 @@ public sealed record PlannedFileState(
     string? RelabelTo,
     string Movement,
     bool Moves,
-    string? Message);
+    string? Message,
+    string? Sidecar);
 
 /// <summary>
 /// What happened to one video.
 /// </summary>
 /// <param name="State"><c>filed</c>, <c>skipped</c>, <c>failed</c> or <c>stopped</c>.</param>
+/// <param name="Sidecar">
+/// What became of the metadata file next to it, when that is worth saying: it was
+/// left alone, or it could not be written. <c>null</c> when it was written, since
+/// the video moving is what the row is about.
+/// </param>
 public sealed record FiledFileState(
     int FileId,
     string Name,
     string State,
     string? Scene,
     string? TargetName,
-    string? Message);
+    string? Message,
+    string? Sidecar);
 
 /// <summary>
 /// Everything the filing part of the downloads screen shows: what would happen,
@@ -117,7 +129,8 @@ public sealed record FilingState(
         plan.Relabel is null ? null : System.IO.Path.GetFileName(plan.Relabel.To),
         Name(plan.Movement),
         plan.Moves,
-        plan.Message);
+        plan.Message,
+        plan.Sidecar.InWords);
 
     private static FiledFileState Filed(FilingResult result) => new(
         result.Plan.FileId,
@@ -125,7 +138,8 @@ public sealed record FilingState(
         Name(result.State),
         result.Plan.Scene?.InWords,
         result.Plan.TargetName,
-        result.Message);
+        result.Message,
+        result.Sidecar);
 
     /// <summary>
     /// As a name rather than a number, the way every other state crosses this

@@ -872,7 +872,8 @@
           "state",
           "scene",
           "targetName",
-          "message"
+          "message",
+          "sidecar"
         ],
         "type": "object",
         "properties": {
@@ -903,6 +904,12 @@
             ]
           },
           "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sidecar": {
             "type": [
               "null",
               "string"
@@ -1147,7 +1154,8 @@
           "relabelTo",
           "movement",
           "moves",
-          "message"
+          "message",
+          "sidecar"
         ],
         "type": "object",
         "properties": {
@@ -1211,6 +1219,12 @@
             "type": "boolean"
           },
           "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sidecar": {
             "type": [
               "null",
               "string"
