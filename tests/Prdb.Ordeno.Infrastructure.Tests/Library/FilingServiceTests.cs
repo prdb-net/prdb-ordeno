@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Prdb.Ordeno.Core.Configuration;
 using Prdb.Ordeno.Core.Identification;
@@ -40,6 +41,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     private readonly TestTime time = new();
     private readonly FakePrdbIdentification prdb = new();
     private readonly TestFileHashes hashes = new();
+    private readonly StoppingQualities stopping = new();
 
     private ServiceProvider services = null!;
     private string downloads = null!;
@@ -56,6 +58,11 @@ public sealed class FilingServiceTests : IAsyncLifetime
         collection.AddSingleton<IVideoIdentification>(prdb);
         collection.AddSingleton<IFileHashes>(hashes);
 
+        // Registered before the slice, whose registrations are TryAdd. It is the
+        // real ffprobe until a test asks it to stop the run, which is how a
+        // shutdown is put in a known place rather than raced for.
+        collection.AddSingleton<IVideoQualities>(stopping);
+
         collection.AddOrdenoPersistence(directory.Combine("data"));
         collection.AddOrdenoScanning();
         collection.AddOrdenoIdentification();
@@ -70,6 +77,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         await services.DisposeAsync();
+        stopping.Dispose();
         directory.Dispose();
     }
 
@@ -411,6 +419,63 @@ public sealed class FilingServiceTests : IAsyncLifetime
         Assert.Equal(2, Directory.GetDirectories(Path.Combine(library, "Example Studio")).Length);
     }
 
+    /// <summary>
+    /// What <c>docker stop</c> has to mean. The entrypoint <c>exec</c>s so the
+    /// signal reaches the application, and what arrives here is a cancelled
+    /// token partway through a run: the file that had already moved is filed and
+    /// written down, and the ones behind it are untouched and reported as not
+    /// reached rather than silently dropped.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The stop is arranged from inside the run rather than by racing it with a
+    /// timer, because a test that sometimes stops in the right place is a test
+    /// that sometimes proves nothing. The quality reading is the seam: it is
+    /// what every file goes through on its way to being planned.
+    /// </para>
+    /// <para>
+    /// The other half — a stop that lands in the middle of a cross-filesystem
+    /// copy — is in <see cref="LibraryMovesTests"/>. It cannot be arranged here:
+    /// both directories are on one filesystem, so a filing is a rename, and a
+    /// rename has no middle.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task A_run_stopped_partway_files_what_it_reached_and_leaves_the_rest()
+    {
+        prdb.Recognises(Guid.NewGuid(), Title, Site);
+        var first = await ArrivedAsync("first.1080p.mkv", 1920, 1080);
+        var second = await ArrivedAsync("second.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        // The stop arrives while the first file is being worked out, which is
+        // where a real one would: mid-run, with a file already on its way.
+        stopping.After(reads: 1);
+
+        var report = await FileAsync(stopping.Token);
+
+        Assert.Equal(2, report.Results.Count);
+        Assert.NotNull(report.Problem);
+
+        var filed = Assert.Single(report.Results, result => result.Filed);
+        var stopped = Assert.Single(report.Results, result => result.State is FilingResultState.Stopped);
+
+        Assert.True(File.Exists(filed.Plan.TargetPath));
+        Assert.False(File.Exists(filed.Plan.SourcePath));
+        Assert.True(File.Exists(stopped.Plan.SourcePath));
+
+        // And the one that did move was written down, although the run was
+        // stopping while that happened. A library holding a video no row knows
+        // about would be filed around next time.
+        await using var scope = services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<OrdenoDbContext>();
+
+        Assert.Single(await context.FiledVideos.ToListAsync());
+
+        // Belt and braces: one of the two is still in the download directory.
+        Assert.Single([first, second], File.Exists);
+    }
+
     private async Task<FilingPreview> PlanAsync()
     {
         await using var scope = services.CreateAsyncScope();
@@ -418,11 +483,13 @@ public sealed class FilingServiceTests : IAsyncLifetime
         return await scope.ServiceProvider.GetRequiredService<FilingService>().PlanAsync();
     }
 
-    private async Task<FilingReport> FileAsync()
+    private async Task<FilingReport> FileAsync(CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
 
-        return await scope.ServiceProvider.GetRequiredService<FilingService>().FileAsync();
+        return await scope.ServiceProvider
+            .GetRequiredService<FilingService>()
+            .FileAsync(cancellationToken);
     }
 
     /// <summary>A real video of the given size, in the download directory.</summary>
@@ -458,6 +525,39 @@ public sealed class FilingServiceTests : IAsyncLifetime
         await using var scope = services.CreateAsyncScope();
 
         await scope.ServiceProvider.GetRequiredService<IdentificationService>().IdentifyAsync();
+    }
+
+    /// <summary>
+    /// The real reading of a picture size, with a way to cancel the run at a
+    /// known point — after the given number of files have been measured.
+    /// </summary>
+    private sealed class StoppingQualities : IVideoQualities, IDisposable
+    {
+        private readonly VideoQualities real = new(NullLogger<VideoQualities>.Instance);
+        private readonly CancellationTokenSource source = new();
+
+        private int stopAfter = -1;
+        private int read;
+
+        public CancellationToken Token => source.Token;
+
+        public void After(int reads) => stopAfter = reads;
+
+        public async Task<VideoQualityReading> ReadAsync(
+            string path,
+            CancellationToken cancellationToken = default)
+        {
+            var reading = await real.ReadAsync(path, cancellationToken);
+
+            if (stopAfter > 0 && ++read >= stopAfter)
+            {
+                await source.CancelAsync();
+            }
+
+            return reading;
+        }
+
+        public void Dispose() => source.Dispose();
     }
 
     private async Task ConfigureAsync()

@@ -144,7 +144,7 @@ public sealed class FilingService(
                     return new FilingResult(FilingResultState.Failed, plan, renamed.Problem);
                 }
 
-                await RecordRelabelAsync(relabel, cancellationToken);
+                await RecordRelabelAsync(relabel);
             }
 
             var outcome = await moves.FileAsync(
@@ -159,7 +159,7 @@ public sealed class FilingService(
                 return new FilingResult(FilingResultState.Failed, plan, outcome.Problem);
             }
 
-            await RecordFilingAsync(library, plan, filed, cancellationToken);
+            await RecordFilingAsync(library, plan, filed);
 
             return new FilingResult(FilingResultState.Filed, plan, outcome.Problem);
         }
@@ -209,12 +209,23 @@ public sealed class FilingService(
     /// The library now holds this file. The row is what the next filing of the
     /// same scene reads in order to tell a second quality from a second copy.
     /// </summary>
+    /// <remarks>
+    /// Nothing here takes the run's cancellation token, and that is the point:
+    /// by the time this is called the file has moved, and a shutdown arriving
+    /// now must not stop the tool writing down where it went. A library holding
+    /// a video no row knows about is worse than a slightly late shutdown — the
+    /// next run would see an occupied directory it cannot account for and file
+    /// the scene around it, under a name carrying prdb's id, for a reason
+    /// nobody could see.
+    /// </remarks>
     private async Task RecordFilingAsync(
         Library library,
         FilingPlan plan,
-        Dictionary<Guid, List<FiledCopy>> filed,
-        CancellationToken cancellationToken)
+        Dictionary<Guid, List<FiledCopy>> filed)
     {
+        // Not the run's token, for the reason above.
+        var whateverHappens = CancellationToken.None;
+
         var videoId = plan.Scene!.VideoId;
         var directory = plan.Directory!;
         var fileName = System.IO.Path.GetFileName(plan.TargetPath!);
@@ -227,8 +238,17 @@ public sealed class FilingService(
             // and the operation log (#19) is what keeps the rest.
             await context.FiledVideos
                 .Where(row => row.VideoId == videoId && row.LibraryRoot == library.Root)
-                .ExecuteDeleteAsync(cancellationToken);
+                .ExecuteDeleteAsync(whateverHappens);
         }
+
+        // And whatever any other row claimed about this exact path, the file
+        // that is at it now is this one. Such a row is stale by definition — the
+        // planner would not have filed here if the file it named were still
+        // there — and leaving it would make the insert below collide with a
+        // record of something that no longer exists.
+        await context.FiledVideos
+            .Where(row => row.Directory == directory && row.FileName == fileName)
+            .ExecuteDeleteAsync(whateverHappens);
 
         context.FiledVideos.Add(new FiledVideo
         {
@@ -246,9 +266,9 @@ public sealed class FilingService(
         // again and report as missing.
         await context.DiscoveredFiles
             .Where(file => file.Id == plan.FileId)
-            .ExecuteDeleteAsync(cancellationToken);
+            .ExecuteDeleteAsync(whateverHappens);
 
-        await context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(whateverHappens);
         context.ChangeTracker.Clear();
 
         var copies = filed.TryGetValue(videoId, out var existing) ? existing : filed[videoId] = [];
@@ -265,9 +285,10 @@ public sealed class FilingService(
     /// The file that was already filed is called something else now (ADR 0020),
     /// and the row that says where this scene lives has to say so too — before
     /// the second quality lands, so that an interruption between the two leaves
-    /// a record that matches the disk.
+    /// a record that matches the disk. Like the row below, it is written whether
+    /// or not the run has been asked to stop: the rename has already happened.
     /// </summary>
-    private async Task RecordRelabelAsync(FilingRelabel relabel, CancellationToken cancellationToken)
+    private async Task RecordRelabelAsync(FilingRelabel relabel)
     {
         var directory = System.IO.Path.GetDirectoryName(relabel.From)!;
         var was = System.IO.Path.GetFileName(relabel.From);
@@ -275,7 +296,7 @@ public sealed class FilingService(
 
         await context.FiledVideos
             .Where(row => row.Directory == directory && row.FileName == was)
-            .ExecuteUpdateAsync(row => row.SetProperty(filed => filed.FileName, now), cancellationToken);
+            .ExecuteUpdateAsync(row => row.SetProperty(filed => filed.FileName, now), CancellationToken.None);
     }
 
     /// <summary>
