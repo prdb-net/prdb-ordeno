@@ -6,6 +6,8 @@ export type AccessState = components['schemas']['AccessState']
 export type ConfigurationState = components['schemas']['ConfigurationState']
 export type SourceState = components['schemas']['SourceState']
 export type LayoutOption = components['schemas']['LayoutOption']
+export type MediaServerState = components['schemas']['MediaServerState']
+export type MediaServerCheckState = components['schemas']['MediaServerCheckState']
 export type ScanState = components['schemas']['ScanState']
 export type ScannedFileState = components['schemas']['ScannedFileState']
 export type ScannedSourceState = components['schemas']['ScannedSourceState']
@@ -120,6 +122,23 @@ export const configuration = {
 
   setTarget: (path: string, layout: string) =>
     request<ConfigurationState>('/api/configuration/target', { method: 'PUT', body: body({ path, layout }) }),
+
+  /**
+   * The optional media server connection — ADR 0018. Storing it answers with
+   * what the server said about itself, which is more than "it answered": the
+   * release date format, and whether it holds anything this tool has filed.
+   */
+  setMediaServer: (url: string, apiKey: string) =>
+    request<MediaServerCheckState>('/api/configuration/media-server', {
+      method: 'PUT',
+      body: body({ url, apiKey }),
+    }),
+
+  testMediaServer: () =>
+    request<MediaServerCheckState>('/api/configuration/media-server/test', { method: 'POST' }),
+
+  forgetMediaServer: () =>
+    request<ConfigurationState>('/api/configuration/media-server', { method: 'DELETE' }),
 
   finish: () => request<ConfigurationState>('/api/configuration/completion', { method: 'POST' }),
 }

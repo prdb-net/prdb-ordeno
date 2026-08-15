@@ -5,11 +5,21 @@ import {
   Refused,
   SignedOut,
   type ConfigurationState,
+  type MediaServerCheckState,
   type SourceState,
 } from '../api/client'
 
 /** Runs one change and reports what the tool said about it, or null if it agreed. */
 type Run = (call: () => Promise<ConfigurationState>) => Promise<string | null>
+
+/**
+ * The same for the media server, which answers with more than a yes: a
+ * connection can be stored and still have something worth reading next to it.
+ * A string is a refusal, and null is nothing to say.
+ */
+type RunCheck = (
+  call: () => Promise<MediaServerCheckState>,
+) => Promise<MediaServerCheckState | string | null>
 
 /**
  * The guided path of ADR 0009, and the settings page afterwards — one screen,
@@ -62,6 +72,35 @@ export default function ConfigurationScreen({
     [onChanged, onSignedOut],
   )
 
+  const runCheck = useCallback<RunCheck>(
+    async (call) => {
+      try {
+        const answer = await call()
+        setState(answer.configuration)
+        onChanged(answer.configuration)
+
+        return answer
+      } catch (error) {
+        if (error instanceof SignedOut) {
+          onSignedOut()
+          return null
+        }
+
+        if (error instanceof Refused) {
+          if (error.configuration !== undefined) {
+            setState(error.configuration)
+            onChanged(error.configuration)
+          }
+
+          return error.message
+        }
+
+        return 'Something went wrong.'
+      }
+    },
+    [onChanged, onSignedOut],
+  )
+
   // While the path is being walked, a step appears once the one before it has
   // been answered. Afterwards there is no path left to walk, only settings.
   // Cumulative, not one condition per step: a configuration that was filled in
@@ -70,6 +109,7 @@ export default function ConfigurationScreen({
   const guided = !state.complete
   const showSources = !guided || state.apiKeySet
   const showTarget = showSources && (!guided || state.sources.length > 0)
+  const showMediaServer = showTarget && (!guided || state.target?.usable === true)
 
   return (
     <>
@@ -78,6 +118,7 @@ export default function ConfigurationScreen({
       <ApiKeyStep state={state} run={run} />
       {showSources && <SourcesStep state={state} run={run} />}
       {showTarget && <TargetStep state={state} run={run} />}
+      {showMediaServer && <MediaServerStep state={state} run={run} runCheck={runCheck} />}
       {guided && <FinishStep state={state} run={run} />}
     </>
   )
@@ -268,6 +309,124 @@ function TargetStep({ state, run }: { state: ConfigurationState; run: Run }) {
   )
 }
 
+/**
+ * ADR 0018's two optional fields. Everything about this step says so: it can be
+ * walked past, the setup finishes without it, and nothing on the screen calls a
+ * blank one a problem — leaving it empty is what most installations do.
+ *
+ * What it is not is a reachability check. The test reads back the one server
+ * setting that would silently discard every date the tool writes, and looks for
+ * something the tool has filed; a server that answers and holds none of it looks
+ * fine and does nothing, so that is said here rather than nowhere.
+ */
+function MediaServerStep({
+  state,
+  run,
+  runCheck,
+}: {
+  state: ConfigurationState
+  run: Run
+  runCheck: RunCheck
+}) {
+  const [url, setUrl] = useState(state.mediaServer?.url ?? '')
+  const [apiKey, setApiKey] = useState('')
+  const [check, setCheck] = useState<MediaServerCheckState | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const answered = (result: MediaServerCheckState | string | null) => {
+    setCheck(typeof result === 'object' ? result : null)
+    setProblem(typeof result === 'string' ? result : null)
+  }
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setBusy(true)
+    answered(await runCheck(() => api.setMediaServer(url, apiKey)))
+    setBusy(false)
+    setApiKey('')
+  }
+
+  const test = async () => {
+    setBusy(true)
+    answered(await runCheck(api.testMediaServer))
+    setBusy(false)
+  }
+
+  const forget = async () => {
+    setBusy(true)
+    setCheck(null)
+    setProblem(await run(api.forgetMediaServer))
+    setBusy(false)
+    setUrl('')
+    setApiKey('')
+  }
+
+  const connected = state.mediaServer !== null
+
+  return (
+    <Step number={4} title="Your media server (optional)" done={connected}>
+      <p className="hint">
+        Leave this empty and everything still works: the tool files videos and writes the metadata
+        file next to each one, and your media server picks them up on its next scan. Fill it in and
+        two more things happen — a video you file shows up there straight away instead of on the
+        next scan, and the setup can tell you now whether the server will read the dates the tool
+        writes.
+      </p>
+
+      {connected && <p className="done">Connected to {state.mediaServer?.url}</p>}
+
+      {check !== null && <p className={check.working ? 'done' : 'problem'}>{check.message}</p>}
+
+      <form onSubmit={save}>
+        <label>
+          Media server address
+          <input
+            type="text"
+            placeholder="http://192.168.1.10:8096"
+            spellCheck={false}
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+          />
+        </label>
+
+        <label>
+          API key
+          <input
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            value={apiKey}
+            onChange={(event) => setApiKey(event.target.value)}
+          />
+        </label>
+
+        <p className="hint">
+          In Jellyfin the key is made under Dashboard → API keys. It needs no user name and no
+          password, and it is checked here before it is stored.
+        </p>
+
+        {problem !== null && <p className="problem">{problem}</p>}
+
+        <button type="submit" disabled={busy || url.trim().length === 0 || apiKey.trim().length === 0}>
+          {busy ? 'Asking…' : 'Check and save'}
+        </button>
+
+        {connected && (
+          <>
+            <button type="button" className="quiet" onClick={() => void test()} disabled={busy}>
+              Test again
+            </button>
+            <button type="button" className="quiet" onClick={() => void forget()} disabled={busy}>
+              Forget it
+            </button>
+          </>
+        )}
+      </form>
+    </Step>
+  )
+}
+
 function FinishStep({ state, run }: { state: ConfigurationState; run: Run }) {
   const [problem, setProblem] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -279,10 +438,11 @@ function FinishStep({ state, run }: { state: ConfigurationState; run: Run }) {
   }
 
   return (
-    <Step number={4} title="Finish" done={state.complete}>
+    <Step number={5} title="Finish" done={state.complete}>
       <p className="hint">
         Until this is done the tool scans nothing. Everything above stays editable afterwards —
-        this is the configuration, not a wizard that locks itself.
+        this is the configuration, not a wizard that locks itself. Step 4 can be left empty; the
+        button below does not wait for it.
       </p>
 
       {problem !== null && <p className="problem">{problem}</p>}
