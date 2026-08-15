@@ -1,4 +1,5 @@
 using Prdb.Ordeno.Core.Identification;
+using Prdb.Ordeno.Core.Review;
 
 namespace Prdb.Ordeno.Core.Library;
 
@@ -62,9 +63,31 @@ public sealed record Scene(Guid VideoId, string Site, string Title, DateOnly? Re
             return null;
         }
 
-        return string.IsNullOrWhiteSpace(recognition.SiteTitle)
-            || string.IsNullOrWhiteSpace(recognition.Title)
-                ? null
-                : new Scene(videoId, recognition.SiteTitle, recognition.Title, recognition.ReleaseDate);
+        return Named(videoId, recognition.SiteTitle, recognition.Title, recognition.ReleaseDate);
     }
+
+    /// <summary>
+    /// The scene a person named, or <c>null</c> when they named none — a
+    /// dismissal, which is an answer that files nothing (ADR 0023).
+    /// </summary>
+    /// <remarks>
+    /// The same shape as the answer from prdb, deliberately: a resolution is
+    /// filed by the same planner, along the same path, and the only thing that
+    /// makes it different is who decided. What it is built from is what prdb said
+    /// about the video that was named — fetched when the decision was recorded,
+    /// so this is no more a title from a browser than the other one is.
+    /// </remarks>
+    public static Scene? From(Resolution resolution)
+    {
+        ArgumentNullException.ThrowIfNull(resolution);
+
+        return resolution is { Kind: ResolutionKind.Assigned, VideoId: { } videoId }
+            ? Named(videoId, resolution.SiteTitle, resolution.Title, resolution.ReleaseDate)
+            : null;
+    }
+
+    private static Scene? Named(Guid videoId, string? site, string? title, DateOnly? releaseDate) =>
+        string.IsNullOrWhiteSpace(site) || string.IsNullOrWhiteSpace(title)
+            ? null
+            : new Scene(videoId, site, title, releaseDate);
 }

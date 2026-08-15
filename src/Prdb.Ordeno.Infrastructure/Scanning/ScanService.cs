@@ -352,16 +352,25 @@ public sealed class ScanService(
     }
 
     /// <summary>
-    /// Drops the identifications of files whose bytes have changed, so they are
-    /// asked about again once they have settled.
+    /// Drops what was known about files whose bytes have changed, so they are
+    /// asked about again once they have settled — and decided about again.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// A person's answer outranks prdb's and survives re-identification, but not
+    /// this: ADR 0023 makes the bytes changing the one thing that forgets it. The
+    /// row is keyed to a path, and a path whose contents have changed is a
+    /// different video — a decision about last week's file naming this week's is
+    /// how the wrong scene ends up in the library under a deliberate-looking name.
+    /// </para>
+    /// <para>
     /// One statement per file rather than one for the list: a delete matching
     /// against a collection parameter is not a shape the SQLite provider
     /// translates. That is affordable here because a file that changed between
     /// two scans is a file being written, and there are a handful of those at a
     /// time — never the whole library, which is why this is not in the path that
     /// records a file for the first time.
+    /// </para>
     /// </remarks>
     private async Task ForgetWhatTheyWereAsync(
         IReadOnlyList<int> changed,
@@ -371,6 +380,10 @@ public sealed class ScanService(
         {
             await context.FileIdentifications
                 .Where(identification => identification.DiscoveredFileId == fileId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await context.FileResolutions
+                .Where(resolution => resolution.DiscoveredFileId == fileId)
                 .ExecuteDeleteAsync(cancellationToken);
         }
     }
