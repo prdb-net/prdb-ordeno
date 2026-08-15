@@ -1,5 +1,6 @@
 using Prdb.Ordeno.Core.Identification;
 using Prdb.Ordeno.Core.Library;
+using Prdb.Ordeno.Core.Review;
 
 using Xunit;
 
@@ -75,4 +76,37 @@ public sealed class SceneTests
     [InlineData("Scene Title", " ")]
     public void A_recognised_video_missing_a_title_or_a_site_is_not_filed(string? title, string? site) =>
         Assert.Null(Scene.From(Answer(title: title, site: site)));
+
+    /// <summary>
+    /// ADR 0023: a video a person named is filed the same way as one prdb named.
+    /// Nothing downstream can tell the two apart, which is the point — the only
+    /// difference is who decided, and that is recorded elsewhere.
+    /// </summary>
+    [Fact]
+    public void A_video_a_person_named_becomes_a_scene()
+    {
+        var videoId = Guid.NewGuid();
+
+        var scene = Scene.From(new Resolution(
+            ResolutionKind.Assigned,
+            ResolvedFrom.Search,
+            DateTimeOffset.UnixEpoch,
+            videoId,
+            "Scene Title",
+            new DateOnly(2025, 11, 3),
+            "Example Studio"));
+
+        Assert.Equal(new Scene(videoId, "Example Studio", "Scene Title", new DateOnly(2025, 11, 3)), scene);
+    }
+
+    /// <summary>
+    /// A dismissal names no video, so it files nothing. It is an answer all the
+    /// same: the file stops being offered rather than coming back every scan.
+    /// </summary>
+    [Fact]
+    public void A_dismissal_is_not_a_scene() =>
+        Assert.Null(Scene.From(new Resolution(
+            ResolutionKind.Dismissed,
+            From: null,
+            DateTimeOffset.UnixEpoch)));
 }

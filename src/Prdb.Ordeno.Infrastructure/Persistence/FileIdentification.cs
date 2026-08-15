@@ -69,6 +69,14 @@ public sealed class FileIdentification
 /// One of the videos that fitted equally well. Several rows mean prdb refused to
 /// guess, which is the outcome the review queue exists for.
 /// </summary>
+/// <remarks>
+/// The identify endpoint names the candidates as ids and nothing more, so what a
+/// person needs in order to choose between them — a title, a site, a date — is
+/// fetched the first time the queue shows the row and kept here. That is the
+/// bargain ADR 0017 struck for the answer itself, applied to the one part of it
+/// that arrives without words: paid for once, rather than every time somebody
+/// opens the page, and readable afterwards while prdb is unreachable.
+/// </remarks>
 public sealed class IdentificationCandidate
 {
     public int Id { get; set; }
@@ -79,4 +87,31 @@ public sealed class IdentificationCandidate
     public int Position { get; set; }
 
     public Guid VideoId { get; set; }
+
+    /// <summary>
+    /// When prdb was asked what this video is, or <c>null</c> while it has not
+    /// been. It is the flag rather than the title being null, because a video
+    /// whose title prdb does not fill in would otherwise be asked about on every
+    /// page view forever.
+    /// </summary>
+    public DateTimeOffset? DescribedAt { get; set; }
+
+    public string? Title { get; set; }
+
+    public DateOnly? ReleaseDate { get; set; }
+
+    public string? SiteTitle { get; set; }
+
+    /// <summary>
+    /// Who is in it, as one line in the order prdb listed them. Two candidates
+    /// for one file are usually two scenes from one site in one month, and this
+    /// is what tells them apart — a title and a date often do not.
+    /// </summary>
+    /// <remarks>
+    /// One column rather than a table of its own. Nothing here searches, counts
+    /// or matches on a performer: this is a line on a button, and a set of rows
+    /// would be a corpus of prdb's people growing in a store that must not
+    /// become one — ADR 0001.
+    /// </remarks>
+    public string? Performers { get; set; }
 }

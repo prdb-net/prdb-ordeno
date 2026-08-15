@@ -20,6 +20,8 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
 
     public DbSet<FileIdentification> FileIdentifications => Set<FileIdentification>();
 
+    public DbSet<FileResolution> FileResolutions => Set<FileResolution>();
+
     public DbSet<FiledVideo> FiledVideos => Set<FiledVideo>();
 
     public DbSet<Session> Sessions => Set<Session>();
@@ -131,6 +133,29 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
             candidate.ToTable("IdentificationCandidates");
             candidate.HasKey(row => row.Id);
             candidate.HasIndex(row => row.FileIdentificationId);
+
+            candidate.Property(row => row.DescribedAt).HasConversion(UtcTimestamp);
+        });
+
+        modelBuilder.Entity<FileResolution>(resolution =>
+        {
+            resolution.HasKey(row => row.Id);
+            resolution.Property(row => row.Kind).HasConversion<string>().HasMaxLength(32);
+            resolution.Property(row => row.From).HasConversion<string>().HasMaxLength(32);
+
+            resolution.Property(row => row.DecidedAt).HasConversion(UtcTimestamp);
+
+            // One decision per file. A second one replaces it — two answers from
+            // one person about one file, with no way to tell which is current, is
+            // the same state two identifications would be.
+            resolution.HasIndex(row => row.DiscoveredFileId).IsUnique();
+
+            // It goes with the file, in the schema: a row deciding the fate of a
+            // file that is no longer in any download directory decides nothing.
+            resolution.HasOne<DiscoveredFile>()
+                .WithOne()
+                .HasForeignKey<FileResolution>(row => row.DiscoveredFileId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<FiledVideo>(filed =>

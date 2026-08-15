@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.Identification;
+using Prdb.Ordeno.Core.Review;
 using Prdb.Ordeno.Core.Scanning;
 using Prdb.Ordeno.Infrastructure.Configuration;
 using Prdb.Ordeno.Infrastructure.Persistence;
@@ -268,6 +270,71 @@ public sealed class ScanServiceTests : IAsyncLifetime
 
         Assert.Equal(count, inventory.Total);
         Assert.Equal(Inventory.Limit, inventory.Files.Count);
+    }
+
+    /// <summary>
+    /// ADR 0023: a person's answer survives prdb being asked again, and does not
+    /// survive the bytes changing. The path is the same and the video is not, so
+    /// keeping the decision would file the new download under the old answer.
+    /// </summary>
+    [Fact]
+    public async Task A_file_that_changes_loses_what_prdb_said_and_what_a_person_decided()
+    {
+        var path = Path.Combine(downloads, "settled.mkv");
+        await File.WriteAllBytesAsync(path, new byte[1024]);
+
+        await ScanAsync();
+        time.Advance(Settling.QuietPeriod);
+        await ScanAsync();
+
+        await DecideAsync(path);
+
+        // The same path, different contents: somebody re-downloaded it.
+        await File.WriteAllBytesAsync(path, new byte[4096]);
+        await ScanAsync();
+
+        await using var scope = services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<OrdenoDbContext>();
+
+        Assert.Equal(0, await context.FileIdentifications.CountAsync());
+        Assert.Equal(0, await context.FileResolutions.CountAsync());
+
+        // And the file itself is still there, back at the start of its quiet
+        // period. Forgetting what it was is not forgetting that it exists.
+        Assert.Equal(1, await RowsAsync());
+    }
+
+    /// <summary>
+    /// Both answers about one file: what prdb said, and what a person said
+    /// afterwards. Written straight to the database, because what is under test
+    /// is the scan's reaction to them rather than the paths that produce them.
+    /// </summary>
+    private async Task DecideAsync(string path)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<OrdenoDbContext>();
+
+        var file = await context.DiscoveredFiles.SingleAsync(row => row.Path == path);
+
+        context.FileIdentifications.Add(new FileIdentification
+        {
+            DiscoveredFileId = file.Id,
+            AskedAt = time.GetUtcNow(),
+            Confidence = MatchConfidence.Ambiguous,
+        });
+
+        context.FileResolutions.Add(new FileResolution
+        {
+            DiscoveredFileId = file.Id,
+            DecidedAt = time.GetUtcNow(),
+            Kind = ResolutionKind.Assigned,
+            From = ResolvedFrom.Candidate,
+            VideoId = Guid.NewGuid(),
+            Title = "What somebody said it is",
+            SiteTitle = "A site",
+        });
+
+        await context.SaveChangesAsync();
     }
 
     /// <summary>
