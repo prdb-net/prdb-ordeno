@@ -105,7 +105,10 @@ public sealed class ReviewQueueService(
 
         var sources = await SourcesAsync(cancellationToken);
         var candidates = await CandidatesAsync(
-            configuration.PrdbApiKey,
+            // Empty is the same as absent here. Asking prdb with a key that is
+            // not one spends a request to be told so, on a screen somebody is
+            // waiting in front of.
+            string.IsNullOrWhiteSpace(configuration.PrdbApiKey) ? null : configuration.PrdbApiKey,
             [.. found.Select(row => row.Id)],
             cancellationToken);
 
