@@ -59,6 +59,14 @@ it was — nothing is ever written on a partial answer. Perceptual hashes are
 computed in the background, one file at a time, for the files an exact hash did
 not settle, and those files are then asked about again.
 
+A file that has finished downloading is now asked about within a minute of
+counting as finished, rather than whenever a five-minute timer next came round —
+which, on a fresh installation, was reliably the wrong moment: the tool would sit
+for five minutes showing files it had found and saying nothing about any of them.
+The Downloads screen also says when it last asked and how many files it asked
+about, so a run that found nothing ready is no longer indistinguishable from a
+run that never happened.
+
 Onboarding and the Downloads screen both say plainly that the name, size and
 hashes of every file examined are sent to prdb. That is what identifying them
 is; the files themselves are never uploaded.
