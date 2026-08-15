@@ -42,14 +42,37 @@ public sealed class FilingPlannerTests
         }
     }
 
+    /// <summary>Whose the sidecar at each path is; there is none anywhere else.</summary>
+    private sealed class Sidecars : ISidecars
+    {
+        private readonly Dictionary<string, SidecarState> answers = [];
+
+        public List<string> Asked { get; } = [];
+
+        public Sidecars With(string path, SidecarState state)
+        {
+            answers[path] = state;
+
+            return this;
+        }
+
+        public SidecarState StateOf(string absolutePath)
+        {
+            Asked.Add(absolutePath);
+
+            return answers.GetValueOrDefault(absolutePath, SidecarState.Missing);
+        }
+    }
+
     private static FilingPlan Plan(
         Directories directories,
         VideoQualityReading? quality = null,
         Scene? scene = null,
         IReadOnlyList<FiledCopy>? filed = null,
         string sourceName = "some.release.1080p.mkv",
-        FileMovement movement = FileMovement.Rename) =>
-        new FilingPlanner(new TargetPaths(directories), directories).Plan(
+        FileMovement movement = FileMovement.Rename,
+        Sidecars? sidecars = null) =>
+        new FilingPlanner(new TargetPaths(directories), directories, sidecars ?? new Sidecars()).Plan(
             fileId: 7,
             sourcePath: "/downloads/" + sourceName,
             sourceName,
@@ -278,7 +301,7 @@ public sealed class FilingPlannerTests
     {
         var directories = new Directories();
 
-        var plan = new FilingPlanner(new TargetPaths(directories), directories).Plan(
+        var plan = new FilingPlanner(new TargetPaths(directories), directories, new Sidecars()).Plan(
             fileId: 7,
             sourcePath: "/downloads/some.release.mkv",
             sourceName: "some.release.mkv",
@@ -291,6 +314,95 @@ public sealed class FilingPlannerTests
         Assert.Equal(FilingOutcome.Blocked, plan.Outcome);
         Assert.False(plan.Moves);
         Assert.Contains("review queue", plan.Message);
+    }
+
+    /// <summary>
+    /// #18: the video is only half of what a filing writes. The sidecar is on
+    /// the plan for the same reason the move is — it is a write, and a write the
+    /// user has not read about is one they cannot refuse.
+    /// </summary>
+    [Fact]
+    public void A_scene_the_library_does_not_hold_gets_a_sidecar()
+    {
+        var sidecars = new Sidecars();
+
+        var plan = Plan(new Directories(), sidecars: sidecars);
+
+        Assert.Equal(SidecarAction.Write, plan.Sidecar.Action);
+        Assert.Equal($"{Directory}/movie.nfo", plan.Sidecar.Path);
+        Assert.NotNull(plan.Sidecar.InWords);
+
+        // And the filesystem was not asked. A directory holding anything at all
+        // counts as occupied, so a scene directory this filing may write into is
+        // one that demonstrably has no sidecar in it.
+        Assert.Empty(sidecars.Asked);
+    }
+
+    /// <summary>
+    /// The one case where there may already be one: a second quality goes into
+    /// the directory the first was filed into, and the tool wrote that sidecar.
+    /// </summary>
+    [Fact]
+    public void A_sidecar_the_tool_wrote_is_written_again()
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var plan = Plan(
+            new Directories().With(filed[0].Path, SceneDirectoryState.Occupied),
+            VideoQualityReading.Of(3840, 2160),
+            filed: filed,
+            sourceName: "some.release.2160p.mkv",
+            sidecars: new Sidecars().With($"{Directory}/movie.nfo", SidecarState.Ours));
+
+        Assert.Equal(SidecarAction.Replace, plan.Sidecar.Action);
+        Assert.True(plan.Sidecar.Writes);
+    }
+
+    /// <summary>
+    /// A hand-written sidecar is most likely to be at this very name — it is
+    /// what Jellyfin reads — so there is no stepping around it. It stays, and
+    /// the plan says so before anything is moved.
+    /// </summary>
+    [Theory]
+    [InlineData(SidecarState.Foreign)]
+    [InlineData(SidecarState.Unknown)]
+    public void A_sidecar_the_tool_did_not_write_is_left_alone(SidecarState state)
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var plan = Plan(
+            new Directories().With(filed[0].Path, SceneDirectoryState.Occupied),
+            VideoQualityReading.Of(3840, 2160),
+            filed: filed,
+            sourceName: "some.release.2160p.mkv",
+            sidecars: new Sidecars().With($"{Directory}/movie.nfo", state));
+
+        Assert.Equal(SidecarAction.Keep, plan.Sidecar.Action);
+        Assert.False(plan.Sidecar.Writes);
+        Assert.NotNull(plan.Sidecar.Message);
+
+        // The video still goes in next to it. What is refused is writing over
+        // somebody's file, not filing the video they will want to watch.
+        Assert.True(plan.Moves);
+    }
+
+    /// <summary>
+    /// Nothing is filed, so nothing is written — not even into a directory whose
+    /// sidecar has gone missing. When one is refreshed is a decision of its own,
+    /// and a run reporting that it moved nothing must not be quietly writing.
+    /// </summary>
+    [Fact]
+    public void A_run_that_moves_nothing_writes_no_sidecar_either()
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var already = Plan(new Directories().With(filed[0].Path, SceneDirectoryState.Occupied), filed: filed);
+        var blocked = Plan(new Directories(), new VideoQualityReading(VideoQualityState.Unreadable));
+
+        Assert.Equal(SidecarAction.None, already.Sidecar.Action);
+        Assert.Equal(SidecarAction.None, blocked.Sidecar.Action);
+        Assert.Null(already.Sidecar.Path);
+        Assert.Null(blocked.Sidecar.InWords);
     }
 
     /// <summary>

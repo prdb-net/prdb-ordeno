@@ -22,7 +22,7 @@ namespace Prdb.Ordeno.Core.Library;
 /// I/O — ADR 0012.
 /// </para>
 /// </remarks>
-public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directories)
+public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directories, ISidecars sidecars)
 {
     /// <summary>
     /// The plan for one video.
@@ -150,7 +150,11 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
             target.VideoFile(),
             Relabel: null,
             movement,
-            target.Message);
+            target.Message,
+            // Nothing is at that path, and this is known rather than asked:
+            // a directory holding anything at all counts as occupied, so a
+            // target that got this far is one no sidecar can be sitting in.
+            new SidecarPlan(SidecarAction.Write, Sidecar(target.Directory!)));
     }
 
     /// <summary>
@@ -158,7 +162,7 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
     /// nothing is filed (ADR 0003), or at another, in which case this one goes
     /// next to it and the copy that is there is relabelled first (ADR 0020).
     /// </summary>
-    private static FilingPlan Next(
+    private FilingPlan Next(
         int fileId,
         string sourcePath,
         string sourceName,
@@ -185,7 +189,12 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
                 movement,
                 $"The library already holds this scene at {quality.Label}, as '{same.FileName}'. "
                 + "The file is left exactly where it is: a second copy of the same quality is "
-                + "not filed, and it is not deleted either.");
+                + "not filed, and it is not deleted either.",
+                // Nothing is filed, so nothing is written — not even a sidecar
+                // that might be missing from a directory the tool filled last
+                // year. When one is refreshed is its own decision, and a run
+                // that reports moving nothing must not be quietly writing.
+                SidecarPlan.None);
         }
 
         // Every copy of one scene lives in one directory — that is what makes
@@ -224,8 +233,40 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
             target,
             relabel,
             movement,
-            message);
+            message,
+            SidecarIn(home.Directory));
     }
+
+    /// <summary>
+    /// Whose the sidecar in a directory the library already holds is. This is the
+    /// only place the question has to be asked: everywhere else the scene
+    /// directory is one nothing is in yet.
+    /// </summary>
+    private SidecarPlan SidecarIn(string directory)
+    {
+        var path = Sidecar(directory);
+
+        return sidecars.StateOf(path) switch
+        {
+            SidecarState.Missing => new SidecarPlan(SidecarAction.Write, path),
+            SidecarState.Ours => new SidecarPlan(SidecarAction.Replace, path),
+
+            SidecarState.Foreign => new SidecarPlan(
+                SidecarAction.Keep,
+                path,
+                $"There is a '{ScenePath.SidecarFileName}' in that directory this tool did not "
+                + "write. The video is filed next to it and the file is left exactly as it is."),
+
+            _ => new SidecarPlan(
+                SidecarAction.Keep,
+                path,
+                $"The '{ScenePath.SidecarFileName}' in that directory could not be read, so it is "
+                + "left alone rather than written over."),
+        };
+    }
+
+    private static string Sidecar(string directory) =>
+        System.IO.Path.Combine(directory, ScenePath.SidecarFileName);
 
     private static string Qualities(IReadOnlyList<FiledCopy> live) =>
         live.Count == 1
