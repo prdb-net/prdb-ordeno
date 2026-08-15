@@ -86,13 +86,28 @@ docker run -d --name prdb-ordeno \
 
 Open `http://<host>:8080`. A fresh installation asks you to set a password —
 there is no default one, and there is no username — and then walks through the
-prdb API key, the directories your downloads arrive in, and the directory your
-library lives in with the layout that reads it.
+prdb API key, the directories your downloads arrive in, the directory your
+library lives in with the layout that reads it, and — if you want it — your
+media server.
 
 Nothing is stored before it has been checked. The API key is tried against prdb,
 and every directory against the filesystem the container can actually see, so a
 path nothing is mounted at, a source it may not read and a library it may not
 write to each say so next to the field rather than at three in the morning.
+
+There is one optional step: the address of your media server and an API key for
+it. Leaving it empty is a complete setup — the tool files videos and writes the
+metadata file next to each one either way, and your media server picks them up
+on its next scan. Filling it in buys two things. A video the tool files shows up
+there straight away rather than on the next scan, and the setup tells you
+whether the server will read the dates the tool writes: Jellyfin parses them
+against one exact format that is a server setting, and a server set to anything
+else throws every date away without either side reporting a thing. The key comes
+from Jellyfin's Dashboard → API keys, and needs no user name and no password.
+
+Whatever that connection does or does not do, it never touches your files. A
+media server that is switched off, moved or answering with an old key does not
+stop, delay or fail a single move.
 
 Until that is finished the tool scans nothing. Afterwards the same screen is
 where you change any of it, and a second screen — Downloads — shows what the

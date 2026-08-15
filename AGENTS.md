@@ -101,6 +101,28 @@ onboarding ends on. **The filing path never depends on them.** A server that is
 down, moved or answering with a stale key does not stop, delay or fail a move,
 and no feature may require the connection to exist.
 
+`Core/MediaServer` holds what that means and `Infrastructure/MediaServer` the
+four calls section 9 measured. Four rules that a plausible refactor would quietly
+break:
+
+- **The refresh happens after the run is reported, not during it.** `FilingRunner`
+  publishes the result and only then tells the server, in a `try` that swallows
+  everything. Moving that call inside `FilingService` would put a media server in
+  the filing path, which is the one thing ADR 0018 forbids.
+- **An item is found by enumerating and matching the tail of the path.** Not by
+  `path=`, which `GET /Items` accepts, ignores and answers with the whole library
+  — a caller that trusts it refreshes something at random — and not by
+  `POST /Library/Media/Updated`, which obeys the tolerance window a targeted
+  refresh exists to beat. The tail carries a leading separator, or a scene
+  directory matches under the wrong site.
+- **The connection test proves three things, and one of them costs a filed file.**
+  Reachability, the release date format, and that the server holds something this
+  tool put there. A server that answers and matches nothing looks fine and does
+  nothing; nothing has been filed yet is a different state and must not read like
+  it.
+- **Blank is not degraded.** No warning, no banner, no screen that looks broken,
+  and nothing stored for a server that refused the key or never answered.
+
 ## Watching the download directories
 
 Source directories are walked on a timer, not watched through the filesystem:

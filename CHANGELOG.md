@@ -106,6 +106,24 @@ video that is filed with no metadata beside it rather than one filed with the
 wrong metadata beside it. The plan on the Downloads screen says which of those
 would happen before anything is written.
 
+Setup has gained one optional step: the address of your media server and an API
+key for it. Leaving it empty is a complete setup and there is no warning
+anywhere about it — the tool files videos and writes the metadata file beside
+each one either way, and your media server picks them up on its next scan.
+Filling it in buys two things. A video the tool files is shown to the server
+straight away, so it appears there without waiting for a scan. And the setup can
+answer the question nothing else in either product would: Jellyfin parses release
+dates against one exact format that is a server setting, and a server set to
+anything else discards every date the tool writes without either side reporting
+a thing — so the connection test reads that setting back and says so, next to the
+field, while somebody is standing in front of it. It also looks for a video this
+tool has filed, because a server that answers and holds none of them looks fine
+and does nothing.
+
+None of that can touch your files. A media server that is switched off, has
+moved, or is answering with a key that was revoked does not stop, delay or fail a
+single move; it is a line in the container's log and nothing else.
+
 There is now a review queue, on a screen of its own, holding everything prdb
 could not settle: the files several videos fit equally well, the ones only the
 site could be read from, and the ones nothing matched. Where prdb named
