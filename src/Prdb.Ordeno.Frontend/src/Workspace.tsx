@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { configuration as api, Refused, SignedOut, type ConfigurationState } from './api/client'
 import ConfigurationScreen from './configuration/ConfigurationScreen'
+import ReviewScreen from './review/ReviewScreen'
 import ScanScreen from './scanning/ScanScreen'
 
-type View = 'downloads' | 'settings'
+type View = 'downloads' | 'review' | 'settings'
 
 /**
  * What a signed-in visitor sees. Until the setup is finished there is only the
@@ -61,6 +62,13 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
         </button>
         <button
           type="button"
+          className={view === 'review' ? 'view chosen' : 'view'}
+          onClick={() => setView('review')}
+        >
+          Review
+        </button>
+        <button
+          type="button"
           className={view === 'settings' ? 'view chosen' : 'view'}
           onClick={() => setView('settings')}
         >
@@ -68,7 +76,9 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
         </button>
       </nav>
 
-      {view === 'downloads' ? <ScanScreen onSignedOut={onSignedOut} /> : settings}
+      {view === 'downloads' && <ScanScreen onSignedOut={onSignedOut} />}
+      {view === 'review' && <ReviewScreen onSignedOut={onSignedOut} />}
+      {view === 'settings' && settings}
     </>
   )
 }

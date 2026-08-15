@@ -13,6 +13,14 @@ export type RecognisedState = components['schemas']['RecognisedState']
 export type FilingState = components['schemas']['FilingState']
 export type PlannedFileState = components['schemas']['PlannedFileState']
 export type FiledFileState = components['schemas']['FiledFileState']
+export type ReviewQueueState = components['schemas']['ReviewQueueState']
+export type ReviewEntryState = components['schemas']['ReviewEntryState']
+export type ReviewCandidateState = components['schemas']['ReviewCandidateState']
+export type ReviewDecisionState = components['schemas']['ReviewDecisionState']
+export type ReviewSiteState = components['schemas']['ReviewSiteState']
+export type ReviewSummaryState = components['schemas']['ReviewSummaryState']
+export type VideoSearchState = components['schemas']['VideoSearchState']
+export type VideoState = components['schemas']['VideoState']
 
 type ConfigurationProblem = components['schemas']['ConfigurationProblem']
 type ProblemResponse = components['schemas']['ProblemResponse']
@@ -147,4 +155,60 @@ export const filing = {
   plan: () => request<FilingState>('/api/filing/plan', { method: 'POST' }),
 
   file: () => request<FilingState>('/api/filing', { method: 'POST' }),
+}
+
+/** Which list of the queue is being read. */
+export type ReviewFilter = 'waiting' | 'assigned' | 'dismissed'
+
+/**
+ * The queue moves no files. Everything here writes down what a file *is* —
+ * ADR 0023 — and filing is still the run somebody asks for afterwards.
+ *
+ * A refusal comes back as a 400 carrying the same shape as an answer, so
+ * `Refused` has the message and the screen keeps its counts.
+ */
+export const review = {
+  read: (filter: ReviewFilter = 'waiting', site?: string, noSite = false, page = 1) => {
+    const query = new URLSearchParams({ filter, page: String(page) })
+
+    if (site !== undefined) {
+      query.set('site', site)
+    }
+
+    if (noSite) {
+      query.set('noSite', 'true')
+    }
+
+    return request<ReviewQueueState>(`/api/queue?${query.toString()}`)
+  },
+
+  /** A request against the user's prdb quota, spent because they typed something. */
+  search: (q: string, site?: string) => {
+    const query = new URLSearchParams({ q })
+
+    if (site !== undefined) {
+      query.set('site', site)
+    }
+
+    return request<VideoSearchState>(`/api/queue/search?${query.toString()}`)
+  },
+
+  assign: (fileId: number, videoId: string) =>
+    request<ReviewDecisionState>(`/api/queue/${String(fileId)}/assignment`, {
+      method: 'POST',
+      body: body({ videoId }),
+    }),
+
+  dismiss: (fileId: number) =>
+    request<ReviewDecisionState>(`/api/queue/${String(fileId)}/dismissal`, { method: 'POST' }),
+
+  dismissMany: (fileIds: number[]) =>
+    request<ReviewDecisionState>('/api/queue/dismissals', {
+      method: 'POST',
+      body: body({ fileIds }),
+    }),
+
+  /** The way back from a wrong button, for either kind of decision. */
+  forget: (fileId: number) =>
+    request<ReviewDecisionState>(`/api/queue/${String(fileId)}/decision`, { method: 'DELETE' }),
 }
