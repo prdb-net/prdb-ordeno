@@ -349,6 +349,12 @@ does not say which is which, or renaming a file the user already considers filed
 in order to get a tidy one. That is a decision for the filing path rather than a
 property of Jellyfin, and both options work.
 
+It has since been taken, in
+[ADR 0020](adr/0020-a-second-quality-relabels-the-filed-file.md): the filed file
+is renamed to carry its own label first, and the newcomer is written next to it.
+The measurement above is what says that is a choice rather than a necessity —
+the rename buys the version list, and nothing else depends on it.
+
 ## 7. Refresh
 
 A plain library scan re-reads a `movie.nfo` that changed on disk, and **the only
