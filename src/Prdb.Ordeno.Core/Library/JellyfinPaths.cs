@@ -28,6 +28,8 @@ public static class JellyfinPaths
     /// The scene has no site or no title. That is not a shape to fall back for:
     /// ADR 0019 does not file such a file at all, so reaching here with one is a
     /// caller that skipped the question rather than a scene to be named somehow.
+    /// <see cref="Scene.From"/> is that question, and it is where a filing path
+    /// belongs — this guard is for the programmer who went round it.
     /// </exception>
     public static ScenePath For(Scene scene, string extension, bool distinguish = false)
     {
