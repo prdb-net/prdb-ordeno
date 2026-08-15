@@ -8,13 +8,14 @@ namespace Prdb.Ordeno.Infrastructure.Library;
 public static class LibraryServiceCollectionExtensions
 {
     /// <summary>
-    /// The path computation and the one thing it asks the filesystem. Nothing
-    /// here moves a file or writes a sidecar — that is #17 and #18, and this is
-    /// what both of them will be given.
+    /// The path computation, the two things it asks about a filesystem and a
+    /// file, and nothing that writes. Filing is composed from these; a sidecar
+    /// (#18) will be too.
     /// </summary>
     public static IServiceCollection AddOrdenoLibrary(this IServiceCollection services)
     {
         services.TryAddSingleton<ISceneDirectories, SceneDirectories>();
+        services.TryAddSingleton<IVideoQualities, VideoQualities>();
         services.TryAddSingleton<TargetPaths>();
 
         return services;

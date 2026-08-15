@@ -34,6 +34,13 @@ jobs:
         run: npm ci
         working-directory: src/Prdb.Ordeno.Frontend
 
+      # The runtime image ships these, and the tests that read a picture size
+      # out of a real file need the same pair here. Faking them would test the
+      # parser rather than the question, and the question is what decides
+      # whether somebody's video is filed.
+      - name: Install ffmpeg and ffprobe
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y ffmpeg
+
       # Writes src/Prdb.Ordeno.Host/openapi.json on the way through.
       - name: Build
         run: dotnet build
