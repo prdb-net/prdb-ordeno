@@ -2,20 +2,21 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { configuration as api, Refused, SignedOut, type ConfigurationState } from './api/client'
 import ConfigurationScreen from './configuration/ConfigurationScreen'
+import FilingScreen from './library/FilingScreen'
+import Navigation from './navigation/Navigation'
+import { useRoute } from './navigation/useRoute'
 import ReviewScreen from './review/ReviewScreen'
 import ScanScreen from './scanning/ScanScreen'
-
-type View = 'downloads' | 'review' | 'settings'
 
 /**
  * What a signed-in visitor sees. Until the setup is finished there is only the
  * setup — ADR 0009 has the tool doing nothing until then, and a navigation
- * offering screens that would all be empty is a way of hiding that.
+ * offering areas that would all be empty is a way of hiding that.
  */
 export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) {
   const [configuration, setConfiguration] = useState<ConfigurationState | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
-  const [view, setView] = useState<View>('downloads')
+  const { area, go, replace } = useRoute()
 
   const read = useCallback(async () => {
     try {
@@ -34,8 +35,24 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
     void read()
   }, [read])
 
+  // An installation that has not been set up yet shows the setup whatever
+  // address it was opened at, so the address is corrected to the one that is
+  // actually on screen. The setup is the settings — the same screen — which is
+  // why there is no fifth area for it.
+  const setUp = configuration?.complete === true
+
+  useEffect(() => {
+    if (configuration !== null && !setUp) {
+      replace('/settings')
+    }
+  }, [configuration, setUp, replace])
+
   if (configuration === null) {
-    return <p className={problem === null ? 'hint' : 'problem'}>{problem ?? 'Asking the tool what it knows…'}</p>
+    return (
+      <p className={problem === null ? 'hint' : 'problem'}>
+        {problem ?? 'Asking the tool what it knows…'}
+      </p>
+    )
   }
 
   const settings = (
@@ -52,33 +69,12 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
 
   return (
     <>
-      <nav className="views">
-        <button
-          type="button"
-          className={view === 'downloads' ? 'view chosen' : 'view'}
-          onClick={() => setView('downloads')}
-        >
-          Downloads
-        </button>
-        <button
-          type="button"
-          className={view === 'review' ? 'view chosen' : 'view'}
-          onClick={() => setView('review')}
-        >
-          Review
-        </button>
-        <button
-          type="button"
-          className={view === 'settings' ? 'view chosen' : 'view'}
-          onClick={() => setView('settings')}
-        >
-          Settings
-        </button>
-      </nav>
+      <Navigation area={area} onChosen={go} />
 
-      {view === 'downloads' && <ScanScreen onSignedOut={onSignedOut} />}
-      {view === 'review' && <ReviewScreen onSignedOut={onSignedOut} />}
-      {view === 'settings' && settings}
+      {area === '/downloads' && <ScanScreen onSignedOut={onSignedOut} />}
+      {area === '/filing' && <FilingScreen onSignedOut={onSignedOut} />}
+      {area === '/review' && <ReviewScreen onSignedOut={onSignedOut} />}
+      {area === '/settings' && settings}
     </>
   )
 }
