@@ -193,6 +193,33 @@ a.area.chosen {
   color: inherit;
 }
 
+/* The settings' own sections, one level under the areas. Deliberately not a
+   second tab strip: two identical rows under each other read as two sets of
+   areas rather than as one inside the other, so this one is smaller, has no
+   underline of its own, and marks the chosen section by weight. */
+.sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  margin: 0.9rem 0 0.2rem;
+}
+
+a.section {
+  color: var(--quiet);
+  font-size: 0.9rem;
+  padding: 0.2rem 0;
+  text-decoration: none;
+}
+
+a.section:hover {
+  color: inherit;
+}
+
+a.section.chosen {
+  color: inherit;
+  font-weight: 600;
+}
+
 /* A list of files as a table: one line each, and what a line has to say for
    itself folded away underneath it. The wrapper scrolls rather than the page,
    so a long file name on a phone cannot push the whole layout sideways. */

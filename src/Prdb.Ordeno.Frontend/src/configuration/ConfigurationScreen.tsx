@@ -8,6 +8,8 @@ import {
   type MediaServerCheckState,
   type SourceState,
 } from '../api/client'
+import Navigation from '../navigation/Navigation'
+import { firstSection, sections, type SectionPath } from './sections'
 
 /** Runs one change and reports what the tool said about it, or null if it agreed. */
 type Run = (call: () => Promise<ConfigurationState>) => Promise<string | null>
@@ -23,8 +25,18 @@ type RunCheck = (
 
 /**
  * The guided path of ADR 0009, and the settings page afterwards — one screen,
- * because it is one configuration. Before onboarding is finished the steps
- * appear one at a time; after it, they are all just fields that can be changed.
+ * because it is one configuration. The two halves are shaped by what somebody
+ * is doing in them, and that is why they are drawn differently below.
+ *
+ * Walking the path, the order is the whole point: a step appears once the one
+ * before it has been answered, all of them under each other, numbered, so that
+ * what is left to do is visible without clicking anything.
+ *
+ * Afterwards there is no order left. Somebody who opens the settings came to
+ * change one thing, so the four blocks become four sections with an address
+ * each and one of them on screen — see `sections.ts`. The alternative is the
+ * column, and a column only grows: the switches around duplicates and
+ * contributions ADR 0009 promises would land at the bottom of it.
  *
  * The configuration arrives from the workspace around it rather than being
  * fetched here: finishing the setup is what puts the rest of the tool within
@@ -32,10 +44,14 @@ type RunCheck = (
  */
 export default function ConfigurationScreen({
   initial,
+  section,
+  onSection,
   onChanged,
   onSignedOut,
 }: {
   initial: ConfigurationState
+  section: SectionPath | null
+  onSection: (section: SectionPath) => void
   onChanged: (state: ConfigurationState) => void
   onSignedOut: () => void
 }) {
@@ -101,30 +117,70 @@ export default function ConfigurationScreen({
     [onChanged, onSignedOut],
   )
 
-  // While the path is being walked, a step appears once the one before it has
-  // been answered. Afterwards there is no path left to walk, only settings.
-  // Cumulative, not one condition per step: a configuration that was filled in
-  // out of order — through the API, or by a key that stopped working — would
-  // otherwise show step three while step two is still hidden.
-  const guided = !state.complete
-  const showSources = !guided || state.apiKeySet
-  const showTarget = showSources && (!guided || state.sources.length > 0)
-  const showMediaServer = showTarget && (!guided || state.target?.usable === true)
+  const summary = (
+    <p className={state.readyToComplete ? 'summary' : 'summary waiting'}>{state.whatHappensNext}</p>
+  )
+
+  if (!state.complete) {
+    // A step appears once the one before it has been answered. Cumulative, not
+    // one condition per step: a configuration that was filled in out of order —
+    // through the API, or by a key that stopped working — would otherwise show
+    // step three while step two is still hidden.
+    const showSources = state.apiKeySet
+    const showTarget = showSources && state.sources.length > 0
+    const showMediaServer = showTarget && state.target?.usable === true
+
+    return (
+      <>
+        {summary}
+
+        <ApiKeyStep state={state} run={run} number={1} />
+        {showSources && <SourcesStep state={state} run={run} number={2} />}
+        {showTarget && <TargetStep state={state} run={run} number={3} />}
+        {showMediaServer && <MediaServerStep state={state} run={run} runCheck={runCheck} number={4} />}
+        <FinishStep state={state} run={run} />
+      </>
+    )
+  }
+
+  // The address catches up a render later — the workspace replaces a bare
+  // `/settings` with the first section — so the screen answers for itself in
+  // the meantime rather than showing nothing at all for a frame.
+  const chosen = section ?? firstSection
 
   return (
     <>
-      <p className={state.readyToComplete ? 'summary' : 'summary waiting'}>{state.whatHappensNext}</p>
+      <Navigation
+        kind="section"
+        label="Settings"
+        links={sections.map((one) => ({
+          to: one.path,
+          href: `/settings/${one.path}`,
+          label: one.label,
+        }))}
+        chosen={chosen}
+        onChosen={onSection}
+      />
 
-      <ApiKeyStep state={state} run={run} />
-      {showSources && <SourcesStep state={state} run={run} />}
-      {showTarget && <TargetStep state={state} run={run} />}
-      {showMediaServer && <MediaServerStep state={state} run={run} runCheck={runCheck} />}
-      {guided && <FinishStep state={state} run={run} />}
+      {summary}
+
+      {chosen === 'prdb' && <ApiKeyStep state={state} run={run} />}
+      {chosen === 'sources' && <SourcesStep state={state} run={run} />}
+      {chosen === 'library' && <TargetStep state={state} run={run} />}
+      {chosen === 'media-server' && <MediaServerStep state={state} run={run} runCheck={runCheck} />}
     </>
   )
 }
 
-function ApiKeyStep({ state, run }: { state: ConfigurationState; run: Run }) {
+function ApiKeyStep({
+  state,
+  run,
+  number,
+}: {
+  state: ConfigurationState
+  run: Run
+  number?: number
+}) {
   const [apiKey, setApiKey] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -138,7 +194,7 @@ function ApiKeyStep({ state, run }: { state: ConfigurationState; run: Run }) {
   }
 
   return (
-    <Step number={1} title="Your prdb API key" done={state.apiKeySet}>
+    <Step number={number} title="Your prdb API key" done={state.apiKeySet}>
       <p className="hint">
         prdb is where the tool gets what it knows about a video. The key is on your account page
         at prdb.net — it is checked here before it is stored, and it never leaves this container
@@ -177,7 +233,15 @@ function ApiKeyStep({ state, run }: { state: ConfigurationState; run: Run }) {
   )
 }
 
-function SourcesStep({ state, run }: { state: ConfigurationState; run: Run }) {
+function SourcesStep({
+  state,
+  run,
+  number,
+}: {
+  state: ConfigurationState
+  run: Run
+  number?: number
+}) {
   const [path, setPath] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -200,7 +264,7 @@ function SourcesStep({ state, run }: { state: ConfigurationState; run: Run }) {
   }
 
   return (
-    <Step number={2} title="Where your downloads arrive" done={state.sources.length > 0}>
+    <Step number={number} title="Where your downloads arrive" done={state.sources.length > 0}>
       <p className="hint">
         The paths as the container sees them — the right-hand side of each volume, not the path
         on the NAS. There can be several.
@@ -248,7 +312,15 @@ function SourcesStep({ state, run }: { state: ConfigurationState; run: Run }) {
   )
 }
 
-function TargetStep({ state, run }: { state: ConfigurationState; run: Run }) {
+function TargetStep({
+  state,
+  run,
+  number,
+}: {
+  state: ConfigurationState
+  run: Run
+  number?: number
+}) {
   const [path, setPath] = useState(state.target?.path ?? '')
   const [layout, setLayout] = useState(state.layout ?? state.availableLayouts[0]?.name ?? '')
   const [problem, setProblem] = useState<string | null>(null)
@@ -264,7 +336,7 @@ function TargetStep({ state, run }: { state: ConfigurationState; run: Run }) {
   const chosen = state.availableLayouts.find((option) => option.name === layout)
 
   return (
-    <Step number={3} title="Where your library lives" done={state.target?.usable === true}>
+    <Step number={number} title="Where your library lives" done={state.target?.usable === true}>
       <p className="hint">
         Videos are moved here once they have been recognised, in the shape your media server
         reads. Keep it out of the download directories, or the tool will find its own work.
@@ -323,10 +395,12 @@ function MediaServerStep({
   state,
   run,
   runCheck,
+  number,
 }: {
   state: ConfigurationState
   run: Run
   runCheck: RunCheck
+  number?: number
 }) {
   const [url, setUrl] = useState(state.mediaServer?.url ?? '')
   const [apiKey, setApiKey] = useState('')
@@ -365,7 +439,7 @@ function MediaServerStep({
   const connected = state.mediaServer !== null
 
   return (
-    <Step number={4} title="Your media server (optional)" done={connected}>
+    <Step number={number} title="Your media server (optional)" done={connected}>
       <p className="hint">
         Leave this empty and everything still works: the tool files videos and writes the metadata
         file next to each one, and your media server picks them up on its next scan. Fill it in and
@@ -454,13 +528,19 @@ function FinishStep({ state, run }: { state: ConfigurationState; run: Run }) {
   )
 }
 
+/**
+ * One block of the configuration, numbered while it is a step of the guided
+ * path and plain once it is a section of the settings — a number is an answer
+ * to "how much is left", and on a page showing one block there is no such
+ * question. What each block says about its own state it says in its prose.
+ */
 function Step({
   number,
   title,
   done,
   children,
 }: {
-  number: number
+  number?: number
   title: string
   done: boolean
   children: React.ReactNode
@@ -468,7 +548,9 @@ function Step({
   return (
     <section className="card">
       <h2>
-        <span className={done ? 'step done' : 'step'}>{done ? '✓' : number}</span>
+        {number !== undefined && (
+          <span className={done ? 'step done' : 'step'}>{done ? '✓' : number}</span>
+        )}
         {title}
       </h2>
       {children}

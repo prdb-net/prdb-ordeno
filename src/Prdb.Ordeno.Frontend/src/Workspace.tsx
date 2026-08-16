@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { configuration as api, Refused, SignedOut, type ConfigurationState } from './api/client'
 import ConfigurationScreen from './configuration/ConfigurationScreen'
+import { firstSection } from './configuration/sections'
 import FilingScreen from './library/FilingScreen'
+import { areas } from './navigation/areas'
 import Navigation from './navigation/Navigation'
 import { useRoute } from './navigation/useRoute'
 import ReviewScreen from './review/ReviewScreen'
@@ -16,7 +18,7 @@ import ScanScreen from './scanning/ScanScreen'
 export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) {
   const [configuration, setConfiguration] = useState<ConfigurationState | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
-  const { area, go, replace } = useRoute()
+  const { area, section, go, replace } = useRoute()
 
   const read = useCallback(async () => {
     try {
@@ -39,13 +41,29 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
   // address it was opened at, so the address is corrected to the one that is
   // actually on screen. The setup is the settings — the same screen — which is
   // why there is no fifth area for it.
+  //
+  // The same screen is also why `/settings` alone means two things, and why the
+  // correction between them lives here rather than in the router. Before the
+  // setup is finished it is the guided path, one column with no sections in it;
+  // afterwards it is four settings, and the address says which one — so a
+  // finished installation asked for `/settings` is sent on to the first
+  // section, including in the moment somebody presses "Finish setup".
   const setUp = configuration?.complete === true
 
   useEffect(() => {
-    if (configuration !== null && !setUp) {
-      replace('/settings')
+    if (configuration === null) {
+      return
     }
-  }, [configuration, setUp, replace])
+
+    if (!setUp) {
+      replace('/settings')
+      return
+    }
+
+    if (area === '/settings' && section === null) {
+      replace('/settings', firstSection)
+    }
+  }, [configuration, setUp, area, section, replace])
 
   if (configuration === null) {
     return (
@@ -58,6 +76,8 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
   const settings = (
     <ConfigurationScreen
       initial={configuration}
+      section={section}
+      onSection={(chosen) => go('/settings', chosen)}
       onChanged={setConfiguration}
       onSignedOut={onSignedOut}
     />
@@ -69,7 +89,13 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
 
   return (
     <>
-      <Navigation area={area} onChosen={go} />
+      <Navigation
+        kind="area"
+        label="Areas"
+        links={areas.map((one) => ({ to: one.path, href: one.path, label: one.label }))}
+        chosen={area}
+        onChosen={(chosen) => go(chosen)}
+      />
 
       {area === '/downloads' && <ScanScreen onSignedOut={onSignedOut} />}
       {area === '/filing' && <FilingScreen onSignedOut={onSignedOut} />}
