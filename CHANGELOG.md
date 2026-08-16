@@ -132,6 +132,19 @@ None of that can touch your files. A media server that is switched off, has
 moved, or is answering with a key that was revoked does not stop, delay or fail a
 single move; it is a line in the container's log and nothing else.
 
+The workspace has areas with addresses: Downloads, Filing, Review and Settings,
+each at its own URL. A reload keeps you where you were, the back button works,
+and a link to the review queue is a link somebody can send. Filing is now an
+area of its own rather than a card halfway down the downloads screen — it is the
+one part of the tool that moves a file, and it has the room to say what it would
+do to each video and what it did to each of them afterwards.
+
+The lists of files are tables rather than stacks of paragraphs. One line per
+file with the same columns down the page, and everything that explains a line —
+where it would go, why it is blocked, what happens to a metadata file already
+there — folded away under it until it is opened. Twenty files now fit on a
+screen instead of four.
+
 There is now a review queue, on a screen of its own, holding everything prdb
 could not settle: the files several videos fit equally well, the ones only the
 site could be read from, and the ones nothing matched. Where prdb named

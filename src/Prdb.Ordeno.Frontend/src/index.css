@@ -14,10 +14,19 @@ body {
   margin: 0;
 }
 
+/* Wide enough for a table of files to keep its columns on a laptop, and no
+   wider: prose that runs past about 40rem is prose nobody finishes, so the
+   paragraphs inside the cards set their own width below. */
 main {
   margin: 0 auto;
-  max-width: 42rem;
+  max-width: 64rem;
   padding: 2rem 1rem 4rem;
+}
+
+/* Explanations stay readable while tables use the full card. */
+.card > p,
+.card > ul.directories {
+  max-width: 42rem;
 }
 
 header {
@@ -159,49 +168,108 @@ button.quiet {
   word-break: break-all;
 }
 
-/* Downloads or settings, once there is more than one thing to look at. */
-.views {
+/* The areas. Links rather than buttons, because each one has an address. */
+.areas {
   border-bottom: 1px solid var(--edge);
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 1.2rem;
   margin-top: 1.5rem;
 }
 
-button.view {
-  background: none;
-  border: none;
+a.area {
   border-bottom: 2px solid transparent;
-  border-radius: 0;
   color: var(--quiet);
-  margin: 0;
-  padding: 0.5rem 0.2rem;
+  padding: 0.5rem 0.1rem;
+  text-decoration: none;
 }
 
-button.view.chosen {
+a.area:hover {
+  color: inherit;
+}
+
+a.area.chosen {
   border-bottom-color: currentcolor;
   color: inherit;
 }
 
-.files {
-  list-style: none;
-  margin: 0.5rem 0 0;
-  padding: 0;
+/* A list of files as a table: one line each, and what a line has to say for
+   itself folded away underneath it. The wrapper scrolls rather than the page,
+   so a long file name on a phone cannot push the whole layout sideways. */
+.rows {
+  margin-top: 0.8rem;
+  overflow-x: auto;
 }
 
-.files li {
+.rows table {
+  border-collapse: collapse;
+  min-width: 100%;
+}
+
+.rows th,
+.rows td {
+  padding: 0.45rem 0.6rem 0.45rem 0;
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.rows thead th {
+  border-bottom: 1px solid var(--edge);
+  color: var(--quiet);
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+
+.rows tbody th {
+  font-weight: normal;
+  max-width: 24rem;
+}
+
+.rows tbody tr > * {
   border-top: 1px solid var(--edge);
-  padding: 0.5rem 0;
 }
 
-.files .row {
-  align-items: baseline;
-  display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
+/* The detail belongs to the line above it, so no rule runs between them. */
+.rows tbody tr.detail > * {
+  border-top: none;
+  padding-top: 0;
 }
 
-.files code {
+.rows tbody.open th,
+.rows tbody.open td {
+  border-top-color: var(--quiet);
+}
+
+.rows code {
   word-break: break-all;
+}
+
+.rows .opener {
+  padding-right: 0.2rem;
+  width: 1.4rem;
+}
+
+button.opener {
+  font-size: 0.8rem;
+  line-height: 1;
+  text-decoration: none;
+}
+
+/* Named for the reader that needs it and nobody else. */
+.offscreen {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+/* Buttons that belong together, rather than one under the other. */
+.row.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 /* Whether a file has finished being written, said in one word. */

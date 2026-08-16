@@ -109,16 +109,24 @@ Whatever that connection does or does not do, it never touches your files. A
 media server that is switched off, moved or answering with an old key does not
 stop, delay or fail a single move.
 
-Until that is finished the tool scans nothing. Afterwards the same screen is
-where you change any of it, and a second screen — Downloads — shows what the
-tool has found in the directories you gave it.
+Until that is finished the tool scans nothing. Afterwards the workspace opens
+with four areas, each at its own address, so a reload and the back button both
+land where you expect:
 
-That screen distinguishes a video that has finished downloading from one that is
-still arriving, and it waits for the second kind rather than acting on it. A
-file counts as finished only once two scans in a row have seen it unchanged, so
-expect a new download to take a few minutes to appear as ready. It is asked
-about within a minute of that, and the screen says when the tool last asked and
-what it asked about — including when the answer is that nothing was ready yet.
+| Area | What it is |
+| --- | --- |
+| Downloads | What the tool has found in the directories you gave it, and what prdb said each file is. |
+| Filing | What would happen to every recognised video, and the button that carries it out. |
+| Review | What prdb could not settle: the files it named several videos for, the ones only the site could be read from, and the ones nothing matched. |
+| Settings | Everything the setup asked, and where you change any of it. |
+
+The Downloads area distinguishes a video that has finished downloading from one
+that is still arriving, and it waits for the second kind rather than acting on
+it. A file counts as finished only once two scans in a row have seen it
+unchanged, so expect a new download to take a few minutes to appear as ready. It
+is asked about within a minute of that, and the area says when the tool last
+asked and what it asked about — including when the answer is that nothing was
+ready yet.
 
 Once a file is ready the tool asks prdb what it is, and the answer appears on
 the same screen: the video, several videos that fit equally well with no choice

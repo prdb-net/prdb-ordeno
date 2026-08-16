@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import FilingCard from '../library/FilingCard'
 import {
   Refused,
   SignedOut,
@@ -9,6 +8,7 @@ import {
   type ScanState,
   type ScannedFileState,
 } from '../api/client'
+import RowTable, { Row } from '../ui/RowTable'
 
 /** How often the screen asks again while something is under way. */
 const WhileWorking = 2000
@@ -38,10 +38,13 @@ function lastRun(identification: ScanState['identification']): string {
 
 /**
  * What is in the download directories, and what the tool has made of it. The
- * first screen someone opens once the setup is done, because the question they
- * came with is "is it dealing with my downloads" — and in this version the
- * honest answer is "it has found them, it knows what they are, and it will file
- * them when you say so".
+ * first area someone opens once the setup is done, because the question they
+ * came with is "is it dealing with my downloads".
+ *
+ * Two things and no more: what the tool is doing about them, and the files
+ * themselves. What would *happen* to the files is the filing area — this screen
+ * answers "what is there", and one screen that also answered "and what shall we
+ * do with it" was the one people had to scroll past to reach their own files.
  */
 export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void }) {
   const [state, setState] = useState<ScanState | null>(null)
@@ -101,15 +104,21 @@ export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void })
 
   return (
     <>
-      <p className="summary">{state.whatItFound}</p>
-
-      {problem !== null && <p className="problem">{problem}</p>}
-      {state.problem !== null && state.problem !== undefined && (
-        <p className="problem">{state.problem}</p>
-      )}
-
       <section className="card">
-        <h2>Download directories</h2>
+        <h2>Downloads</h2>
+
+        {problem !== null && <p className="problem">{problem}</p>}
+
+        {/* The answer to "is it dealing with my downloads", before anything that
+            explains how. */}
+        <p className={identification.whatItRecognised === null ? 'hint' : 'answer'}>
+          {identification.whatItRecognised ??
+            'Nothing has been asked about yet. The tool asks prdb once a file has finished downloading.'}
+        </p>
+
+        {identification.problem !== null && identification.problem !== undefined && (
+          <p className="problem">{identification.problem}</p>
+        )}
 
         <ul className="directories">
           {state.sources.map((source) => (
@@ -129,29 +138,25 @@ export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void })
           ))}
         </ul>
 
+        <div className="row buttons">
+          <button type="button" onClick={() => void ask(api.now)} disabled={busy || state.scanning}>
+            {state.scanning ? 'Looking…' : 'Scan now'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void ask(api.identify)}
+            disabled={busy || identification.running}
+          >
+            {identification.running ? 'Asking prdb…' : 'Identify now'}
+          </button>
+        </div>
+
         <p className="hint">
           {state.lastScanFinishedAt === null || state.lastScanFinishedAt === undefined
             ? 'Not scanned since the tool started. It looks by itself every few minutes.'
             : `Last looked at ${new Date(state.lastScanFinishedAt).toLocaleString()}. The tool looks by itself every few minutes.`}
         </p>
-
-        <button type="button" onClick={() => void ask(api.now)} disabled={busy || state.scanning}>
-          {state.scanning ? 'Looking…' : 'Scan now'}
-        </button>
-      </section>
-
-      <section className="card">
-        <h2>What prdb says they are</h2>
-
-        {identification.whatItRecognised === null ||
-        identification.whatItRecognised === undefined ? (
-          <p className="hint">
-            Nothing has been asked about yet. The tool asks prdb once a file has finished
-            downloading.
-          </p>
-        ) : (
-          <p>{identification.whatItRecognised}</p>
-        )}
 
         {/* What the last run did, including when it did nothing. Without this a
             run that found nothing ready and a run that never happened look the
@@ -159,22 +164,11 @@ export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void })
             a file takes to settle looks like, and it reads as a broken button. */}
         <p className="hint">{lastRun(identification)}</p>
 
-        {identification.problem !== null && identification.problem !== undefined && (
-          <p className="problem">{identification.problem}</p>
-        )}
-
         {identification.notBefore !== null && identification.notBefore !== undefined && (
           <p className="hint">
             Asking again after {new Date(identification.notBefore).toLocaleString()}.
           </p>
         )}
-
-        {/* VISION.md says this plainly and so does onboarding; the screen that
-            shows the answers is the other place it belongs. */}
-        <p className="hint">
-          The name, size and hashes of every file examined are sent to prdb. That is what
-          identifying them is.
-        </p>
 
         {Number(identification.perceptualBacklog) > 0 && (
           <p className="hint">
@@ -184,16 +178,13 @@ export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void })
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={() => void ask(api.identify)}
-          disabled={busy || identification.running}
-        >
-          {identification.running ? 'Asking prdb…' : 'Identify now'}
-        </button>
+        {/* VISION.md says this plainly and so does onboarding; the screen that
+            shows the answers is the other place it belongs. */}
+        <p className="hint">
+          The name, size and hashes of every file examined are sent to prdb. That is what
+          identifying them is.
+        </p>
       </section>
-
-      <FilingCard onSignedOut={onSignedOut} />
 
       {state.files.length > 0 && (
         <section className="card">
@@ -207,11 +198,11 @@ export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void })
             </p>
           )}
 
-          <ul className="files">
+          <RowTable heads={['File', 'Size', 'State', 'What prdb says']}>
             {state.files.map((file) => (
               <Found key={String(file.id)} file={file} />
             ))}
-          </ul>
+          </RowTable>
         </section>
       )}
     </>
@@ -220,20 +211,45 @@ export default function ScanScreen({ onSignedOut }: { onSignedOut: () => void })
 
 function Found({ file }: { file: ScannedFileState }) {
   return (
-    <li>
-      <div className="row">
-        <code>{file.name}</code>
-        <span className={file.ready ? 'chip ready' : 'chip'} title={
-          file.ready
-            ? 'Seen unchanged by two scans, so it has finished downloading.'
-            : 'Seen once, or changed since the last look. The tool waits for it to stop changing.'
-        }>
+    <Row
+      name={<code>{file.name}</code>}
+      detail={
+        <>
+          <p className="hint">
+            <code>{file.path}</code>
+          </p>
+          <p className="hint">Found {new Date(file.firstSeenAt).toLocaleString()}.</p>
+          {file.recognised !== null && file.recognised !== undefined && (
+            <p className="hint">
+              Asked {new Date(file.recognised.askedAt).toLocaleString()}
+              {file.recognised.because !== null &&
+                file.recognised.because !== undefined &&
+                ` — ${file.recognised.because}`}
+              {Number(file.recognised.candidates) > 0 &&
+                `, ${String(file.recognised.candidates)} candidates in the review queue`}
+              .
+            </p>
+          )}
+        </>
+      }
+    >
+      <td>{size(Number(file.sizeBytes))}</td>
+      <td>
+        <span
+          className={file.ready ? 'chip ready' : 'chip'}
+          title={
+            file.ready
+              ? 'Seen unchanged by two scans, so it has finished downloading.'
+              : 'Seen once, or changed since the last look. The tool waits for it to stop changing.'
+          }
+        >
           {file.ready ? 'ready' : 'waiting'}
         </span>
-      </div>
-      <p className="hint">{size(Number(file.sizeBytes))}</p>
-      <Recognised recognised={file.recognised} ready={file.ready} />
-    </li>
+      </td>
+      <td>
+        <Recognised recognised={file.recognised} ready={file.ready} />
+      </td>
+    </Row>
   )
 }
 
@@ -251,19 +267,16 @@ function Recognised({
 }) {
   if (recognised === null || recognised === undefined) {
     return (
-      <p className="hint">
-        {ready ? 'Waiting to be identified.' : 'Not identified yet — it is still arriving.'}
-      </p>
+      <span className="hint">
+        {ready ? 'waiting to be identified' : 'still arriving'}
+      </span>
     )
   }
 
   return (
-    <p className={recognised.state === 'unrecognised' ? 'hint' : 'answer'}>
+    <span className={recognised.state === 'unrecognised' ? 'hint' : 'answer'}>
       {recognised.answer}
-      {recognised.because !== null && recognised.because !== undefined && (
-        <span className="hint"> — {recognised.because}</span>
-      )}
-    </p>
+    </span>
   )
 }
 
