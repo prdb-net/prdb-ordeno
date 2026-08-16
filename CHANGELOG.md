@@ -139,6 +139,14 @@ area of its own rather than a card halfway down the downloads screen — it is t
 one part of the tool that moves a file, and it has the room to say what it would
 do to each video and what it did to each of them afterwards.
 
+The settings have addresses too, one per thing there is to change: prdb, the
+download directories, the library, and the media server, at `/settings/prdb` and
+so on. One of them is on screen at a time instead of all four under each other,
+so changing the library directory no longer means scrolling past the API key.
+Setting the tool up for the first time is unchanged — the guided path is still
+one column, numbered, with each step appearing as the one before it is answered,
+because there the order is the point.
+
 The lists of files are tables rather than stacks of paragraphs. One line per
 file with the same columns down the page, and everything that explains a line —
 where it would go, why it is blocked, what happens to a metadata file already
