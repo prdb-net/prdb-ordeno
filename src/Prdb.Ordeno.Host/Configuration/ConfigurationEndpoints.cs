@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 
 using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.Library;
 using Prdb.Ordeno.Infrastructure.Configuration;
 
 namespace Prdb.Ordeno.Host.Configuration;
@@ -47,6 +48,12 @@ public sealed record MediaServerState(string Url);
 /// onboarding collects — the tool runs without it — so it is here for the
 /// settings screen and false on every installation that never asked for it.
 /// </param>
+/// <param name="Unattended">
+/// Whether the tool files without being asked (ADR 0031), and
+/// <paramref name="UnattendedIntervalMinutes"/> is how often. Under the same
+/// rule as the image switch and for a larger reason: this is the one setting
+/// that lets the tool move files with nobody in front of it.
+/// </param>
 public sealed record ConfigurationState(
     bool ApiKeySet,
     IReadOnlyList<SourceState> Sources,
@@ -55,6 +62,8 @@ public sealed record ConfigurationState(
     IReadOnlyList<LayoutOption> AvailableLayouts,
     MediaServerState? MediaServer,
     bool Artwork,
+    bool Unattended,
+    int UnattendedIntervalMinutes,
     bool Complete,
     bool ReadyToComplete,
     string WhatHappensNext);
@@ -98,6 +107,9 @@ public sealed record SetTargetRequest(string Path, string Layout);
 /// or does not.
 /// </summary>
 public sealed record SetArtworkRequest(bool Enabled);
+
+/// <summary>The unattended filing switch, in the same shape and for the same reason.</summary>
+public sealed record SetUnattendedFilingRequest(bool Enabled);
 
 /// <summary>
 /// Both fields together, because neither is any use alone. Sending them empty is
@@ -157,6 +169,16 @@ internal static class ConfigurationEndpoints
             ConfigurationService service,
             CancellationToken cancellationToken) =>
             Answer(await service.SetArtworkAsync(request.Enabled, cancellationToken)));
+
+        // ADR 0031's switch, next to ADR 0027's and for the same reason: it is a
+        // property of what filing does, not something onboarding waits for an
+        // answer to. Turning it on is the only setting in the tool that lets it
+        // move a file with nobody in front of it.
+        configuration.MapPut("/unattended-filing", async Task<Results<Ok<ConfigurationState>, BadRequest<ConfigurationProblem>>> (
+            SetUnattendedFilingRequest request,
+            ConfigurationService service,
+            CancellationToken cancellationToken) =>
+            Answer(await service.SetUnattendedFilingAsync(request.Enabled, cancellationToken)));
 
         // ADR 0018's two optional fields. Nothing here is on the filing path, and
         // a setup that never touches these endpoints is a finished setup.
@@ -240,6 +262,8 @@ internal static class ConfigurationEndpoints
         ],
         MediaServer: configuration.MediaServerUrl is { } url ? new MediaServerState(url) : null,
         Artwork: configuration.Artwork,
+        Unattended: configuration.Unattended,
+        UnattendedIntervalMinutes: (int)FilingSchedule.Interval.TotalMinutes,
         Complete: configuration.Complete,
         ReadyToComplete: configuration.ReadyToComplete,
         WhatHappensNext: configuration.WhatHappensNext);

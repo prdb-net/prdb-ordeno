@@ -62,7 +62,7 @@ public sealed class ScanService(
         // One timestamp for the whole scan, so that "not seen by this scan" is an
         // exact comparison rather than a window with an edge to fall through.
         var scanAt = time.GetUtcNow();
-        var walked = new List<int>();
+        var walked = new List<(int Id, string Root)>();
 
         foreach (var source in sources)
         {
@@ -85,7 +85,7 @@ public sealed class ScanService(
                 scanAt,
                 cancellationToken);
 
-            walked.Add(source.Id);
+            walked.Add((source.Id, inspection.Path));
 
             logger.LogInformation("Scanned {Path}: {Found} videos.", inspection.Path, found);
         }
@@ -94,12 +94,17 @@ public sealed class ScanService(
         // one watched directory to another is present throughout, and forgetting
         // it after the first walk would make it arrive again in the second — with
         // a fresh quiet period, and no memory of having settled days ago.
-        var gone = await ForgetFilesNotSeenAsync(walked, scanAt, cancellationToken);
+        var gone = await ForgetFilesNotSeenAsync(walked.Select(source => source.Id), scanAt, cancellationToken);
 
         if (gone > 0)
         {
             logger.LogInformation("{Gone} videos are no longer in the download directories.", gone);
         }
+
+        await ForgetHoldsOnFilesThatAreGoneAsync(
+            walked.Select(source => source.Root),
+            scanAt,
+            cancellationToken);
     }
 
     /// <summary>
@@ -291,7 +296,7 @@ public sealed class ScanService(
             .Where(file => paths.Contains(file.Path))
             .ToDictionaryAsync(file => file.Path, cancellationToken);
 
-        var changed = new List<int>();
+        var changed = new List<(int Id, string Path)>();
 
         foreach (var observed in batch)
         {
@@ -316,7 +321,7 @@ public sealed class ScanService(
                     file.PerceptualHashAttempts = 0;
                     file.PerceptualHashAt = null;
 
-                    changed.Add(file.Id);
+                    changed.Add((file.Id, file.Path));
                 }
 
                 // The path is what identifies a file, and it is unique across the
@@ -373,10 +378,10 @@ public sealed class ScanService(
     /// </para>
     /// </remarks>
     private async Task ForgetWhatTheyWereAsync(
-        IReadOnlyList<int> changed,
+        IReadOnlyList<(int Id, string Path)> changed,
         CancellationToken cancellationToken)
     {
-        foreach (var fileId in changed)
+        foreach (var (fileId, path) in changed)
         {
             await context.FileIdentifications
                 .Where(identification => identification.DiscoveredFileId == fileId)
@@ -384,6 +389,14 @@ public sealed class ScanService(
 
             await context.FileResolutions
                 .Where(resolution => resolution.DiscoveredFileId == fileId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            // And a hold, in the same breath and for the same reason — ADR 0030.
+            // A hold says "this is the file you put back"; different bytes at
+            // that name are a download nobody has seen yet, and holding it would
+            // be answering for a file the user has said nothing about.
+            await context.FileHolds
+                .Where(hold => hold.Path == path)
                 .ExecuteDeleteAsync(cancellationToken);
         }
     }
@@ -417,6 +430,51 @@ public sealed class ScanService(
         }
 
         return gone;
+    }
+
+    /// <summary>
+    /// Drops the holds an undo left on files that are no longer in the download
+    /// directories — ADR 0030.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The same rule the discovered rows follow, and only for the directories
+    /// this scan walked: a share that could not be read keeps its holds, because
+    /// "I could not look" and "there is nothing there" are not the same answer.
+    /// A hold under a directory nobody watches any more is left alone; the file
+    /// is not a candidate for anything, so the row decides nothing either way.
+    /// </para>
+    /// <para>
+    /// Only holds older than this scan. An undo that finished while the walk was
+    /// already past that directory wrote a hold for a file this scan was never
+    /// going to see, and sweeping it away would leave the file unheld — which is
+    /// the one outcome the hold exists to prevent.
+    /// </para>
+    /// </remarks>
+    private async Task ForgetHoldsOnFilesThatAreGoneAsync(
+        IEnumerable<string> walked,
+        DateTimeOffset scanAt,
+        CancellationToken cancellationToken)
+    {
+        foreach (var root in walked)
+        {
+            var prefix = Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar;
+
+            var released = await context.FileHolds
+                .Where(hold => hold.HeldAt < scanAt
+                    && hold.Path.StartsWith(prefix)
+                    && !context.DiscoveredFiles.Any(file => file.Path == hold.Path))
+                .ExecuteDeleteAsync(cancellationToken);
+
+            if (released > 0)
+            {
+                logger.LogInformation(
+                    "{Released} files that had been put back are no longer in {Path}; their holds "
+                    + "are gone with them.",
+                    released,
+                    root);
+            }
+        }
     }
 
     /// <summary>The part of a path below its download directory, for reading.</summary>

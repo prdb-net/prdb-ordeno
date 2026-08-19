@@ -47,6 +47,12 @@ builder.Services.AddHostedService<ScanWorker>();
 builder.Services.AddHostedService<IdentificationWorker>();
 builder.Services.AddHostedService<PerceptualHashWorker>();
 
+// The fourth, and the only one that moves a file the user cannot get back — so
+// it is the only one that does nothing at all until somebody has turned it on
+// (ADR 0031). It is registered whatever the switch says, because the switch is
+// a row in the database that can change while the container runs.
+builder.Services.AddHostedService<FilingWorker>();
+
 // ADR 0014: this describes the API for the build that turns it into the
 // frontend's types. Nothing maps it as an endpoint — the document is written to
 // a file at build time and committed, and the browser never asks for it.

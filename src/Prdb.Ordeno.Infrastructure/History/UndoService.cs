@@ -275,6 +275,14 @@ public sealed class UndoService(
         var directory = System.IO.Path.GetDirectoryName(operation.To)!;
         var fileName = System.IO.Path.GetFileName(operation.To);
 
+        // First of everything that follows the move — ADR 0030. A file that is
+        // back in a download directory with no hold on it is exactly the state
+        // the hold exists to prevent: by the next scan it is indistinguishable
+        // from a fresh download, and an unattended run would file it again under
+        // the rule it was taken back from. So the interruption that could produce
+        // it is the one this order is chosen against.
+        await HoldAsync(operation);
+
         if (operation.Kind is OperationKind.Relabelled)
         {
             // The library still holds this file; it is called what it was called
@@ -303,6 +311,50 @@ public sealed class UndoService(
                     .SetProperty(row => row.UndoneAt, time.GetUtcNow())
                     .SetProperty(row => row.UndoneByRunId, undoRunId),
                 whateverHappens);
+    }
+
+    /// <summary>
+    /// The file is back in a download directory, and nothing files it again
+    /// until somebody says so — ADR 0030.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A relabel leaves none: nothing came back to a download directory, so there
+    /// is nothing to hold. The file it renamed is still in the library under the
+    /// name it had before the second quality arrived.
+    /// </para>
+    /// <para>
+    /// Written against the path rather than against a discovered file, because
+    /// there is no row to write it against: the one that said where this file was
+    /// went when it was filed, and ADR 0029 does not put it back. A hold already
+    /// at that path is replaced — a second undo returning a file there is the
+    /// later answer, and two rows about one path would be two answers to "why is
+    /// this not being filed".
+    /// </para>
+    /// </remarks>
+    private async Task HoldAsync(LoggedOperation operation)
+    {
+        if (operation.Kind is OperationKind.Relabelled)
+        {
+            return;
+        }
+
+        var whateverHappens = CancellationToken.None;
+
+        await context.FileHolds
+            .Where(hold => hold.Path == operation.From)
+            .ExecuteDeleteAsync(whateverHappens);
+
+        context.FileHolds.Add(new FileHold
+        {
+            Path = operation.From,
+            FiledAt = operation.At,
+            FiledTo = operation.To,
+            HeldAt = time.GetUtcNow(),
+        });
+
+        await context.SaveChangesAsync(whateverHappens);
+        context.ChangeTracker.Clear();
     }
 
     /// <summary>

@@ -22,6 +22,14 @@ public sealed class OperationRun
 
     public RunKind Kind { get; set; }
 
+    /// <summary>
+    /// Whether a person asked for this run or the timer did — ADR 0031, in the
+    /// column ADR 0028 left for it. It also decides whether an empty run keeps
+    /// its row: the row above is owed to whoever asked, and nobody asked for a
+    /// tick of the clock.
+    /// </summary>
+    public AskedBy AskedBy { get; set; }
+
     public DateTimeOffset StartedAt { get; set; }
 
     /// <summary>When it stopped, or <c>null</c> for a run that never did.</summary>

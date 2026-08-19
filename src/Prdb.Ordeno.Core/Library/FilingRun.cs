@@ -1,6 +1,37 @@
 using System.Globalization;
 
+using Prdb.Ordeno.Core.History;
+
 namespace Prdb.Ordeno.Core.Library;
+
+/// <summary>
+/// How often the tool files, when nobody asks it to and the switch is on —
+/// ADR 0031.
+/// </summary>
+/// <remarks>
+/// Both numbers are constants rather than settings, exactly as
+/// <see cref="Scanning.ScanSchedule"/>'s are: a setting is worth adding once
+/// somebody has a reason to change it, and until then it is one more thing in
+/// the UI to be wrong about. The setting here is the switch.
+/// </remarks>
+public static class FilingSchedule
+{
+    /// <summary>
+    /// A quarter of an hour. A shorter interval buys nothing — a file is not a
+    /// candidate until two scans have seen it unchanged (ADR 0016), which is ten
+    /// minutes of its own — and a longer one is a preference nobody has
+    /// expressed. A tick with nothing waiting costs one query.
+    /// </summary>
+    public static readonly TimeSpan Interval = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// The wait before the first unattended run after a start. Longer than the
+    /// scan's, for the reason the identification run's is: the volumes are
+    /// mounted around the moment this starts, and the first scan is what says
+    /// whether anything in them has settled.
+    /// </summary>
+    public static readonly TimeSpan FirstRunDelay = TimeSpan.FromMinutes(2);
+}
 
 /// <summary>
 /// What filing would do, and why it might not be able to do any of it.
@@ -48,9 +79,14 @@ public sealed record FilingReport(IReadOnlyList<FilingResult> Results, string? P
 /// Whether the run under way is moving files or only working out what it would
 /// move. The difference is the whole of ADR 0022 and it belongs on the screen.
 /// </param>
+/// <param name="AskedBy">
+/// Who the last run that filed anything happened for. A screen that shows a run
+/// nobody started has to say so, or the tool looks like it is talking to itself.
+/// </param>
 public sealed record FilingRun(
     bool Running,
     bool Filing,
+    AskedBy AskedBy,
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt,
     string? Problem,
@@ -63,6 +99,7 @@ public sealed record FilingRun(
     public static readonly FilingRun Never = new(
         Running: false,
         Filing: false,
+        AskedBy.Person,
         null,
         null,
         null,
@@ -71,8 +108,20 @@ public sealed record FilingRun(
         [],
         null);
 
-    public FilingRun Started(DateTimeOffset at, bool filing) =>
-        this with { Running = true, Filing = filing, StartedAt = at, FinishedAt = null, Problem = null };
+    public FilingRun Started(DateTimeOffset at, bool filing, AskedBy askedBy = AskedBy.Person) =>
+        this with
+        {
+            Running = true,
+            Filing = filing,
+
+            // Who asked belongs to the last run that moved files. Somebody
+            // working out what would happen next does not change who filed what
+            // the screen is still reporting underneath it.
+            AskedBy = filing ? askedBy : AskedBy,
+            StartedAt = at,
+            FinishedAt = null,
+            Problem = null,
+        };
 
     /// <summary>
     /// A planning run that finished. The results of the last filing run are kept
@@ -134,7 +183,8 @@ public sealed record FilingRun(
 
             var moving = Plan.Count(plan => plan.Moves);
             var second = Plan.Count(plan => plan.Outcome is FilingOutcome.SecondQuality);
-            var held = Plan.Count(plan => plan.Outcome is FilingOutcome.AlreadyFiled);
+            var already = Plan.Count(plan => plan.Outcome is FilingOutcome.AlreadyFiled);
+            var held = Plan.Count(plan => plan.Outcome is FilingOutcome.Held);
             var blocked = Plan.Count(plan => plan.Outcome is FilingOutcome.Blocked);
 
             var parts = new List<string>();
@@ -147,9 +197,19 @@ public sealed record FilingRun(
                         + "copy the library already holds");
             }
 
+            if (already > 0)
+            {
+                parts.Add($"{Number(already)} would be left alone as a copy of something already filed");
+            }
+
+            // ADR 0030, and it is deliberately not in with the blocked ones:
+            // nothing is wrong with these files, and the way out is a button
+            // rather than a fix.
             if (held > 0)
             {
-                parts.Add($"{Number(held)} would be left alone as a copy of something already filed");
+                parts.Add(held == 1
+                    ? "1 is held because you put it back"
+                    : $"{Number(held)} are held because you put them back");
             }
 
             if (blocked > 0)

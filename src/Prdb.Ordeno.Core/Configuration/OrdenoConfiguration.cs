@@ -27,6 +27,12 @@ public sealed record ConfiguredSource(int Id, DirectoryInspection Inspection, Fi
 /// turned it on: it spends a connection and a disk that are not the tool's, and
 /// it is not part of what onboarding collects, because the tool runs without it.
 /// </param>
+/// <param name="Unattended">
+/// Whether the tool files on its own, on the interval in
+/// <see cref="Library.FilingSchedule"/> (ADR 0031). Off unless somebody turned it
+/// on — the same rule as the image switch, applied to the one thing in this tool
+/// that moves a file the user cannot get back.
+/// </param>
 public sealed record OrdenoConfiguration(
     bool ApiKeySet,
     IReadOnlyList<ConfiguredSource> Sources,
@@ -34,6 +40,7 @@ public sealed record OrdenoConfiguration(
     LibraryLayout? Layout,
     string? MediaServerUrl,
     bool Artwork,
+    bool Unattended,
     DateTimeOffset? OnboardingCompletedAt)
 {
     /// <summary>
@@ -104,20 +111,24 @@ public sealed record OrdenoConfiguration(
                     + "library, so videos from them will be copied rather than renamed into place.",
             };
 
-            // A finished setup watches on its own and files nothing on its own,
-            // and a sentence that lets someone believe otherwise is one they act
-            // on: they stop looking, and report months later as a bug that their
-            // downloads were never touched. This half goes when a filing timer
-            // lands, which ADR 0022 puts with the operation log and not before.
             var ending = Complete
                 ? $"prdb-ordeno is watching {Sources.Count} {directories} and will file what it "
                 : $"prdb-ordeno will watch {Sources.Count} {directories} and file what it ";
 
-            var notYet = Complete
-                ? " Filing happens when you ask for it: the Downloads screen shows what would "
-                    + "happen to each video, and a button carries it out. It will not move anything "
-                    + "by itself until there is a way to undo a run that went wrong."
-                : string.Empty;
+            // Whether the tool moves files on its own is now a switch rather than
+            // a promise (ADR 0031), and this sentence says which way it is set.
+            // A vaguer one in its place would be worse than the promise it
+            // replaces: somebody who believes the wrong half of this stops
+            // looking, and reports months later as a bug either that nothing was
+            // filed or that everything was.
+            var filing = !Complete
+                ? string.Empty
+                : Unattended
+                    ? " It files on its own, a few minutes after a download has finished arriving. "
+                        + "Every run is in the History, where one that went wrong can be put back."
+                    : " Filing happens when you ask for it: the Filing screen shows what would "
+                        + "happen to each video, and a button carries it out. Under Settings → "
+                        + "Library it can be told to file on its own instead.";
 
             // The same rule as below, applied to the other switch nobody has to
             // touch: an installation that files without images is the ordinary
@@ -138,7 +149,7 @@ public sealed record OrdenoConfiguration(
 
             return ending
                 + $"recognises into {Target.Path}, in the layout {LibraryLayouts.NameOf(Layout.Value)} "
-                + "reads." + speed + images + notYet + connected;
+                + "reads." + speed + images + filing + connected;
         }
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Prdb.Ordeno.Infrastructure.Persistence;
 
@@ -10,9 +11,11 @@ using Prdb.Ordeno.Infrastructure.Persistence;
 namespace Prdb.Ordeno.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(OrdenoDbContext))]
-    partial class OrdenoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260819190228_UnattendedFiling")]
+    partial class UnattendedFiling
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.10");

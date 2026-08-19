@@ -15,22 +15,30 @@ Docker itself.
 
 ## Where this stands
 
-**This version sets itself up, looks, works out what it found, and files it
-when you ask.** It takes a password, checks your prdb API key, checks the
-directories you point it at, and from then on it walks your download
-directories every few minutes, shows you the videos it finds, and asks prdb
-what each of them is once it has finished downloading.
+**This version sets itself up, looks, works out what it found, and files it.**
+It takes a password, checks your prdb API key, checks the directories you point
+it at, and from then on it walks your download directories every few minutes,
+shows you the videos it finds, and asks prdb what each of them is once it has
+finished downloading.
 
-**It files nothing on its own.** The Downloads screen shows you what would
-happen to every recognised video — which directory it would go into, what it
-would be called there, what would be left alone as a copy of something you
-already have — and a button carries that out. Until there is a way to undo a
-run that went wrong, nothing moves unasked; the unattended version comes with
-that undo and not before.
+**It files nothing on its own until you tell it to.** The Filing screen shows
+you what would happen to every recognised video — which directory it would go
+into, what it would be called there, what would be left alone as a copy of
+something you already have — and a button carries that out. Under Settings →
+Library the same run can be put on a timer, a quarter of an hour apart; that
+switch is off on a fresh installation and stays off when an existing one is
+upgraded.
+
+**Everything it moves can be put back.** The History lists every run and every
+file in it, with where each came from and why the tool thought that was right,
+and a run — or one file of one — can be returned to the download directory it
+came from. What it cannot put back safely it leaves exactly as it is and says
+why. A file you have put back is never filed again until you release it, so an
+overnight run cannot undo your undo.
 
 Nothing else in your download directories is written, renamed or deleted. Apart
-from the files you have asked it to move, it reads directory listings, reads
-each file to hash it, and reports what it was told.
+from the files it files, it reads directory listings, reads each file to hash
+it, and reports what it was told.
 
 Working out what a file is means sending its name, its size and hashes of it to
 prdb. That is what identification is, and it happens for every file the tool

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.Library;
 using Prdb.Ordeno.Core.MediaServer;
 using Prdb.Ordeno.Infrastructure.MediaServer;
 using Prdb.Ordeno.Infrastructure.Persistence;
@@ -191,6 +192,48 @@ public sealed class ConfigurationService(
     }
 
     /// <summary>
+    /// Turns unattended filing on or off — ADR 0031.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Nothing is checked before it is stored, for the same reason the artwork
+    /// switch checks nothing: there is nothing here to check. What the switch
+    /// turns on is a run that works out for itself whether it can do anything,
+    /// and refusing to store it because the library is unreachable this minute
+    /// would be refusing to record an intention about tomorrow.
+    /// </para>
+    /// <para>
+    /// It is logged loudly, unlike the other switches. This is the one setting in
+    /// the tool that lets it move files with nobody in front of it, and the
+    /// container's log is where somebody looking into a surprise starts.
+    /// </para>
+    /// </remarks>
+    public async Task<ConfigurationChange> SetUnattendedFilingAsync(
+        bool wanted,
+        CancellationToken cancellationToken = default)
+    {
+        var configuration = await SingleConfigurationAsync(cancellationToken);
+        configuration.UnattendedFiling = wanted;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        if (wanted)
+        {
+            logger.LogInformation(
+                "Unattended filing was turned on: the tool will file what it recognises every "
+                + "{Minutes} minutes without being asked.",
+                FilingSchedule.Interval.TotalMinutes);
+        }
+        else
+        {
+            logger.LogInformation(
+                "Unattended filing was turned off: nothing is filed until somebody asks for it.");
+        }
+
+        return ConfigurationChange.Made(await BuildAsync(cancellationToken));
+    }
+
+    /// <summary>
     /// Stores where the media server is and the key that gets in — the two
     /// optional fields of ADR 0018 — and only after the server has answered for
     /// them.
@@ -348,6 +391,7 @@ public sealed class ConfigurationService(
                 ? null
                 : configuration.MediaServerUrl,
             Artwork: configuration.DownloadArtwork,
+            Unattended: configuration.UnattendedFiling,
             OnboardingCompletedAt: configuration.OnboardingCompletedAt);
     }
 

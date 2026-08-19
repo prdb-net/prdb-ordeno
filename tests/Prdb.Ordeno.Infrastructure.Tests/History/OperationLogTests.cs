@@ -165,18 +165,55 @@ public sealed class OperationLogTests : IAsyncLifetime
 
     /// <summary>
     /// A tool that says nothing about the night it found nothing to do is a tool
-    /// whose silence has two meanings.
+    /// whose silence has two meanings — for somebody who asked, which is what the
+    /// row is owed to.
     /// </summary>
     [Fact]
-    public async Task A_run_that_moved_nothing_still_leaves_its_row()
+    public async Task A_run_somebody_asked_for_still_leaves_its_row_when_it_moved_nothing()
     {
         await workspace.FileAsync();
 
         var run = Assert.Single(await workspace.RunsAsync());
 
         Assert.Empty(await workspace.OperationsAsync());
+        Assert.Equal(AskedBy.Person, run.AskedBy);
         Assert.NotNull(run.FinishedAt);
         Assert.Equal("0 videos were filed.", run.Account);
+    }
+
+    /// <summary>
+    /// And a run nobody asked for leaves nothing at all — ADR 0031, amending
+    /// ADR 0028. A row every quarter of an hour would push three years of nights
+    /// out of a thousand-run log inside a fortnight, and the trim would be
+    /// dropping real history to keep a record of the tool doing nothing.
+    /// </summary>
+    [Fact]
+    public async Task An_unattended_run_that_moved_nothing_leaves_no_row()
+    {
+        await workspace.FileAsync(AskedBy.Timer);
+
+        Assert.Empty(await workspace.RunsAsync());
+    }
+
+    /// <summary>
+    /// One that did move something is in the log exactly as an asked-for run is,
+    /// and it says who asked: "you filed these" and "the tool filed these while
+    /// nobody was watching" are different sentences.
+    /// </summary>
+    [Fact]
+    public async Task An_unattended_run_that_moved_something_is_logged_as_the_timers()
+    {
+        workspace.Recognised();
+        workspace.Arrived("scene.1080p.mkv");
+        await workspace.ReadyAsync();
+
+        await workspace.FileAsync(AskedBy.Timer);
+
+        var run = Assert.Single(await workspace.RunsAsync());
+
+        Assert.Equal(AskedBy.Timer, run.AskedBy);
+        Assert.Equal("1 video was filed.", run.Account);
+        Assert.Single(await workspace.OperationsAsync());
     }
 
     /// <summary>

@@ -141,6 +141,17 @@ export const configuration = {
     }),
 
   /**
+   * Unattended filing — ADR 0031. Off until this is called with true, and it
+   * sits with the library settings for the reason the image switch does: it is
+   * a property of what filing does, and the tool works without it.
+   */
+  setUnattendedFiling: (enabled: boolean) =>
+    request<ConfigurationState>('/api/configuration/unattended-filing', {
+      method: 'PUT',
+      body: body({ enabled }),
+    }),
+
+  /**
    * The optional media server connection — ADR 0018. Storing it answers with
    * what the server said about itself, which is more than "it answered": the
    * release date format, and whether it holds anything this tool has filed.
@@ -191,6 +202,17 @@ export const filing = {
   plan: () => request<FilingState>('/api/filing/plan', { method: 'POST' }),
 
   file: () => request<FilingState>('/api/filing', { method: 'POST' }),
+
+  /**
+   * Takes the hold off a file an undo put back, or off all of them — ADR 0030.
+   * Neither moves anything: it makes a file ordinary again, and the answer
+   * carries the plan being worked out afresh, because what was on the screen no
+   * longer describes what a run would do.
+   */
+  release: (fileId: number) =>
+    request<FilingState>(`/api/filing/holds/${String(fileId)}`, { method: 'DELETE' }),
+
+  releaseAll: () => request<FilingState>('/api/filing/holds', { method: 'DELETE' }),
 }
 
 /**

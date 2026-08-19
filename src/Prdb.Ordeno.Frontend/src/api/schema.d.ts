@@ -469,6 +469,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/configuration/unattended-filing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetUnattendedFilingRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationProblem"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/configuration/media-server": {
         parameters: {
             query?: never;
@@ -806,6 +854,78 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/filing/holds/{fileId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    fileId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FilingState"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/filing/holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FilingState"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -1317,6 +1437,9 @@ export interface components {
             availableLayouts: components["schemas"]["LayoutOption"][];
             mediaServer: null | components["schemas"]["MediaServerState"];
             artwork: boolean;
+            unattended: boolean;
+            /** Format: int32 */
+            unattendedIntervalMinutes: number | string;
             complete: boolean;
             readyToComplete: boolean;
             whatHappensNext: string;
@@ -1343,6 +1466,8 @@ export interface components {
         FilingState: {
             running: boolean;
             filing: boolean;
+            unattended: boolean;
+            askedByTimer: boolean;
             /** Format: date-time */
             plannedAt: null | string;
             /** Format: date-time */
@@ -1353,6 +1478,8 @@ export interface components {
             planTotal: number | string;
             /** Format: int32 */
             wouldFile: number | string;
+            /** Format: int32 */
+            held: number | string;
             whatItWouldDo: null | string;
             results: components["schemas"]["FiledFileState"][];
             /** Format: int32 */
@@ -1425,6 +1552,7 @@ export interface components {
             /** Format: int32 */
             id: number | string;
             kind: string;
+            askedByTimer: boolean;
             /** Format: date-time */
             startedAt: string;
             /** Format: date-time */
@@ -1618,6 +1746,9 @@ export interface components {
         SetTargetRequest: {
             path: string;
             layout: string;
+        };
+        SetUnattendedFilingRequest: {
+            enabled: boolean;
         };
         SignInRequest: {
             password: string;

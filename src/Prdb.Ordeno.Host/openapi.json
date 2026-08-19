@@ -358,6 +358,45 @@
         }
       }
     },
+    "/api/configuration/unattended-filing": {
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUnattendedFilingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/configuration/media-server": {
       "put": {
         "tags": [
@@ -575,6 +614,56 @@
     },
     "/api/filing/plan": {
       "post": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/filing/holds/{fileId}": {
+      "delete": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/filing/holds": {
+      "delete": {
         "tags": [
           "Filing"
         ],
@@ -1089,6 +1178,8 @@
           "availableLayouts",
           "mediaServer",
           "artwork",
+          "unattended",
+          "unattendedIntervalMinutes",
           "complete",
           "readyToComplete",
           "whatHappensNext"
@@ -1138,6 +1229,17 @@
           },
           "artwork": {
             "type": "boolean"
+          },
+          "unattended": {
+            "type": "boolean"
+          },
+          "unattendedIntervalMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           },
           "complete": {
             "type": "boolean"
@@ -1254,12 +1356,15 @@
         "required": [
           "running",
           "filing",
+          "unattended",
+          "askedByTimer",
           "plannedAt",
           "filedAt",
           "problem",
           "plan",
           "planTotal",
           "wouldFile",
+          "held",
           "whatItWouldDo",
           "results",
           "resultTotal",
@@ -1271,6 +1376,12 @@
             "type": "boolean"
           },
           "filing": {
+            "type": "boolean"
+          },
+          "unattended": {
+            "type": "boolean"
+          },
+          "askedByTimer": {
             "type": "boolean"
           },
           "plannedAt": {
@@ -1308,6 +1419,14 @@
             "format": "int32"
           },
           "wouldFile": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "held": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -1621,6 +1740,7 @@
         "required": [
           "id",
           "kind",
+          "askedByTimer",
           "startedAt",
           "finishedAt",
           "account",
@@ -1642,6 +1762,9 @@
           },
           "kind": {
             "type": "string"
+          },
+          "askedByTimer": {
+            "type": "boolean"
           },
           "startedAt": {
             "type": "string",
@@ -2502,6 +2625,17 @@
           },
           "layout": {
             "type": "string"
+          }
+        }
+      },
+      "SetUnattendedFilingRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
           }
         }
       },

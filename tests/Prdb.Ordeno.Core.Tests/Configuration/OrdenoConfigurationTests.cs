@@ -25,6 +25,7 @@ public sealed class OrdenoConfigurationTests
             Layout: null,
             MediaServerUrl: null,
             Artwork: false,
+            Unattended: false,
             OnboardingCompletedAt: null);
 
         Assert.False(configuration.ReadyToComplete);
@@ -43,6 +44,7 @@ public sealed class OrdenoConfigurationTests
             Layout: null,
             MediaServerUrl: null,
             Artwork: false,
+            Unattended: false,
             OnboardingCompletedAt: null);
 
         Assert.False(configuration.ReadyToComplete);
@@ -96,19 +98,13 @@ public sealed class OrdenoConfigurationTests
     }
 
     /// <summary>
-    /// A finished path says what is true of this version and nothing beyond it.
-    /// The tool watches and identifies — both run on their own — and it files
-    /// nothing, so it claims exactly the first two and disclaims the third.
-    /// Someone told their downloads are being handled stops looking at them.
-    /// </summary>
-    /// <summary>
-    /// A finished setup watches on its own and files nothing on its own —
-    /// ADR 0022. The sentence has to carry both halves, because someone who
-    /// reads only the first goes away expecting their downloads to be dealt
+    /// A finished setup watches on its own, and whether it files on its own is a
+    /// switch — ADR 0031. The sentence has to carry both halves, because someone
+    /// who reads only the first goes away expecting their downloads to be dealt
     /// with while they sleep.
     /// </summary>
     [Fact]
-    public void A_finished_path_says_that_filing_waits_to_be_asked()
+    public void A_finished_path_with_the_switch_off_says_that_filing_waits_to_be_asked()
     {
         var configuration = Configured(Source(FileMovement.Rename)) with
         {
@@ -121,8 +117,30 @@ public sealed class OrdenoConfigurationTests
             "Filing happens when you ask for it",
             configuration.WhatHappensNext,
             StringComparison.Ordinal);
-        Assert.Contains(
-            "will not move anything by itself",
+        Assert.DoesNotContain(
+            "files on its own",
+            configuration.WhatHappensNext,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// And with the switch on it says so, rather than saying something that
+    /// covers both cases. The replacement for a promise must not be vaguer than
+    /// the promise was — ADR 0031.
+    /// </summary>
+    [Fact]
+    public void A_finished_path_with_the_switch_on_says_the_tool_files_on_its_own()
+    {
+        var configuration = Configured(Source(FileMovement.Rename)) with
+        {
+            OnboardingCompletedAt = DateTimeOffset.UnixEpoch,
+            Unattended = true,
+        };
+
+        Assert.Contains("files on its own", configuration.WhatHappensNext, StringComparison.Ordinal);
+        Assert.Contains("History", configuration.WhatHappensNext, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "when you ask for it",
             configuration.WhatHappensNext,
             StringComparison.Ordinal);
     }
@@ -185,5 +203,6 @@ public sealed class OrdenoConfigurationTests
         Layout: LibraryLayout.Jellyfin,
         MediaServerUrl: null,
         Artwork: false,
+        Unattended: false,
         OnboardingCompletedAt: null);
 }

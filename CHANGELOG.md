@@ -75,9 +75,9 @@ The tool now files what it recognises, and does it when you ask. The Downloads
 screen shows what would happen to every recognised video before anything moves:
 which directory it would go into, what it would be called there, whether the
 move is instant or a copy that takes as long as the file is large, and which
-files would be left alone. A button carries exactly that out. Nothing is filed
-on a timer — that arrives together with the log that can undo a run, and not
-before.
+files would be left alone. A button carries exactly that out. Filing on a timer
+came later, with the log that can undo a run behind it, and it is off until you
+turn it on — further down.
 
 The download directory ends up emptier by exactly the files that were filed.
 Within one filesystem a video is renamed into place, which is instant and cannot
@@ -156,6 +156,27 @@ and so does an image that is not the one the tool downloaded.
 A file that comes back is a file the tool has not seen. The next scan finds it,
 prdb is asked about it once more, and an answer you gave in the review queue for
 it is asked for again.
+
+prdb-ordeno can now file on its own. Turn on "File what is recognised without
+being asked" under Settings → Library and it files what it recognises every
+fifteen minutes without anybody pressing anything — the same run as the button on
+the Filing screen, working out the same plan, and every run of it is in the
+History with the same way back out of it. It is off until you turn it on,
+including on an installation upgraded into this version: nothing starts moving
+files because the container was updated. Runs nobody asked for are marked as such
+in the History, and a run that found nothing to do leaves no trace at all rather
+than a row every quarter of an hour.
+
+A file you put back stays put. An undo returns a video to the download directory,
+where by the morning it looks exactly like a fresh download — so the undo leaves a
+hold on it, and nothing files it again until you say so. Not the tool on its own,
+and not the button either: the file is on the Filing screen as held, saying when
+you put it back and what it had been filed as, with a release next to it — one
+file, or all of them at once, which is what undoing a run of two hundred needs.
+Releasing moves nothing. It makes the file ordinary again, and the plan and the
+button still stand between it and the library. A hold goes on its own when the
+file leaves the download directory, or when something else arrives under that
+name.
 
 The log does not grow forever, and it needs no pruning. It keeps the most recent
 runs — twenty thousand moved files or a thousand runs, whichever bites first —
