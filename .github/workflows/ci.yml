@@ -57,8 +57,12 @@ jobs:
       - name: Install ffmpeg and ffprobe
         timeout-minutes: 12
         run: |
+          # Three attempts of three minutes, with the pauses between them, has
+          # to stay under the step's limit: the loop's own message and the apt
+          # output below it are the diagnosis, and they are lost if GitHub cuts
+          # the step off first.
           apt_get() {
-            sudo timeout 240 apt-get \
+            sudo timeout 180 apt-get \
               -o Acquire::http::Timeout=15 \
               -o Acquire::https::Timeout=15 \
               -o Acquire::Retries=2 \
@@ -75,13 +79,14 @@ jobs:
             fi
 
             if [ "$attempt" -lt "$attempts" ]; then
-              echo "::warning::Installing ffmpeg failed or stalled on attempt ${attempt} of ${attempts}, retrying in 15 seconds."
+              pause=$((attempt * 30))
+              echo "::warning::Installing ffmpeg failed or stalled on attempt ${attempt} of ${attempts}, retrying in ${pause} seconds."
 
               # An attempt the timeout killed can leave dpkg half-configured,
               # and the next one would then fail on that rather than on the
               # archives it is here to retry.
               sudo dpkg --configure -a || true
-              sleep 15
+              sleep "$pause"
             fi
           done
 
