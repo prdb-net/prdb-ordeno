@@ -17,6 +17,10 @@ jobs:
     name: Build, test and check the API contract
     runs-on: ubuntu-latest
 
+    # This job passes in about five minutes. The default is six hours, which is
+    # long enough for a step that hangs to look like a step that is working.
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v7
 
@@ -38,8 +42,79 @@ jobs:
       # out of a real file need the same pair here. Faking them would test the
       # parser rather than the question, and the question is what decides
       # whether somebody's video is filed.
+      #
+      # They still come from the archives rather than from a binary pinned here,
+      # for the reason ADR 0013 gives for the image: a distribution build is the
+      # ffmpeg the tool actually runs, and it is kept current by somebody else.
+      # Both stalls that prompted this installed in about two minutes when the
+      # step was simply run again, so where the binary comes from was never the
+      # problem — a step that waited for it forever was. So that is what is
+      # bounded: apt drops a connection that has stopped answering instead of
+      # holding it open, three attempts cover a mirror that is briefly gone, and
+      # the limit on the step turns anything worse into a red job somebody can
+      # re-run rather than a check that reads as "still building" until GitHub's
+      # six-hour limit kills it.
       - name: Install ffmpeg and ffprobe
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y ffmpeg
+        timeout-minutes: 12
+        run: |
+          apt_get() {
+            seconds=$1
+            shift
+            sudo timeout "$seconds" apt-get \
+              -o Acquire::http::Timeout=15 \
+              -o Acquire::https::Timeout=15 \
+              -o Acquire::Retries=2 \
+              "$@"
+          }
+
+          # How long is left of the budget, in a piece no attempt may exceed,
+          # and never zero -- `timeout 0` means no limit at all, which is the
+          # one thing this step must not do.
+          slice() {
+            remaining=$((deadline - $(date +%s)))
+            if [ "$remaining" -gt 180 ]; then echo 180
+            elif [ "$remaining" -gt 10 ]; then echo "$remaining"
+            else echo 10
+            fi
+          }
+
+          # ffmpeg and its dependencies are a hundred megabytes or so, and a
+          # download that is cut off part way stays in apt's cache, so the next
+          # attempt carries on rather than starting again. That is why this is
+          # one budget with attempts inside it and not a fixed number of tries:
+          # against a mirror that is gone the attempts fail fast and the budget
+          # is never spent, and against one that is merely crawling they add up
+          # to one download instead of three abandoned ones.
+          # Five, because the budget alone does not bound an attempt that
+          # fails immediately: a mirror answering with an error would otherwise
+          # be asked sixty times in those nine minutes, which is hammering it
+          # rather than retrying it. Whichever bound is reached first ends the
+          # step -- five quick failures are red in a couple of minutes, and one
+          # slow download gets the whole budget.
+          deadline=$(($(date +%s) + 540))
+          attempts=5
+          attempt=0
+
+          while [ "$attempt" -lt "$attempts" ] && [ "$((deadline - $(date +%s)))" -gt 30 ]; do
+            attempt=$((attempt + 1))
+
+            if apt_get "$(slice)" update && apt_get "$(slice)" install --no-install-recommends -y ffmpeg; then
+              ffmpeg -version | head -n 1
+              ffprobe -version | head -n 1
+              exit 0
+            fi
+
+            echo "::warning::Installing ffmpeg failed or stalled on attempt ${attempt} of ${attempts}; $((deadline - $(date +%s)))s of the budget left."
+
+            # An attempt the timeout killed can leave dpkg half-configured, and
+            # the next one would then fail on that rather than on the archives
+            # it is here to retry.
+            sudo dpkg --configure -a || true
+            sleep 15
+          done
+
+          echo "::error::ffmpeg could not be installed in ${attempt} attempts inside nine minutes; the apt output above is the failure. Usually this is a transient archive or DNS problem on the runner, so re-running the job is the first thing to try."
+          exit 1
 
       # Writes src/Prdb.Ordeno.Host/openapi.json on the way through.
       - name: Build
