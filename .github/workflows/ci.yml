@@ -57,40 +57,63 @@ jobs:
       - name: Install ffmpeg and ffprobe
         timeout-minutes: 12
         run: |
-          # Three attempts of three minutes, with the pauses between them, has
-          # to stay under the step's limit: the loop's own message and the apt
-          # output below it are the diagnosis, and they are lost if GitHub cuts
-          # the step off first.
           apt_get() {
-            sudo timeout 180 apt-get \
+            seconds=$1
+            shift
+            sudo timeout "$seconds" apt-get \
               -o Acquire::http::Timeout=15 \
               -o Acquire::https::Timeout=15 \
               -o Acquire::Retries=2 \
               "$@"
           }
 
-          attempts=3
+          # How long is left of the budget, in a piece no attempt may exceed,
+          # and never zero -- `timeout 0` means no limit at all, which is the
+          # one thing this step must not do.
+          slice() {
+            remaining=$((deadline - $(date +%s)))
+            if [ "$remaining" -gt 180 ]; then echo 180
+            elif [ "$remaining" -gt 10 ]; then echo "$remaining"
+            else echo 10
+            fi
+          }
 
-          for attempt in $(seq "$attempts"); do
-            if apt_get update && apt_get install --no-install-recommends -y ffmpeg; then
+          # ffmpeg and its dependencies are a hundred megabytes or so, and a
+          # download that is cut off part way stays in apt's cache, so the next
+          # attempt carries on rather than starting again. That is why this is
+          # one budget with attempts inside it and not a fixed number of tries:
+          # against a mirror that is gone the attempts fail fast and the budget
+          # is never spent, and against one that is merely crawling they add up
+          # to one download instead of three abandoned ones.
+          # Five, because the budget alone does not bound an attempt that
+          # fails immediately: a mirror answering with an error would otherwise
+          # be asked sixty times in those nine minutes, which is hammering it
+          # rather than retrying it. Whichever bound is reached first ends the
+          # step -- five quick failures are red in a couple of minutes, and one
+          # slow download gets the whole budget.
+          deadline=$(($(date +%s) + 540))
+          attempts=5
+          attempt=0
+
+          while [ "$attempt" -lt "$attempts" ] && [ "$((deadline - $(date +%s)))" -gt 30 ]; do
+            attempt=$((attempt + 1))
+
+            if apt_get "$(slice)" update && apt_get "$(slice)" install --no-install-recommends -y ffmpeg; then
               ffmpeg -version | head -n 1
               ffprobe -version | head -n 1
               exit 0
             fi
 
-            if [ "$attempt" -lt "$attempts" ]; then
-              pause=$((attempt * 30))
-              echo "::warning::Installing ffmpeg failed or stalled on attempt ${attempt} of ${attempts}, retrying in ${pause} seconds."
+            echo "::warning::Installing ffmpeg failed or stalled on attempt ${attempt} of ${attempts}; $((deadline - $(date +%s)))s of the budget left."
 
-              # An attempt the timeout killed can leave dpkg half-configured,
-              # and the next one would then fail on that rather than on the
-              # archives it is here to retry.
-              sudo dpkg --configure -a || true
-              sleep "$pause"
-            fi
+            # An attempt the timeout killed can leave dpkg half-configured, and
+            # the next one would then fail on that rather than on the archives
+            # it is here to retry.
+            sudo dpkg --configure -a || true
+            sleep 15
           done
 
-          echo "::error::ffmpeg could not be installed in ${attempts} attempts; the apt output above is the failure. This is usually a transient archive or DNS problem on the runner, so re-running the job is the first thing to try."
+          echo "::error::ffmpeg could not be installed in ${attempt} attempts inside nine minutes; the apt output above is the failure. Usually this is a transient archive or DNS problem on the runner, so re-running the job is the first thing to try."
           exit 1
 
       # Writes src/Prdb.Ordeno.Host/openapi.json on the way through.
