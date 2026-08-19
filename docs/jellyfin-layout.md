@@ -27,6 +27,13 @@ running the exercise against a server.
 - The storage limits in the last section were measured separately by
   `docs/jellyfin-probe/probe-path.sh`, against a local ext4 filesystem as a
   control and against an SMB 3.1.1 share on a NAS.
+- The second half of section 5 came from a second run of the same harness on the
+  same version, with its own six fixture directories from
+  `docs/jellyfin-probe/make-artwork-fixtures.py`. What the server stores was read
+  back by `docs/jellyfin-probe/probe-artwork.py`; what a client *draws* is a
+  different question, and `docs/jellyfin-probe/probe-artwork-cards.sh` answers it
+  by loading the shipped web client in headless Chromium and reading the page it
+  produced.
 
 To repeat the whole thing:
 
@@ -39,6 +46,20 @@ mkdir -p state/config state/cache && docker compose up -d
 ./probe.sh setup && ./probe.sh scan && ./probe.sh dump observation.json
 ./probe-refresh.sh
 ./probe-itemid.sh
+```
+
+The artwork run is a separate fixture set, because its images have to be told
+apart from the ones above rather than added to them:
+
+```
+cd docs/jellyfin-probe
+export ORDENO_FIXTURES=/var/tmp/ordeno-artwork-fixtures
+export ORDENO_PROBE_UID=$(id -u) ORDENO_PROBE_GID=$(id -g)
+./make-artwork-fixtures.py "$ORDENO_FIXTURES"
+mkdir -p state/config state/cache && docker compose up -d
+./probe.sh setup && ./probe.sh scan
+./probe-artwork.py observation-artwork.json
+./probe-artwork-cards.sh
 ```
 
 Keep the fixtures outside the repository — they are a hundred generated files
@@ -62,8 +83,8 @@ Jellyfin refusing to notice changed sidecars — which is how it was found.
     <Site> - <yyyy-MM-dd> - <Title>/
       <Site> - <yyyy-MM-dd> - <Title>.mkv
       movie.nfo
-      poster.jpg      (only when artwork is enabled)
-      fanart.jpg      (only when artwork is enabled)
+      fanart.jpg      (only when artwork is enabled; see section 5 for why
+                       there is no poster.jpg next to it)
 ```
 
 and, where a second quality of the same scene is kept
@@ -289,9 +310,76 @@ the plain names beyond their being shorter.
 A directory with no artwork at all produced a perfectly good item with no
 images and no errors. Absence costs nothing.
 
-**Write `poster.jpg` and `fanart.jpg`, and only when the user has enabled
-artwork.** Every other name is either a duplicate of those two slots or fills a
-slot this content has no source for.
+**Of the sixteen names only `poster.jpg` and `fanart.jpg` are worth
+considering**, and only when the user has enabled artwork. Every other name is
+either a duplicate of those two slots or fills a slot this content has no source
+for. Which of the two to write turns out to depend on the shape of the image
+there is to write, which is the rest of this section.
+
+### A landscape image in the Primary slot is worse than no image at all
+
+Everything above was measured with a 600×900 poster, which is the shape that
+slot was designed for. prdb's images are not that shape: they are the shape of
+the video, so a poster written from one is 16:9. That is a different question,
+and it was measured separately — six directories, every image the same pattern
+of three vertical stripes with a white bar along the top edge and a yellow bar
+along the bottom, so that a rendered image can be read for what happened to it
+instead of judged by eye.
+
+**The server never crops.**
+`Images/Primary?fillWidth=300&fillHeight=450` over a 1920×1080 image answers
+800×450: the requested height is honoured, the aspect ratio is left alone, and
+nothing is added or cut. Every decision about shape belongs to the client.
+
+**The card in a Movies library is portrait whatever the image is.** All six
+items rendered as `card portraitCard`, and that card's image container is
+`background-size: cover` — a centre crop, not a fit. Sampled across the rendered
+card, the portrait poster shows its three stripes as 34% / 33% / 33%; the
+landscape one shows 4% / 92% / 5%. About a third of the image survives, and it
+is the middle third.
+
+**The client also sizes its request from the image's own aspect ratio**, which
+is where this gets worse than a crop. What the rendered page asked for:
+
+| The item has | The card requested | The server answered |
+| --- | --- | --- |
+| a 1920×1080 `poster.jpg` | `Primary?fillWidth=200&fillHeight=113` | 201×113 |
+| a 600×900 `poster.jpg` | `Primary?fillWidth=200&fillHeight=300` | 200×300 |
+| `fanart.jpg` and no poster | `Backdrop?fillWidth=200&fillHeight=300` | 534×300 |
+
+The landscape poster arrives 113 pixels tall and is stretched over a card box
+233 pixels tall. The item with **no** poster falls back to the backdrop, is
+cropped in exactly the same way, and has 300 pixels of height to do it with. The
+difference is visible in the rendered page, counted as the pixels across a card
+that are between two stripe colours rather than one of them — a sharp edge is
+three or four, a resampled one is more:
+
+| Card | Pixels between colours |
+| --- | --- |
+| landscape `poster.jpg` | 7 of 160 |
+| landscape `poster.jpg`, `thumb.jpg` and `fanart.jpg` | 9 of 160 |
+| portrait `poster.jpg` | 4 of 160 |
+| `fanart.jpg` only | 3 of 160 |
+| `thumb.jpg` and `fanart.jpg` | 3 of 160 |
+
+Two runs of the same fixtures agreed to within a pixel on every row, which is
+the JPEG the server encodes rather than anything about the layout.
+
+**`thumb.jpg` never reaches the card.** The item carrying one had its Thumb slot
+filled and the card fetched the backdrop regardless, so the slot the table above
+calls Thumb buys nothing here.
+
+**The detail page is not affected**, and neither is the "More Like This" row
+beneath it: there the poster is drawn whole in its own aspect ratio, landscape
+or portrait, with the backdrop behind the header. The crop is the library grid
+and nothing else.
+
+**So, for images shaped like the video: write `fanart.jpg` and no poster.** It
+produces the same card as a landscape poster does, at full resolution rather
+than an upscale of a 113-pixel image, and a correct backdrop on the detail page.
+A landscape `poster.jpg` spends bandwidth and disk to make the library look
+worse — which is the opposite of what the name suggests, and the reason this was
+measured rather than assumed.
 
 ## 6. Two versions of the same scene
 
@@ -569,6 +657,11 @@ one `GET` away from being visible.
   slot**.
 - The documented `<video file name>-fanart.jpg` suffix form registers the same
   image as two backdrops.
+- Nothing says what a Primary image that is not portrait costs. It is not merely
+  cropped to fit the card: the client derives the size it requests from the
+  image's own aspect ratio, so a 16:9 poster is fetched 113 pixels tall and then
+  stretched over a card three times that. An item with no poster at all falls
+  back to its backdrop and is drawn better.
 - The multi-version rule is documented as a convenience for deliberately keeping
   several cuts of one film. It is better understood as a hazard: it fires on any
   directory whose file names share the directory's name as a prefix, which
@@ -583,8 +676,9 @@ one `GET` away from being visible.
 
 Settled: the directory shape, the file name shape, the sidecar name and root
 element, the fields worth writing and the exact form three of them need, which
-two artwork files are worth the bandwidth, how a second quality has to be named,
-and what the tool has to escape and how long a component may be.
+artwork file is worth the bandwidth for images shaped the way prdb's are, how a
+second quality has to be named, and what the tool has to escape and how long a
+component may be.
 
 Section 9 was added later, when the API question below was taken up. It settles
 what talking to the server would cost, not whether to do it; that is
