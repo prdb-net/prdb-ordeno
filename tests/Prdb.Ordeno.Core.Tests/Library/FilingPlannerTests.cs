@@ -64,6 +64,28 @@ public sealed class FilingPlannerTests
         }
     }
 
+    /// <summary>Whether there is an image at each path; there is none anywhere else.</summary>
+    private sealed class Artwork : ISceneArtwork
+    {
+        private readonly Dictionary<string, ArtworkState> answers = [];
+
+        public List<string> Asked { get; } = [];
+
+        public Artwork With(string path, ArtworkState state)
+        {
+            answers[path] = state;
+
+            return this;
+        }
+
+        public ArtworkState StateOf(string absolutePath)
+        {
+            Asked.Add(absolutePath);
+
+            return answers.GetValueOrDefault(absolutePath, ArtworkState.Missing);
+        }
+    }
+
     private static FilingPlan Plan(
         Directories directories,
         VideoQualityReading? quality = null,
@@ -71,8 +93,14 @@ public sealed class FilingPlannerTests
         IReadOnlyList<FiledCopy>? filed = null,
         string sourceName = "some.release.1080p.mkv",
         FileMovement movement = FileMovement.Rename,
-        Sidecars? sidecars = null) =>
-        new FilingPlanner(new TargetPaths(directories), directories, sidecars ?? new Sidecars()).Plan(
+        Sidecars? sidecars = null,
+        Artwork? artwork = null,
+        bool wantsArtwork = false) =>
+        new FilingPlanner(
+            new TargetPaths(directories),
+            directories,
+            sidecars ?? new Sidecars(),
+            artwork ?? new Artwork()).Plan(
             fileId: 7,
             sourcePath: "/downloads/" + sourceName,
             sourceName,
@@ -80,7 +108,8 @@ public sealed class FilingPlannerTests
             movement,
             scene ?? Scene,
             quality ?? VideoQualityReading.Of(1920, 1080),
-            filed ?? []);
+            filed ?? [],
+            wantsArtwork);
 
     [Fact]
     public void A_scene_the_library_does_not_hold_is_filed_where_the_layout_says()
@@ -301,7 +330,11 @@ public sealed class FilingPlannerTests
     {
         var directories = new Directories();
 
-        var plan = new FilingPlanner(new TargetPaths(directories), directories, new Sidecars()).Plan(
+        var plan = new FilingPlanner(
+            new TargetPaths(directories),
+            directories,
+            new Sidecars(),
+            new Artwork()).Plan(
             fileId: 7,
             sourcePath: "/downloads/some.release.mkv",
             sourceName: "some.release.mkv",
@@ -403,6 +436,125 @@ public sealed class FilingPlannerTests
         Assert.Equal(SidecarAction.None, blocked.Sidecar.Action);
         Assert.Null(already.Sidecar.Path);
         Assert.Null(blocked.Sidecar.InWords);
+    }
+
+    /// <summary>
+    /// ADR 0027: off unless somebody turned it on. The default is not a
+    /// convenience here — it is the hard rule applied to bandwidth, and a plan
+    /// that promised a download nobody asked for would be the preview lying
+    /// about the run.
+    /// </summary>
+    [Fact]
+    public void Artwork_is_not_written_unless_somebody_turned_it_on()
+    {
+        var artwork = new Artwork();
+
+        var plan = Plan(new Directories(), artwork: artwork);
+
+        Assert.Equal(ArtworkAction.None, plan.Artwork.Action);
+        Assert.Null(plan.Artwork.Path);
+        Assert.Null(plan.Artwork.InWords);
+
+        // And a switch that is off costs not even the question.
+        Assert.Empty(artwork.Asked);
+    }
+
+    /// <summary>
+    /// With it on, the image is named next to the video before anything is
+    /// downloaded — one file, <c>fanart.jpg</c>, and no poster: section 5
+    /// measured a landscape image in the Primary slot to be worse than none.
+    /// </summary>
+    [Fact]
+    public void Artwork_that_is_on_names_one_image_in_the_scene_directory()
+    {
+        var artwork = new Artwork();
+
+        var plan = Plan(new Directories(), artwork: artwork, wantsArtwork: true);
+
+        Assert.Equal(ArtworkAction.Write, plan.Artwork.Action);
+        Assert.Equal($"{Directory}/fanart.jpg", plan.Artwork.Path);
+        Assert.NotNull(plan.Artwork.InWords);
+
+        // The same reason the sidecar is not asked about: a directory holding
+        // anything at all counts as occupied, so a target that got this far is
+        // one no image can be sitting in.
+        Assert.Empty(artwork.Asked);
+    }
+
+    /// <summary>
+    /// The decision ADR 0027 exists for. A file at that name stays, whoever put
+    /// it there — the tool last month or the user this morning — because the two
+    /// want the same thing and neither is worth a marker inside a JPEG.
+    /// </summary>
+    [Theory]
+    [InlineData(ArtworkState.Present)]
+    [InlineData(ArtworkState.Unknown)]
+    public void An_image_that_is_already_there_is_never_written_over(ArtworkState state)
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var plan = Plan(
+            new Directories().With(filed[0].Path, SceneDirectoryState.Occupied),
+            VideoQualityReading.Of(3840, 2160),
+            filed: filed,
+            sourceName: "some.release.2160p.mkv",
+            artwork: new Artwork().With($"{Directory}/fanart.jpg", state),
+            wantsArtwork: true);
+
+        Assert.Equal(ArtworkAction.Keep, plan.Artwork.Action);
+        Assert.False(plan.Artwork.Writes);
+        Assert.NotNull(plan.Artwork.Message);
+
+        // And the video still goes in next to it, as with the sidecar.
+        Assert.True(plan.Moves);
+    }
+
+    /// <summary>
+    /// A scene directory the library already holds with no image in it gets one.
+    /// That is the affordance ADR 0027 gives a user with no setting to find:
+    /// delete the file, and the next filing into that scene brings a fresh one.
+    /// </summary>
+    [Fact]
+    public void A_scene_directory_with_no_image_in_it_gets_one()
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var plan = Plan(
+            new Directories().With(filed[0].Path, SceneDirectoryState.Occupied),
+            VideoQualityReading.Of(3840, 2160),
+            filed: filed,
+            sourceName: "some.release.2160p.mkv",
+            wantsArtwork: true);
+
+        Assert.Equal(FilingOutcome.SecondQuality, plan.Outcome);
+        Assert.Equal(ArtworkAction.Write, plan.Artwork.Action);
+        Assert.Equal($"{Directory}/fanart.jpg", plan.Artwork.Path);
+    }
+
+    /// <summary>
+    /// Nothing is filed, so nothing is downloaded — with artwork on as much as
+    /// with it off. A run that reports moving nothing must not be quietly
+    /// spending somebody's connection.
+    /// </summary>
+    [Fact]
+    public void A_run_that_moves_nothing_downloads_nothing_either()
+    {
+        var filed = Held("Example Studio - 2025-11-03 - Scene Title.mkv", "1080p");
+
+        var already = Plan(
+            new Directories().With(filed[0].Path, SceneDirectoryState.Occupied),
+            filed: filed,
+            wantsArtwork: true);
+
+        var blocked = Plan(
+            new Directories(),
+            new VideoQualityReading(VideoQualityState.Unreadable),
+            wantsArtwork: true);
+
+        Assert.Equal(ArtworkAction.None, already.Artwork.Action);
+        Assert.Equal(ArtworkAction.None, blocked.Artwork.Action);
+        Assert.Null(already.Artwork.Path);
+        Assert.Null(blocked.Artwork.InWords);
     }
 
     /// <summary>

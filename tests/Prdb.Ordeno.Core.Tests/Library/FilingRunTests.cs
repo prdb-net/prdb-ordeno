@@ -47,10 +47,40 @@ public sealed class FilingRunTests
             "1 video was filed.",
             Did([Filed("It was left exactly as it is.", SidecarAction.Keep)]));
 
+    /// <summary>
+    /// One CDN having a bad afternoon is a fact about the run rather than about
+    /// each file, and a user should not have to read two hundred rows to learn
+    /// it — ADR 0027's images get the same line the sidecar does.
+    /// </summary>
+    [Fact]
+    public void Images_that_did_not_arrive_are_counted_at_the_top_of_the_screen() =>
+        Assert.Contains(
+            "1 did not get the image that was to go next to it",
+            Did(
+            [
+                Filed(images: ArtworkAction.Write),
+                Filed(artwork: "The CDN could not be reached.", images: ArtworkAction.Write),
+            ]));
+
+    /// <summary>
+    /// A scene prdb has no image for says nothing and is counted as nothing. It
+    /// is the ordinary outcome, and a run that called it a shortfall would be
+    /// reporting the absence of something nobody was promised.
+    /// </summary>
+    [Fact]
+    public void A_scene_with_no_image_to_download_is_not_a_shortfall() =>
+        Assert.Equal(
+            "1 video was filed.",
+            Did([Filed(images: ArtworkAction.Write)]));
+
     private static string? Did(IReadOnlyList<FilingResult> results) =>
         FilingRun.Never.Filed(DateTimeOffset.UnixEpoch, results).WhatItDid;
 
-    private static FilingResult Filed(string? sidecar = null, SidecarAction action = SidecarAction.Write) =>
+    private static FilingResult Filed(
+        string? sidecar = null,
+        SidecarAction action = SidecarAction.Write,
+        string? artwork = null,
+        ArtworkAction images = ArtworkAction.None) =>
         new(
             FilingResultState.Filed,
             new FilingPlan(
@@ -65,7 +95,9 @@ public sealed class FilingRunTests
                 Relabel: null,
                 FileMovement.Rename,
                 Message: null,
-                new SidecarPlan(action, "/library/scene/movie.nfo")),
+                new SidecarPlan(action, "/library/scene/movie.nfo"),
+                new ArtworkPlan(images, "/library/scene/fanart.jpg")),
             Message: null,
-            sidecar);
+            sidecar,
+            artwork);
 }

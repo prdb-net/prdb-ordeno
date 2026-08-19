@@ -175,6 +175,14 @@ public sealed record FilingRun(
             var bare = Results.Count(result =>
                 result.Filed && result.Plan.Sidecar.Writes && result.Sidecar is not null);
 
+            // And the same for the image, which is worth a line here for the
+            // same reason: one CDN having a bad afternoon is a fact about the
+            // run, and reading it off two hundred rows is nobody's evening. A
+            // scene prdb has no image for says nothing and is not counted —
+            // ADR 0027 is plain that this is the ordinary case.
+            var unillustrated = Results.Count(result =>
+                result.Filed && result.Plan.Artwork.Writes && result.Artwork is not null);
+
             var parts = new List<string>
             {
                 filed == 1 ? "1 video was filed" : $"{Number(filed)} videos were filed",
@@ -187,6 +195,13 @@ public sealed record FilingRun(
                         + "rows say why"
                     : $"{Number(bare)} of them could not be given the metadata file the media server "
                         + "reads");
+            }
+
+            if (unillustrated > 0)
+            {
+                parts.Add(unillustrated == 1
+                    ? "1 did not get the image that was to go next to it"
+                    : $"{Number(unillustrated)} did not get the image that was to go next to them");
             }
 
             if (failed > 0)

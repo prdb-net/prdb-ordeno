@@ -38,6 +38,7 @@ public sealed class FilingService(
     FilingPlanner planner,
     LibraryMoves moves,
     Sidecars sidecars,
+    SceneArtwork artwork,
     TimeProvider time,
     ILogger<FilingService> logger)
 {
@@ -168,12 +169,15 @@ public sealed class FilingService(
 
             // Last, and only now: the video is where the sidecar describes it,
             // and a sidecar that fails to be written costs the library a title
-            // rather than a file.
+            // rather than a file. The image goes after both, because it is the
+            // one of the three that spends somebody's connection — and it is the
+            // one that can be left out entirely without anybody noticing.
             return new FilingResult(
                 FilingResultState.Filed,
                 plan,
                 outcome.Problem,
-                WriteSidecar(plan, described));
+                WriteSidecar(plan, described),
+                await WriteArtworkAsync(plan, described, cancellationToken));
         }
         catch (OperationCanceledException)
         {
@@ -214,7 +218,8 @@ public sealed class FilingService(
             library.MovementFrom(candidate.Path, inspector),
             scene,
             quality,
-            scene is null ? [] : filed.GetValueOrDefault(scene.VideoId, []));
+            scene is null ? [] : filed.GetValueOrDefault(scene.VideoId, []),
+            library.Artwork);
     }
 
     /// <summary>
@@ -251,6 +256,45 @@ public sealed class FilingService(
         }
 
         return sidecars.Write(plan.Sidecar.Path!, MovieNfo.For(metadata)).Problem;
+    }
+
+    /// <summary>
+    /// The image, once the video it belongs to is in place — ADR 0027.
+    /// </summary>
+    /// <returns>
+    /// What to tell the user about it, or <c>null</c> when there is nothing to
+    /// say. Silent in three cases and not only in the obvious one: the image
+    /// arrived, artwork is switched off, and prdb has no image for this scene.
+    /// The last is the ordinary outcome for a scene nobody has photographed, and
+    /// a warning under it would turn that into a problem.
+    /// </returns>
+    /// <remarks>
+    /// Nothing here can undo the move above, and nothing here is allowed to try —
+    /// the same rule as the sidecar, one step further from mattering. An item
+    /// with no image is what section 5 of the layout document measured the
+    /// library against.
+    /// </remarks>
+    private async Task<string?> WriteArtworkAsync(
+        FilingPlan plan,
+        Descriptions described,
+        CancellationToken cancellationToken)
+    {
+        if (!plan.Artwork.Writes)
+        {
+            // Off, or there is a file at that name already. Either way the plan
+            // said so before the run started.
+            return plan.Artwork.Message;
+        }
+
+        // Nothing is downloaded on the strength of a partial or failed lookup,
+        // and nothing is said about it either: the sidecar's own message on this
+        // row already carries the reason prdb could not be asked.
+        if (described.Of(plan.Scene!.VideoId)?.ImageUrl is not { } url)
+        {
+            return null;
+        }
+
+        return (await artwork.DownloadAsync(url, plan.Artwork.Path!, cancellationToken)).Problem;
     }
 
     /// <summary>
@@ -565,7 +609,8 @@ public sealed class FilingService(
             ? new Library(
                 inspection.Path,
                 null,
-                string.IsNullOrWhiteSpace(configuration.PrdbApiKey) ? null : configuration.PrdbApiKey)
+                string.IsNullOrWhiteSpace(configuration.PrdbApiKey) ? null : configuration.PrdbApiKey,
+                configuration.DownloadArtwork)
             : new Library(null, $"Nothing can be filed while the library is unusable: {inspection.Message}");
     }
 
@@ -616,7 +661,16 @@ public sealed class FilingService(
     /// The stored key, because what a sidecar says is asked for at the moment it
     /// is written rather than remembered from the identification.
     /// </param>
-    private sealed record Library(string? Root, string? Problem, string? ApiKey = null)
+    /// <param name="Artwork">
+    /// Whether somebody switched artwork on (ADR 0027), read once for the run
+    /// like everything else here. False for an installation that never touched
+    /// the setting, which is what off means.
+    /// </param>
+    private sealed record Library(
+        string? Root,
+        string? Problem,
+        string? ApiKey = null,
+        bool Artwork = false)
     {
         private readonly Dictionary<string, FileMovement> movements = [];
 

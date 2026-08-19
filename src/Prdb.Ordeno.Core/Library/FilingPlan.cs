@@ -113,6 +113,70 @@ public sealed record SidecarPlan(SidecarAction Action, string? Path = null, stri
     };
 }
 
+/// <summary>What filing would do with the image next to the video.</summary>
+public enum ArtworkAction
+{
+    /// <summary>
+    /// Nothing is downloaded and nothing is written — because nothing is filed,
+    /// or because artwork is switched off, which is what it is by default
+    /// (ADR 0027).
+    /// </summary>
+    None,
+
+    /// <summary>
+    /// There is no image in that directory, and one is downloaded if prdb has
+    /// one for the scene.
+    /// </summary>
+    Write,
+
+    /// <summary>
+    /// There is already a file at that name, or one that could not be looked at.
+    /// It stays exactly as it is and nothing is downloaded.
+    /// </summary>
+    Keep,
+}
+
+/// <summary>
+/// What would happen to the image, worked out with the rest of the plan and
+/// carried out after the video and the sidecar.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <see cref="ArtworkAction.Write"/> is a promise to try rather than a promise to
+/// produce a file: whether prdb has an image for this scene is in an answer the
+/// preview deliberately does not fetch, exactly as the sidecar's is. What the
+/// preview does say is the part that is decided here and cannot change under it —
+/// which file name, in which directory, and that nothing at that name is written
+/// over.
+/// </para>
+/// <para>
+/// There is no <c>Replace</c>, and that is the whole of ADR 0027: a tool that
+/// never writes over an image does not need to recognise its own, which is what
+/// makes a marker inside the JPEG unnecessary rather than merely awkward.
+/// </para>
+/// </remarks>
+/// <param name="Path">Where the image goes, or <c>null</c> when none would be written.</param>
+/// <param name="Message">
+/// Why it is being left alone, when it is. <c>null</c> everywhere else, where the
+/// action speaks for itself.
+/// </param>
+public sealed record ArtworkPlan(ArtworkAction Action, string? Path = null, string? Message = null)
+{
+    public static readonly ArtworkPlan None = new(ArtworkAction.None);
+
+    public bool Writes => Action is ArtworkAction.Write;
+
+    /// <summary>
+    /// What the row says about the image, or <c>null</c> when there is nothing
+    /// to say — which includes artwork being off, because a setting nobody
+    /// turned on is not a remark to put under every file.
+    /// </summary>
+    public string? InWords => Message ?? (Action is ArtworkAction.Write
+        ? $"One image is downloaded next to the video as '{ScenePath.ArtworkFileName}', if prdb "
+            + "has one for this scene."
+        : null);
+}
+
 /// <summary>
 /// What would happen to one video, worked out without touching anything.
 /// </summary>
@@ -149,6 +213,12 @@ public sealed record SidecarPlan(SidecarAction Action, string? Path = null, stri
 /// and would make the scene's own directory look occupied to the run that tried
 /// again.
 /// </param>
+/// <param name="Artwork">
+/// What happens to the <c>fanart.jpg</c> in that directory, under the same rule
+/// as the sidecar and for the same reason — and only where somebody switched
+/// artwork on, because spending their connection and their disk is not something
+/// that happens by default (ADR 0027).
+/// </param>
 public sealed record FilingPlan(
     FilingOutcome Outcome,
     int FileId,
@@ -161,7 +231,8 @@ public sealed record FilingPlan(
     FilingRelabel? Relabel,
     FileMovement Movement,
     string? Message,
-    SidecarPlan Sidecar)
+    SidecarPlan Sidecar,
+    ArtworkPlan Artwork)
 {
     /// <summary>Whether carrying this plan out moves a file at all.</summary>
     public bool Moves => TargetPath is not null;
@@ -190,7 +261,8 @@ public sealed record FilingPlan(
             Relabel: null,
             FileMovement.Unknown,
             message,
-            SidecarPlan.None);
+            SidecarPlan.None,
+            ArtworkPlan.None);
 }
 
 /// <summary>
@@ -226,11 +298,17 @@ public enum FilingResultState
 /// when it was written, because the plan already said it would be and the video
 /// is what the row is about.
 /// </param>
+/// <param name="Artwork">
+/// What became of the image, under the same rule — and silent in one more case
+/// than the sidecar: a scene prdb has no image for is the ordinary outcome
+/// rather than a problem, so it says nothing at all (ADR 0027).
+/// </param>
 public sealed record FilingResult(
     FilingResultState State,
     FilingPlan Plan,
     string? Message = null,
-    string? Sidecar = null)
+    string? Sidecar = null,
+    string? Artwork = null)
 {
     public bool Filed => State is FilingResultState.Filed;
 }

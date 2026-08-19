@@ -27,6 +27,11 @@ namespace Prdb.Ordeno.Host.Library;
 /// <c>null</c> when nothing would. It is the second thing a filing writes, and
 /// the one that can land next to a file somebody wrote themselves.
 /// </param>
+/// <param name="Artwork">
+/// What would happen to the <c>fanart.jpg</c>, in words, or <c>null</c> when
+/// nothing would — which includes every installation that left artwork off, so
+/// this row is silent for most of them.
+/// </param>
 public sealed record PlannedFileState(
     int FileId,
     string Name,
@@ -41,7 +46,8 @@ public sealed record PlannedFileState(
     string Movement,
     bool Moves,
     string? Message,
-    string? Sidecar);
+    string? Sidecar,
+    string? Artwork);
 
 /// <summary>
 /// What happened to one video.
@@ -52,6 +58,10 @@ public sealed record PlannedFileState(
 /// left alone, or it could not be written. <c>null</c> when it was written, since
 /// the video moving is what the row is about.
 /// </param>
+/// <param name="Artwork">
+/// The same for the image, and silent in one more case: a scene prdb has no
+/// image for is the ordinary outcome, not a problem to report.
+/// </param>
 public sealed record FiledFileState(
     int FileId,
     string Name,
@@ -59,7 +69,8 @@ public sealed record FiledFileState(
     string? Scene,
     string? TargetName,
     string? Message,
-    string? Sidecar);
+    string? Sidecar,
+    string? Artwork);
 
 /// <summary>
 /// Everything the filing part of the downloads screen shows: what would happen,
@@ -130,7 +141,8 @@ public sealed record FilingState(
         Name(plan.Movement),
         plan.Moves,
         plan.Message,
-        plan.Sidecar.InWords);
+        plan.Sidecar.InWords,
+        plan.Artwork.InWords);
 
     private static FiledFileState Filed(FilingResult result) => new(
         result.Plan.FileId,
@@ -139,7 +151,8 @@ public sealed record FilingState(
         result.Plan.Scene?.InWords,
         result.Plan.TargetName,
         result.Message,
-        result.Sidecar);
+        result.Sidecar,
+        result.Artwork);
 
     /// <summary>
     /// As a name rather than a number, the way every other state crosses this

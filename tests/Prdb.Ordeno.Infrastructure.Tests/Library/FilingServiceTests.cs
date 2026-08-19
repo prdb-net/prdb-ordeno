@@ -38,6 +38,9 @@ public sealed class FilingServiceTests : IAsyncLifetime
     private const string Site = "Example Studio";
     private const string Title = "Scene Title";
 
+    /// <summary>Where prdb says the scene's first image is — an absolute URL, ready to request.</summary>
+    private const string ImageUrl = "https://cdn.example/videos/scene.jpg";
+
     /// <summary>What the layout gives the scene the fake prdb answers with.</summary>
     private const string SceneDirectory = "Example Studio/Example Studio - 2024-05-01 - Scene Title";
 
@@ -47,6 +50,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     private readonly FakeVideoLookup videos = new();
     private readonly TestFileHashes hashes = new();
     private readonly StoppingQualities stopping = new();
+    private readonly FakeCdn cdn = new();
 
     private ServiceProvider services = null!;
     private string downloads = null!;
@@ -79,6 +83,12 @@ public sealed class FilingServiceTests : IAsyncLifetime
         collection.AddOrdenoIdentification();
         collection.AddOrdenoLibrary();
 
+        // The socket the image would have come down, and nothing above it: the
+        // size cap, the JPEG check and the write are the ones under test.
+        collection
+            .AddHttpClient(SceneArtwork.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(() => cdn);
+
         services = collection.BuildServiceProvider();
 
         await services.PrepareOrdenoDatabaseAsync();
@@ -89,6 +99,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
     {
         await services.DisposeAsync();
         stopping.Dispose();
+        cdn.Dispose();
         directory.Dispose();
     }
 
@@ -458,6 +469,164 @@ public sealed class FilingServiceTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// #28, and the shape ADR 0027 cut it down to: one image, called
+    /// <c>fanart.jpg</c>, and no poster — section 5 measured a landscape image
+    /// in the Primary slot to be worse than none at all.
+    /// </summary>
+    [Fact]
+    public async Task A_filed_video_gets_the_one_image_prdb_has_for_the_scene()
+    {
+        await ArtworkOnAsync();
+        Recognised();
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.Null(result.Artwork);
+
+        var scene = Path.Combine(library, SceneDirectory);
+
+        Assert.Equal(FakeCdn.Jpeg(), await File.ReadAllBytesAsync(Path.Combine(scene, "fanart.jpg")));
+        Assert.False(File.Exists(Path.Combine(scene, "poster.jpg")));
+
+        // The image came from the CDN and cost prdb nothing: the URL was in the
+        // answer the sidecar was written from.
+        Assert.Equal(ImageUrl, Assert.Single(cdn.Requests));
+        Assert.Single(videos.Described);
+    }
+
+    /// <summary>
+    /// The default, and the hard rule applied to bandwidth rather than to data:
+    /// spending somebody's connection and disk is not something that happens
+    /// because nobody said no.
+    /// </summary>
+    [Fact]
+    public async Task Nothing_is_downloaded_unless_somebody_turned_artwork_on()
+    {
+        Recognised();
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.Null(result.Artwork);
+        Assert.Empty(cdn.Requests);
+        Assert.False(File.Exists(Path.Combine(library, SceneDirectory, "fanart.jpg")));
+    }
+
+    /// <summary>
+    /// The decision ADR 0027 is named for, end to end: an image somebody put
+    /// there survives everything the tool does, and it needs no marker to do it.
+    /// </summary>
+    [Fact]
+    public async Task An_image_the_user_put_there_is_left_exactly_as_it_is()
+    {
+        await ArtworkOnAsync();
+        Recognised();
+        await ArrivedAsync("first.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+        await FileAsync();
+
+        var scene = Path.Combine(library, SceneDirectory);
+        var image = Path.Combine(scene, "fanart.jpg");
+        const string Mine = "the image I chose myself";
+
+        await File.WriteAllTextAsync(image, Mine);
+        cdn.Requests.Clear();
+
+        await ArrivedAsync("second.2160p.mkv", 3840, 2160);
+        await ReadyAsync();
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.Equal(ArtworkAction.Keep, result.Plan.Artwork.Action);
+        Assert.Equal(Mine, await File.ReadAllTextAsync(image));
+        Assert.Contains("deleting it", result.Plan.Artwork.Message);
+
+        // Not downloaded and then discarded — not downloaded at all.
+        Assert.Empty(cdn.Requests);
+    }
+
+    /// <summary>
+    /// A scene prdb has no image for. The array is empty and the field is
+    /// nullable, and this is the ordinary case for a scene nobody photographed:
+    /// nothing is written, and nothing is said about it either. A warning here
+    /// would turn the ordinary into a problem.
+    /// </summary>
+    [Fact]
+    public async Task A_scene_prdb_has_no_image_for_is_filed_without_one_and_without_a_word()
+    {
+        await ArtworkOnAsync();
+        Recognised(image: null);
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.Null(result.Artwork);
+        Assert.Empty(cdn.Requests);
+        Assert.False(File.Exists(Path.Combine(library, SceneDirectory, "fanart.jpg")));
+
+        // And the rest of the filing happened exactly as it would have.
+        Assert.True(File.Exists(Path.Combine(library, SceneDirectory, "movie.nfo")));
+    }
+
+    /// <summary>
+    /// A download that fails never fails a filing. The video is where it belongs
+    /// and the row says what did not arrive next to it — which is the same rule
+    /// the sidecar has, one step further from mattering.
+    /// </summary>
+    [Fact]
+    public async Task A_download_that_fails_still_leaves_the_video_filed()
+    {
+        await ArtworkOnAsync();
+        Recognised();
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        cdn.Image = null;
+
+        var result = Assert.Single((await FileAsync()).Results);
+
+        Assert.True(result.Filed);
+        Assert.NotNull(result.Artwork);
+
+        var scene = Path.Combine(library, SceneDirectory);
+
+        Assert.True(File.Exists(result.Plan.TargetPath));
+        Assert.True(File.Exists(Path.Combine(scene, "movie.nfo")));
+
+        // And nothing was left lying about while finding that out: no image, and
+        // no half-written file under a dotted name either.
+        Assert.Equal(2, Directory.GetFileSystemEntries(scene).Length);
+    }
+
+    /// <summary>
+    /// ADR 0022 covers the download as it covers every other write: the plan says
+    /// an image would be fetched, and working out a plan fetches nothing.
+    /// </summary>
+    [Fact]
+    public async Task Working_out_what_would_happen_downloads_nothing()
+    {
+        await ArtworkOnAsync();
+        Recognised();
+        await ArrivedAsync("scene.1080p.mkv", 1920, 1080);
+        await ReadyAsync();
+
+        var plan = Assert.Single((await PlanAsync()).Plans);
+
+        Assert.Equal(ArtworkAction.Write, plan.Artwork.Action);
+        Assert.Equal(Path.Combine(library, SceneDirectory, "fanart.jpg"), plan.Artwork.Path);
+        Assert.Empty(cdn.Requests);
+        Assert.Empty(Directory.GetDirectories(library));
+    }
+
+    /// <summary>
     /// ADR 0020: without a quality neither the skip nor the label can be
     /// decided. The file stays where it is and the message says why.
     /// </summary>
@@ -565,6 +734,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
         string title = Title,
         string site = Site,
         Guid? videoId = null,
+        string? image = ImageUrl,
         params string[] performers)
     {
         var id = videoId ?? Guid.NewGuid();
@@ -577,9 +747,24 @@ public sealed class FilingServiceTests : IAsyncLifetime
             new DateOnly(2024, 5, 1),
             Guid.NewGuid(),
             site,
-            performers));
+            performers,
+            image));
 
         return id;
+    }
+
+    /// <summary>
+    /// Somebody turned artwork on — ADR 0027. Written straight to the
+    /// configuration, because what is under test is what filing makes of it.
+    /// </summary>
+    private async Task ArtworkOnAsync()
+    {
+        await using var scope = services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<OrdenoDbContext>();
+
+        (await context.Configuration.SingleAsync()).DownloadArtwork = true;
+
+        await context.SaveChangesAsync();
     }
 
     /// <summary>
@@ -840,13 +1025,13 @@ public sealed class FilingServiceTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// The videos in a scene directory, which is everything in it that is not
-    /// the sidecar.
+    /// The videos in a scene directory, which is everything in it that filing
+    /// did not write next to them.
     /// </summary>
     private static IReadOnlyList<string> VideosIn(string sceneDirectory) =>
     [
         .. Directory.GetFiles(sceneDirectory)
-            .Where(file => Path.GetFileName(file) != "movie.nfo")
+            .Where(file => Path.GetFileName(file) is not ("movie.nfo" or "fanart.jpg"))
             .Order(StringComparer.Ordinal),
     ];
 

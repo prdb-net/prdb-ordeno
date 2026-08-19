@@ -212,11 +212,15 @@ function Planned({ plan }: { plan: PlannedFileState }) {
           themselves — so it says what it would do before it does it. */}
       {plan.sidecar !== null && plan.sidecar !== undefined && <p className="hint">{plan.sidecar}</p>}
 
+      {/* The third, and the only one that spends somebody's connection. Absent
+          on every installation that left artwork off, which is most of them. */}
+      {plan.artwork !== null && plan.artwork !== undefined && <p className="hint">{plan.artwork}</p>}
+
       {plan.message !== null && plan.message !== undefined && <p className="hint">{plan.message}</p>}
     </>
   )
 
-  const says = [plan.targetName, plan.relabelTo, plan.sidecar, plan.message].some(
+  const says = [plan.targetName, plan.relabelTo, plan.sidecar, plan.artwork, plan.message].some(
     (part) => part !== null && part !== undefined,
   )
 
@@ -235,7 +239,8 @@ function Planned({ plan }: { plan: PlannedFileState }) {
 function Filed({ result }: { result: FiledFileState }) {
   const detail =
     (result.message !== null && result.message !== undefined) ||
-    (result.sidecar !== null && result.sidecar !== undefined) ? (
+    (result.sidecar !== null && result.sidecar !== undefined) ||
+    (result.artwork !== null && result.artwork !== undefined) ? (
       <>
         {result.message !== null && result.message !== undefined && (
           <p className={result.state === 'failed' ? 'problem' : 'hint'}>{result.message}</p>
@@ -246,6 +251,12 @@ function Filed({ result }: { result: FiledFileState }) {
             by this being absent. */}
         {result.sidecar !== null && result.sidecar !== undefined && (
           <p className="hint">{result.sidecar}</p>
+        )}
+
+        {/* The same for the image, and silent in one more case: a scene prdb
+            has no image for is the ordinary outcome rather than a problem. */}
+        {result.artwork !== null && result.artwork !== undefined && (
+          <p className="hint">{result.artwork}</p>
         )}
       </>
     ) : undefined

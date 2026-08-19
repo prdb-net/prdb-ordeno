@@ -114,6 +114,22 @@ video that is filed with no metadata beside it rather than one filed with the
 wrong metadata beside it. The plan on the Downloads screen says which of those
 would happen before anything is written.
 
+A filed scene can also get a picture. Turn on "Download one image for each
+scene" under Settings → Library, and each video filed from then on arrives with
+a `fanart.jpg` next to it, downloaded from prdb — one image, and no poster: the
+images prdb has are the shape of the video, and a landscape image in the poster
+slot is measurably worse in the library grid than no poster at all. It is off
+until you turn it on, because it spends your connection and your disk.
+
+Nothing is ever written over. An image already at that name stays exactly as it
+is, whether the tool put it there last month or you chose it yourself this
+morning — so deleting the file is how you ask for a fresh one, and the next
+video filed into that scene brings it. A download that fails leaves nothing
+behind at all and never fails a filing: the video is in the library and the row
+says what did not arrive next to it. A scene prdb has no picture for is filed
+without one and without a complaint, because that is the ordinary case rather
+than a problem.
+
 Setup has gained one optional step: the address of your media server and an API
 key for it. Leaving it empty is a complete setup and there is no warning
 anywhere about it — the tool files videos and writes the metadata file beside

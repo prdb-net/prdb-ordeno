@@ -12,7 +12,14 @@ namespace Prdb.Ordeno.Infrastructure.Library;
 public static class LibraryServiceCollectionExtensions
 {
     /// <summary>
-    /// Filing: what would happen, what carries it out, and the sidecar that goes
+    /// How long one image may take. Long enough for a picture over a domestic
+    /// connection, short enough that a CDN that has stopped answering is a
+    /// sentence on a row rather than a filing run that never ends.
+    /// </summary>
+    private static readonly TimeSpan ArtworkTimeout = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// Filing: what would happen, what carries it out, and the two files that go
     /// in next to what moved.
     /// </summary>
     /// <remarks>
@@ -47,6 +54,17 @@ public static class LibraryServiceCollectionExtensions
         // answer to the same question.
         services.TryAddSingleton<Sidecars>();
         services.TryAddSingleton<ISidecars>(provider => provider.GetRequiredService<Sidecars>());
+
+        // The image, under the same arrangement — ADR 0027. Its connection is
+        // its own: it goes to a CDN rather than to the API, carries no key, and
+        // therefore follows redirects, which is exactly what the other two
+        // transports refuse to do and for exactly the opposite reason. The
+        // timeout is generous because this is a file on somebody's slow line and
+        // nobody is waiting in front of a screen for it.
+        services.AddHttpClient(SceneArtwork.HttpClientName, client => client.Timeout = ArtworkTimeout);
+
+        services.TryAddSingleton<SceneArtwork>();
+        services.TryAddSingleton<ISceneArtwork>(provider => provider.GetRequiredService<SceneArtwork>());
 
         services.TryAddSingleton<FilingRunner>();
         services.TryAddScoped<FilingService>();

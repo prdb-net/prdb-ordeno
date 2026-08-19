@@ -168,6 +168,29 @@ public sealed class ConfigurationService(
     }
 
     /// <summary>
+    /// Turns the one image per filed scene on or off — ADR 0027.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is checked before this is stored, and it is the only setting on
+    /// this service that is not: there is nothing to check. It reaches no
+    /// service, names no path, and spends nothing until the next filing run — and
+    /// a switch that refused to be turned on because a CDN was slow this minute
+    /// would be a setting nobody could rely on.
+    /// </remarks>
+    public async Task<ConfigurationChange> SetArtworkAsync(
+        bool wanted,
+        CancellationToken cancellationToken = default)
+    {
+        var configuration = await SingleConfigurationAsync(cancellationToken);
+        configuration.DownloadArtwork = wanted;
+
+        await context.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Artwork downloading was turned {State}.", wanted ? "on" : "off");
+
+        return ConfigurationChange.Made(await BuildAsync(cancellationToken));
+    }
+
+    /// <summary>
     /// Stores where the media server is and the key that gets in — the two
     /// optional fields of ADR 0018 — and only after the server has answered for
     /// them.
@@ -324,6 +347,7 @@ public sealed class ConfigurationService(
             MediaServerUrl: string.IsNullOrWhiteSpace(configuration.MediaServerApiKey)
                 ? null
                 : configuration.MediaServerUrl,
+            Artwork: configuration.DownloadArtwork,
             OnboardingCompletedAt: configuration.OnboardingCompletedAt);
     }
 

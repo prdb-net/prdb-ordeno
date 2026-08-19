@@ -3,8 +3,8 @@ using Prdb.Ordeno.Core.Review;
 namespace Prdb.Ordeno.Core.Library;
 
 /// <summary>
-/// What a sidecar is written from: what prdb knows about one scene, in the terms
-/// the media server reads back.
+/// What filing writes from: what prdb knows about one scene, in the terms the
+/// media server reads back.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -26,12 +26,20 @@ namespace Prdb.Ordeno.Core.Library;
 /// in which case no <c>&lt;studio&gt;</c> is written — an empty one is a
 /// browsable studio entry with no name in it.
 /// </param>
+/// <param name="ImageUrl">
+/// The image to put next to the video, or <c>null</c> where prdb has none for
+/// this scene — which is not a failure and not a warning (ADR 0027). It goes
+/// nowhere near <see cref="MovieNfo"/>: a <c>&lt;thumb&gt;</c> in the sidecar is
+/// the media server fetching from the internet, which is what somebody who left
+/// artwork off did not ask for.
+/// </param>
 public sealed record SceneMetadata(
     Guid VideoId,
     string Title,
     DateOnly? ReleaseDate,
     string? Studio,
-    IReadOnlyList<string> Performers)
+    IReadOnlyList<string> Performers,
+    string? ImageUrl = null)
 {
     /// <summary>
     /// The metadata for a video prdb described, or <c>null</c> when what came
@@ -56,6 +64,7 @@ public sealed record SceneMetadata(
                 video.Title,
                 video.ReleaseDate,
                 string.IsNullOrWhiteSpace(video.SiteTitle) ? null : video.SiteTitle,
-                [.. video.Performers.Where(name => !string.IsNullOrWhiteSpace(name))]);
+                [.. video.Performers.Where(name => !string.IsNullOrWhiteSpace(name))],
+                string.IsNullOrWhiteSpace(video.ImageUrl) ? null : video.ImageUrl);
     }
 }
