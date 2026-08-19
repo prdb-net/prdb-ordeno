@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.History;
 using Prdb.Ordeno.Core.Identification;
 using Prdb.Ordeno.Core.Library;
 using Prdb.Ordeno.Core.Review;
@@ -1021,7 +1022,7 @@ public sealed class FilingServiceTests : IAsyncLifetime
 
         return await scope.ServiceProvider
             .GetRequiredService<FilingService>()
-            .FileAsync(cancellationToken);
+            .FileAsync(AskedBy.Person, cancellationToken);
     }
 
     /// <summary>

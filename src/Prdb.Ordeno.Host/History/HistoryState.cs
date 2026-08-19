@@ -39,6 +39,10 @@ public sealed record LoggedOperationState(
 /// One run, and the entries it wrote.
 /// </summary>
 /// <param name="Kind"><c>filing</c> or <c>undo</c>.</param>
+/// <param name="AskedByTimer">
+/// Whether nobody asked for this run — the tool filed on its own (ADR 0031).
+/// Never true of an undo: there is no timer behind the way back.
+/// </param>
 /// <param name="Account">What it did, in the one line the screen showed at the time.</param>
 /// <param name="Operations">How many entries it wrote; <paramref name="Entries"/> may be fewer.</param>
 /// <param name="CanBeUndone">
@@ -48,6 +52,7 @@ public sealed record LoggedOperationState(
 public sealed record LoggedRunState(
     int Id,
     string Kind,
+    bool AskedByTimer,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt,
     string Account,
@@ -229,6 +234,7 @@ internal static class HistoryStates
     private static LoggedRunState Run(LoggedRun run) => new(
         run.Id,
         run.Kind is RunKind.Undo ? "undo" : "filing",
+        run.AskedBy is AskedBy.Timer,
         run.StartedAt,
         run.FinishedAt,
         run.InWords,

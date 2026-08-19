@@ -350,6 +350,17 @@ function RunRow({
     <Row name={new Date(run.startedAt).toLocaleString()} detail={detail}>
       <td>
         {run.account}
+        {/* A run nobody asked for — ADR 0031. It is the first thing somebody
+            reading this page in the morning wants to know about a row they do
+            not remember causing. */}
+        {run.askedByTimer && (
+          <>
+            {' '}
+            <span className="chip" title="Nobody asked for this run: the tool filed on its own.">
+              on its own
+            </span>
+          </>
+        )}
         {undone && (
           <>
             {' '}

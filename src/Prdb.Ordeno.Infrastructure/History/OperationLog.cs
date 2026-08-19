@@ -30,9 +30,13 @@ public sealed class OperationLog(
     ILogger<OperationLog> logger)
 {
     /// <summary>Opens a run, and answers with the id its entries hang off.</summary>
-    public async Task<int> StartAsync(RunKind kind)
+    /// <param name="askedBy">
+    /// Whether somebody asked for this run or the timer did — ADR 0031. It
+    /// decides what an empty run leaves behind, in <see cref="FinishAsync"/>.
+    /// </param>
+    public async Task<int> StartAsync(RunKind kind, AskedBy askedBy = AskedBy.Person)
     {
-        var run = new OperationRun { Kind = kind, StartedAt = time.GetUtcNow() };
+        var run = new OperationRun { Kind = kind, AskedBy = askedBy, StartedAt = time.GetUtcNow() };
 
         context.OperationRuns.Add(run);
         await context.SaveChangesAsync(CancellationToken.None);
@@ -165,8 +169,25 @@ public sealed class OperationLog(
     /// The one line the screen showed while it was happening. Stored rather than
     /// recomputed: it counts files nothing happened to, which leave no entry.
     /// </param>
+    /// <remarks>
+    /// A run nobody asked for that moved nothing is removed instead of closed —
+    /// ADR 0031, amending ADR 0028. That ADR keeps the row for an empty run
+    /// because it answers the first question of somebody who was asleep, and
+    /// that is owed to whoever asked; nobody asked for a tick of the clock, and
+    /// a row every quarter of an hour would push three years of nights out of a
+    /// thousand-run log inside a fortnight.
+    /// </remarks>
     public async Task FinishAsync(int runId, string? account, string? problem = null)
     {
+        if (await LeavesNothingAsync(runId))
+        {
+            await context.OperationRuns
+                .Where(run => run.Id == runId)
+                .ExecuteDeleteAsync(CancellationToken.None);
+
+            return;
+        }
+
         await context.OperationRuns
             .Where(run => run.Id == runId)
             .ExecuteUpdateAsync(
@@ -178,6 +199,23 @@ public sealed class OperationLog(
 
         await TrimAsync();
     }
+
+    /// <summary>
+    /// Whether this run is one the log has nothing to say about: nobody asked for
+    /// it, and it changed no filesystem.
+    /// </summary>
+    /// <remarks>
+    /// Asked at the end rather than assumed at the start, because the run row has
+    /// to exist while the run is happening — the entries hang off it, and a
+    /// container killed mid-run leaves the honest record of a run that did not
+    /// finish.
+    /// </remarks>
+    private async Task<bool> LeavesNothingAsync(int runId) =>
+        await context.OperationRuns
+            .AsNoTracking()
+            .AnyAsync(run => run.Id == runId
+                && run.AskedBy == AskedBy.Timer
+                && !context.Operations.Any(operation => operation.RunId == run.Id));
 
     /// <summary>
     /// Drops the oldest runs, whole, until the log is inside both of

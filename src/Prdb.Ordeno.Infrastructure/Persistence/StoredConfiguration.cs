@@ -56,6 +56,14 @@ public sealed class StoredConfiguration
     /// </summary>
     public bool DownloadArtwork { get; set; }
 
+    /// <summary>
+    /// Whether the tool files on its own, every <c>FilingSchedule.Interval</c> —
+    /// ADR 0031. False by default, and false for an installation that is upgraded
+    /// into the release that adds it: a tool that starts moving files because it
+    /// was upgraded is the surprise the opt-in rule exists to prevent.
+    /// </summary>
+    public bool UnattendedFiling { get; set; }
+
     public DateTimeOffset? OnboardingCompletedAt { get; set; }
 
     /// <summary>

@@ -81,6 +81,7 @@ export default function FilingScreen({ onSignedOut }: { onSignedOut: () => void 
 
   const planned = state.plannedAt !== null && state.plannedAt !== undefined
   const wouldFile = Number(state.wouldFile)
+  const held = Number(state.held)
 
   return (
     <>
@@ -98,10 +99,19 @@ export default function FilingScreen({ onSignedOut }: { onSignedOut: () => void 
               'would go before it moves anything.'}
         </p>
 
+        {/* ADR 0031: whether the tool moves files on its own is a switch now,
+            and this says which way it is set. The sentence it replaced was a
+            promise, and anything vaguer here would be worse than the promise
+            was — somebody who believes the wrong half of it stops looking. */}
         <p className="hint">
-          prdb-ordeno files nothing on its own. It moves a file when you press the second button
-          below, and every move it makes is in the History, where a run that went wrong can be put
-          back.
+          {state.unattended
+            ? 'prdb-ordeno files on its own, shortly after a download has finished arriving. The ' +
+              'button below is the same run, now rather than at the next interval, and every move ' +
+              'either of them makes is in the History, where a run that went wrong can be put back.'
+            : 'prdb-ordeno files nothing on its own. It moves a file when you press the second ' +
+              'button below, and every move it makes is in the History, where a run that went ' +
+              'wrong can be put back. Settings → Library is where it can be told to file without ' +
+              'being asked.'}
         </p>
 
         <div className="row buttons">
@@ -125,6 +135,23 @@ export default function FilingScreen({ onSignedOut }: { onSignedOut: () => void 
                 ? 'File this video'
                 : `File these ${String(wouldFile)} videos`}
           </button>
+
+          {/* ADR 0030's way out of a hold, at the scale that makes it one:
+              undoing a run of two hundred leaves two hundred holds. It moves
+              nothing — the plan and the button above still stand between a
+              released file and the library — which is why it sits next to them
+              rather than looking like a third way to file. */}
+          {held > 0 && (
+            <button
+              type="button"
+              className="quiet"
+              onClick={() => void ask(api.releaseAll)}
+              disabled={busy || state.running}
+              title="These files were put back by an undo. Releasing them lets filing pick them up again; nothing is moved by this."
+            >
+              {held === 1 ? 'Release the held file' : `Release the ${String(held)} held files`}
+            </button>
+          )}
         </div>
       </section>
 
@@ -141,7 +168,12 @@ export default function FilingScreen({ onSignedOut }: { onSignedOut: () => void 
 
           <RowTable heads={['File', 'What would happen', 'The scene']}>
             {state.plan.map((plan) => (
-              <Planned key={String(plan.fileId)} plan={plan} />
+              <Planned
+                key={String(plan.fileId)}
+                plan={plan}
+                release={() => void ask(() => api.release(Number(plan.fileId)))}
+                busy={busy || state.running}
+              />
             ))}
           </RowTable>
         </section>
@@ -151,6 +183,15 @@ export default function FilingScreen({ onSignedOut }: { onSignedOut: () => void 
         <section className="card">
           <h2>What the last run did</h2>
           <p className="answer">{state.whatItDid}</p>
+
+          {/* A run nobody started is a run that appeared out of nowhere on this
+              screen, and it says where it came from — ADR 0031. */}
+          {state.askedByTimer && (
+            <p className="hint">
+              Nobody asked for that run: the tool filed on its own. It is in the History like any
+              other, and it can be put back the same way.
+            </p>
+          )}
 
           <RowTable heads={['File', 'What happened', 'Where it went']}>
             {state.results.map((result) => (
@@ -180,10 +221,24 @@ const outcomes: Record<string, { label: string; title: string }> = {
     label: 'already in the library',
     title: 'The same scene at the same quality. It is not filed, and it is not deleted either.',
   },
+  held: {
+    label: 'you put this back',
+    title:
+      'An undo returned this file to its download directory. Nothing files it again — not the ' +
+      'button, and not the tool on its own — until you release it.',
+  },
   blocked: { label: 'cannot be filed', title: 'The reason is on the row.' },
 }
 
-function Planned({ plan }: { plan: PlannedFileState }) {
+function Planned({
+  plan,
+  release,
+  busy,
+}: {
+  plan: PlannedFileState
+  release: () => void
+  busy: boolean
+}) {
   const outcome = outcomes[plan.outcome] ?? outcomes.blocked
 
   // Everything a single file has to say for itself: where it lands, what that
@@ -218,12 +273,24 @@ function Planned({ plan }: { plan: PlannedFileState }) {
       {plan.artwork !== null && plan.artwork !== undefined && <p className="hint">{plan.artwork}</p>}
 
       {plan.message !== null && plan.message !== undefined && <p className="hint">{plan.message}</p>}
+
+      {/* One file out of a hold — ADR 0030. It is here rather than on the line
+          because it is a decision about this file, taken after reading what
+          happened to it, and because the line is what somebody compares
+          between files. Releasing moves nothing. */}
+      {plan.outcome === 'held' && (
+        <button type="button" className="quiet" onClick={release} disabled={busy}>
+          Release this file
+        </button>
+      )}
     </>
   )
 
-  const says = [plan.targetName, plan.relabelTo, plan.sidecar, plan.artwork, plan.message].some(
-    (part) => part !== null && part !== undefined,
-  )
+  const says =
+    plan.outcome === 'held' ||
+    [plan.targetName, plan.relabelTo, plan.sidecar, plan.artwork, plan.message].some(
+      (part) => part !== null && part !== undefined,
+    )
 
   return (
     <Row name={<code>{plan.name}</code>} detail={says ? detail : undefined}>

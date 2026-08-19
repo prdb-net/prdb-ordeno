@@ -24,6 +24,8 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
 
     public DbSet<FiledVideo> FiledVideos => Set<FiledVideo>();
 
+    public DbSet<FileHold> FileHolds => Set<FileHold>();
+
     public DbSet<OperationRun> OperationRuns => Set<OperationRun>();
 
     public DbSet<OperationEntry> Operations => Set<OperationEntry>();
@@ -184,11 +186,27 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
             filed.HasIndex(row => new { row.Directory, row.FileName }).IsUnique();
         });
 
+        modelBuilder.Entity<FileHold>(hold =>
+        {
+            hold.HasKey(row => row.Id);
+            hold.Property(row => row.Path).IsRequired();
+            hold.Property(row => row.FiledTo).IsRequired();
+
+            hold.Property(row => row.FiledAt).HasConversion(UtcTimestamp);
+            hold.Property(row => row.HeldAt).HasConversion(UtcTimestamp);
+
+            // One file is one hold. A second undo returning a file to a path that
+            // is already held replaces what is there, and two rows about one path
+            // would be two answers to "why is this file not being filed".
+            hold.HasIndex(row => row.Path).IsUnique();
+        });
+
         modelBuilder.Entity<OperationRun>(run =>
         {
             run.HasKey(row => row.Id);
 
             run.Property(row => row.Kind).HasConversion<string>().HasMaxLength(32);
+            run.Property(row => row.AskedBy).HasConversion<string>().HasMaxLength(32);
 
             run.Property(row => row.StartedAt).HasConversion(UtcTimestamp);
             run.Property(row => row.FinishedAt).HasConversion(UtcTimestamp);

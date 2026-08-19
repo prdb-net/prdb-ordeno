@@ -70,6 +70,7 @@ public sealed class HistoryService(OrdenoDbContext context)
             read.Add(new LoggedRun(
                 run.Id,
                 run.Kind,
+                run.AskedBy,
                 run.StartedAt,
                 run.FinishedAt,
                 run.Account,

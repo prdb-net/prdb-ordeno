@@ -1,4 +1,5 @@
 using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.History;
 using Prdb.Ordeno.Core.Library;
 
 namespace Prdb.Ordeno.Host.Library;
@@ -8,9 +9,10 @@ namespace Prdb.Ordeno.Host.Library;
 /// </summary>
 /// <param name="Outcome">
 /// <c>filed</c>, <c>collisionBroken</c>, <c>secondQuality</c>,
-/// <c>alreadyFiled</c> or <c>blocked</c>. The last two move nothing and are not
-/// the same thing: one is a copy of something the library already has, the other
-/// is a reason the tool could not act.
+/// <c>alreadyFiled</c>, <c>held</c> or <c>blocked</c>. The last three move
+/// nothing and are three different things: a copy of something the library
+/// already has, a file somebody put back and has not released (ADR 0030), and a
+/// reason the tool could not act.
 /// </param>
 /// <param name="Movement">
 /// <c>rename</c>, <c>copyThenDelete</c> or <c>unknown</c> — whether this filing
@@ -87,15 +89,33 @@ public sealed record FiledFileState(
 /// move. It is the difference between a screen that is thinking and one that is
 /// touching somebody's library.
 /// </param>
+/// <param name="Unattended">
+/// Whether the tool files on its own (ADR 0031). The screen says which it is,
+/// because "prdb-ordeno files nothing on its own" was a promise and is now a
+/// setting — and a screen that hedges about that is worse than one that was
+/// wrong about it.
+/// </param>
+/// <param name="Held">
+/// How many of the planned files are waiting on a hold an undo left (ADR 0030).
+/// It is counted here rather than on the browser side because the button that
+/// releases all of them is shown from it.
+/// </param>
+/// <param name="AskedByTimer">
+/// Whether the last run that filed anything is one nobody started. A screen
+/// showing a run that appeared out of nowhere has to say where it came from.
+/// </param>
 public sealed record FilingState(
     bool Running,
     bool Filing,
+    bool Unattended,
+    bool AskedByTimer,
     DateTimeOffset? PlannedAt,
     DateTimeOffset? FiledAt,
     string? Problem,
     IReadOnlyList<PlannedFileState> Plan,
     int PlanTotal,
     int WouldFile,
+    int Held,
     string? WhatItWouldDo,
     IReadOnlyList<FiledFileState> Results,
     int ResultTotal,
@@ -117,19 +137,22 @@ public sealed record FilingState(
     /// one gate, so a button pressed while the other one is working is a state
     /// the screen would otherwise have to infer from nothing happening.
     /// </param>
-    public static FilingState Of(FilingRun run, string? problem = null)
+    public static FilingState Of(FilingRun run, bool unattended, string? problem = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
         return new FilingState(
             Running: run.Running,
             Filing: run.Filing,
+            Unattended: unattended,
+            AskedByTimer: run.AskedBy is AskedBy.Timer,
             PlannedAt: run.PlannedAt,
             FiledAt: run.FiledAt,
             Problem: problem ?? run.Problem,
             Plan: [.. run.Plan.Take(Limit).Select(Planned)],
             PlanTotal: run.Plan.Count,
             WouldFile: run.WouldFile,
+            Held: run.Plan.Count(plan => plan.Outcome is FilingOutcome.Held),
             WhatItWouldDo: run.WhatItWouldDo,
             Results: [.. run.Results.Take(Limit).Select(Filed)],
             ResultTotal: run.Results.Count,
@@ -174,6 +197,7 @@ public sealed record FilingState(
         FilingOutcome.CollisionBroken => "collisionBroken",
         FilingOutcome.SecondQuality => "secondQuality",
         FilingOutcome.AlreadyFiled => "alreadyFiled",
+        FilingOutcome.Held => "held",
         _ => "blocked",
     };
 

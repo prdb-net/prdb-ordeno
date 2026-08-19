@@ -206,11 +206,43 @@ internal sealed class HistoryWorkspace : IAsyncDisposable
         await scope.ServiceProvider.GetRequiredService<IdentificationService>().IdentifyAsync();
     }
 
-    public async Task<FilingReport> FileAsync()
+    public async Task<FilingReport> FileAsync(AskedBy askedBy = AskedBy.Person)
     {
         await using var scope = Services.CreateAsyncScope();
 
-        return await scope.ServiceProvider.GetRequiredService<FilingService>().FileAsync();
+        return await scope.ServiceProvider.GetRequiredService<FilingService>().FileAsync(askedBy);
+    }
+
+    public async Task<FilingPreview> PlanAsync()
+    {
+        await using var scope = Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<FilingService>().PlanAsync();
+    }
+
+    /// <summary>What the timer asks before it starts a run at all — ADR 0031.</summary>
+    public async Task<bool> AnythingWaitingAsync()
+    {
+        await using var scope = Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<FilingService>().AnythingWaitingAsync();
+    }
+
+    /// <summary>Takes a hold off one file, or off all of them — ADR 0030.</summary>
+    public async Task<int> ReleaseAsync(int? fileId = null)
+    {
+        await using var scope = Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<FilingService>().ReleaseAsync(fileId);
+    }
+
+    public async Task<IReadOnlyList<FileHold>> HoldsAsync()
+    {
+        await using var scope = Services.CreateAsyncScope();
+
+        return await scope.ServiceProvider
+            .GetRequiredService<OrdenoDbContext>()
+            .FileHolds.AsNoTracking().OrderBy(hold => hold.Id).ToListAsync();
     }
 
     public async Task<UndoPreview> CheckAsync(int? runId = null, int? operationId = null)
@@ -328,7 +360,7 @@ internal sealed class HistoryWorkspace : IAsyncDisposable
             .Order(StringComparer.Ordinal),
     ];
 
-    private async Task ScanAsync()
+    public async Task ScanAsync()
     {
         await using var scope = Services.CreateAsyncScope();
 

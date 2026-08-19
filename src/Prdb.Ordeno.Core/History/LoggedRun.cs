@@ -5,11 +5,31 @@ namespace Prdb.Ordeno.Core.History;
 /// <summary>What a run was doing.</summary>
 public enum RunKind
 {
-    /// <summary>Filing, asked for by somebody (ADR 0022).</summary>
+    /// <summary>Filing, whether somebody asked for it or the timer did (ADR 0031).</summary>
     Filing,
 
     /// <summary>Putting a run, or one operation of one, back where it came from.</summary>
     Undo,
+}
+
+/// <summary>
+/// Who a run happened for — the column ADR 0028 left for whoever added the timer,
+/// and ADR 0031 is that.
+/// </summary>
+/// <remarks>
+/// It is on the row because "you filed these" and "the tool filed these while
+/// nobody was watching" are different sentences, and the second one is what
+/// somebody reading the History in the morning came for. It also decides what an
+/// empty run leaves behind: a run somebody asked for keeps its row whatever it
+/// did, and one nobody asked for keeps it only if it moved something.
+/// </remarks>
+public enum AskedBy
+{
+    /// <summary>Somebody pressed a button, having read what it would do.</summary>
+    Person,
+
+    /// <summary>The interval came round and the switch was on (ADR 0031).</summary>
+    Timer,
 }
 
 /// <summary>
@@ -27,6 +47,11 @@ public enum RunKind
 /// but "did anything happen".
 /// </para>
 /// </remarks>
+/// <param name="AskedBy">
+/// Whether a person started it or the timer did — ADR 0031. An undo is always a
+/// person's: there is no timer behind the way back and there is not going to be
+/// one.
+/// </param>
 /// <param name="Account">
 /// What the run did, in the one line the filing screen already builds.
 /// <c>null</c> while it is still going.
@@ -44,6 +69,7 @@ public enum RunKind
 public sealed record LoggedRun(
     int Id,
     RunKind Kind,
+    AskedBy AskedBy,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt,
     string? Account,

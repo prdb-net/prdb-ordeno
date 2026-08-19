@@ -73,8 +73,51 @@ public sealed class FilingRunTests
             "1 video was filed.",
             Did([Filed(images: ArtworkAction.Write)]));
 
+    /// <summary>
+    /// A held file is not a copy of something already filed and not a file the
+    /// tool could not act on — ADR 0030. It gets its own clause, because the
+    /// answer to it is a button rather than a fix.
+    /// </summary>
+    [Fact]
+    public void Held_files_are_counted_apart_from_everything_else() =>
+        Assert.Equal(
+            "1 video would be filed and 2 are held because you put them back. Nothing has been "
+            + "moved yet.",
+            Would([Planned(FilingOutcome.Filed), Held(), Held()]));
+
+    [Fact]
+    public void One_held_file_reads_as_one() =>
+        Assert.Contains("1 is held because you put it back", Would([Held()]));
+
     private static string? Did(IReadOnlyList<FilingResult> results) =>
         FilingRun.Never.Filed(DateTimeOffset.UnixEpoch, results).WhatItDid;
+
+    private static string? Would(IReadOnlyList<FilingPlan> plans) =>
+        FilingRun.Never.Planned(DateTimeOffset.UnixEpoch, plans).WhatItWouldDo;
+
+    private static FilingPlan Held() =>
+        FilingPlan.Held(
+            fileId: 1,
+            "/downloads/scene.mkv",
+            "scene.mkv",
+            Scene,
+            new FilingHold(DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, "/library/scene/scene.mkv"));
+
+    private static FilingPlan Planned(FilingOutcome outcome) =>
+        new(
+            outcome,
+            FileId: 2,
+            "/downloads/other.mkv",
+            "other.mkv",
+            Scene,
+            "1080p",
+            "/library/scene",
+            "/library/scene/other.mkv",
+            Relabel: null,
+            FileMovement.Rename,
+            Message: null,
+            SidecarPlan.None,
+            ArtworkPlan.None);
 
     private static FilingResult Filed(
         string? sidecar = null,

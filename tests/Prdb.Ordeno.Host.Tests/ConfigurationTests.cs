@@ -201,6 +201,38 @@ public sealed class ConfigurationTests
         Assert.False((await off.Content.ReadFromJsonAsync<ConfigurationState>())!.Artwork);
     }
 
+    /// <summary>
+    /// ADR 0031's switch, over HTTP, and the property that matters most about it:
+    /// a fresh installation — and an upgraded one, which is what the migration's
+    /// default makes this — files nothing on its own until somebody says so.
+    /// </summary>
+    [Fact]
+    public async Task Unattended_filing_is_off_until_it_is_turned_on()
+    {
+        using var directory = new TempDirectory();
+        await using var application = new OrdenoApplication(directory.Root);
+        using var client = await SignedIn(application);
+
+        var fresh = await client.GetFromJsonAsync<ConfigurationState>("/api/configuration");
+        Assert.False(fresh!.Unattended);
+        Assert.True(fresh.UnattendedIntervalMinutes > 0);
+
+        var response = await client.PutAsJsonAsync(
+            "/api/configuration/unattended-filing",
+            new SetUnattendedFilingRequest(Enabled: true));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True((await response.Content.ReadFromJsonAsync<ConfigurationState>())!.Unattended);
+
+        // And back off again, in one click: turning this off is the thing
+        // somebody does in a hurry.
+        var off = await client.PutAsJsonAsync(
+            "/api/configuration/unattended-filing",
+            new SetUnattendedFilingRequest(Enabled: false));
+
+        Assert.False((await off.Content.ReadFromJsonAsync<ConfigurationState>())!.Unattended);
+    }
+
     [Fact]
     public async Task A_layout_this_release_does_not_have_is_refused()
     {

@@ -382,6 +382,12 @@ function TargetStep({
           tool cannot run without, and it runs without this; a fifth step for a
           switch would make an optional thing look like a missing answer. */}
       {number === undefined && <ArtworkSwitch state={state} run={run} />}
+
+      {/* Not part of the guided path either, and for a larger reason — ADR 0031.
+          Somebody who has not seen a single run has not got the information this
+          consent depends on; the History screen is that information, and it is
+          here that somebody comes back to once they have read it. */}
+      {number === undefined && <UnattendedFilingSwitch state={state} run={run} />}
     </Step>
   )
 }
@@ -422,6 +428,50 @@ function ArtworkSwitch({ state, run }: { state: ConfigurationState; run: Run }) 
         prdb — one image, and only where there is no file at that name. Nothing is ever written
         over: deleting the file is how you ask for a fresh one. It costs a download per scene
         filed, which is why it is off unless you turn it on.
+      </p>
+
+      {problem !== null && <p className="problem">{problem}</p>}
+    </>
+  )
+}
+
+/**
+ * Whether the tool files without being asked — ADR 0031. The one switch in this
+ * tool that lets it move a file with nobody in front of it, so the words under
+ * it say what it does rather than selling it.
+ *
+ * It saves as it is clicked, like the switch above: there is nothing to type and
+ * nothing to check. What it turns on is off until the next interval comes round,
+ * and it can be turned off again in the same click.
+ */
+function UnattendedFilingSwitch({ state, run }: { state: ConfigurationState; run: Run }) {
+  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const toggle = async (enabled: boolean) => {
+    setBusy(true)
+    setProblem(await run(() => api.setUnattendedFiling(enabled)))
+    setBusy(false)
+  }
+
+  return (
+    <>
+      <label className="pick">
+        <input
+          type="checkbox"
+          checked={state.unattended}
+          disabled={busy}
+          onChange={(event) => void toggle(event.target.checked)}
+        />
+        File what is recognised without being asked
+      </label>
+
+      <p className="hint">
+        With this on, prdb-ordeno files every {String(state.unattendedIntervalMinutes)} minutes
+        without anybody pressing anything — the same run as the button on the Filing screen, and
+        the same plan. Every run is in the History, where one that went wrong can be put back, and
+        a file you put back is never filed again until you release it. With it off, nothing moves
+        until you ask.
       </p>
 
       {problem !== null && <p className="problem">{problem}</p>}

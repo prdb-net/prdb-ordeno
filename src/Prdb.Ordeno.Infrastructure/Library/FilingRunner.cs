@@ -1,21 +1,24 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+using Prdb.Ordeno.Core.History;
 using Prdb.Ordeno.Core.Library;
 using Prdb.Ordeno.Infrastructure.MediaServer;
 
 namespace Prdb.Ordeno.Infrastructure.Library;
 
 /// <summary>
-/// The one place filing is started from — and, until there is a way back, only
-/// ever by somebody asking for it.
+/// The one place filing is started from, whether somebody asked for it or the
+/// clock did.
 /// </summary>
 /// <remarks>
 /// <para>
-/// There is no timer here, and its absence is the decision in ADR 0022 rather
-/// than an omission. The operation log and its undo now exist, so what is left
-/// before a worker calls <see cref="TryFile"/> on an interval is the question
-/// ADR 0029 handed it: what an undone file means to a run nobody is watching.
+/// The timer ADR 0022 deferred is <c>FilingWorker</c> calling
+/// <see cref="TryFile"/> on an interval, and it is deliberately nothing more
+/// than that: the same call behind the same button, computing the same plan,
+/// writing the same log (ADR 0031). Who asked travels with the run because the
+/// screen and the log both have to say so, and because it decides what an empty
+/// run leaves behind.
 /// </para>
 /// <para>
 /// One gate over both entry points, and the way back takes the same one
@@ -47,34 +50,39 @@ public sealed class FilingRunner(
     /// </summary>
     /// <returns><c>false</c> when something was already under way.</returns>
     public bool TryPlan(CancellationToken cancellationToken = default) =>
-        TryStart(filing: false, cancellationToken);
+        TryStart(filing: false, AskedBy.Person, cancellationToken);
 
     /// <summary>
     /// Carries out what the plan says, working it out again as it goes.
     /// </summary>
+    /// <param name="askedBy">
+    /// Who this run is for. It changes nothing about what the run does — ADR 0031
+    /// is a schedule rather than a second path — and everything about how it
+    /// reads afterwards, on the screen and in the log.
+    /// </param>
     /// <param name="cancellationToken">
     /// Must outlive the request that started it — the application's own stopping
     /// token, so that a shutdown reaches the file being copied.
     /// </param>
     /// <returns><c>false</c> when something was already under way.</returns>
-    public bool TryFile(CancellationToken cancellationToken = default) =>
-        TryStart(filing: true, cancellationToken);
+    public bool TryFile(AskedBy askedBy = AskedBy.Person, CancellationToken cancellationToken = default) =>
+        TryStart(filing: true, askedBy, cancellationToken);
 
-    private bool TryStart(bool filing, CancellationToken cancellationToken)
+    private bool TryStart(bool filing, AskedBy askedBy, CancellationToken cancellationToken)
     {
         if (!gate.TryEnter())
         {
             return false;
         }
 
-        Publish(Status.Started(time.GetUtcNow(), filing));
+        Publish(Status.Started(time.GetUtcNow(), filing, askedBy));
 
-        _ = Task.Run(() => RunAsync(filing, cancellationToken), CancellationToken.None);
+        _ = Task.Run(() => RunAsync(filing, askedBy, cancellationToken), CancellationToken.None);
 
         return true;
     }
 
-    private async Task RunAsync(bool filing, CancellationToken cancellationToken)
+    private async Task RunAsync(bool filing, AskedBy askedBy, CancellationToken cancellationToken)
     {
         try
         {
@@ -83,7 +91,7 @@ public sealed class FilingRunner(
 
             if (filing)
             {
-                var report = await service.FileAsync(cancellationToken);
+                var report = await service.FileAsync(askedBy, cancellationToken);
 
                 logger.LogInformation(
                     "Filed {Filed} of {Total} videos.",

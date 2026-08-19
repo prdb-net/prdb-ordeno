@@ -31,6 +31,13 @@ public enum FilingOutcome
     AlreadyFiled,
 
     /// <summary>
+    /// An undo put this file back, and nothing files it again until somebody
+    /// releases it — ADR 0030. It is not <see cref="Blocked"/>: nothing is
+    /// wrong, and the way out of it is a button rather than a fix.
+    /// </summary>
+    Held,
+
+    /// <summary>
     /// Nothing is moved, and the reason is on the plan. A target that could not
     /// be looked at, a quality that could not be read, an answer from prdb that
     /// names no scene.
@@ -242,6 +249,36 @@ public sealed record FilingPlan(
     /// shows, and it is the whole of what most users want to check.
     /// </summary>
     public string? TargetName => TargetPath is null ? null : System.IO.Path.GetFileName(TargetPath);
+
+    /// <summary>
+    /// A file an undo put back, which no run files until somebody releases it —
+    /// ADR 0030.
+    /// </summary>
+    /// <remarks>
+    /// It is worked out before anything is asked of the filesystem, quality
+    /// included: the hold is the whole answer, and reading the header of a file
+    /// that is not going anywhere is work on somebody's NAS for nothing.
+    /// </remarks>
+    public static FilingPlan Held(
+        int fileId,
+        string sourcePath,
+        string sourceName,
+        Scene? scene,
+        FilingHold hold) =>
+        new(
+            FilingOutcome.Held,
+            fileId,
+            sourcePath,
+            sourceName,
+            scene,
+            QualityLabel: null,
+            Directory: null,
+            TargetPath: null,
+            Relabel: null,
+            FileMovement.Unknown,
+            (hold ?? throw new ArgumentNullException(nameof(hold))).InWords,
+            SidecarPlan.None,
+            ArtworkPlan.None);
 
     public static FilingPlan Blocked(
         int fileId,

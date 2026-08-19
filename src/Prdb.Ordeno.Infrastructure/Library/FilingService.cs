@@ -87,13 +87,21 @@ public sealed class FilingService(
     /// several slower ones while somebody is trying to watch something off the
     /// same disks.
     /// </remarks>
-    public async Task<FilingReport> FileAsync(CancellationToken cancellationToken = default)
+    /// <param name="askedBy">
+    /// Whether somebody pressed the button or the timer came round (ADR 0031).
+    /// It changes nothing about what the run does — that is the whole point of
+    /// the timer being a schedule rather than a second path — and it decides what
+    /// the run leaves in the log.
+    /// </param>
+    public async Task<FilingReport> FileAsync(
+        AskedBy askedBy = AskedBy.Person,
+        CancellationToken cancellationToken = default)
     {
         // Opened before anything is looked at, so that a run refused by an
         // unusable library leaves the same trace as one that filed two hundred
         // files. "You asked, and this is why nothing happened" is an answer
         // somebody who was asleep needs as much as the other one.
-        var runId = await log.StartAsync(RunKind.Filing);
+        var runId = await log.StartAsync(RunKind.Filing, askedBy);
         var library = await ReadLibraryAsync(cancellationToken);
 
         if (library.Problem is not null)
@@ -109,7 +117,14 @@ public sealed class FilingService(
 
         var candidates = await CandidatesAsync(cancellationToken);
         var filed = await FiledAsync(library.Root!, candidates, cancellationToken);
-        var described = await DescribeAsync(library, candidates, cancellationToken);
+        // Not the held ones (ADR 0030). What prdb says about a scene is fetched
+        // to be written next to a video that moves, and these are not going to
+        // move — asking about two hundred of them every quarter of an hour is
+        // exactly the request pattern ADR 0001 exists to avoid.
+        var described = await DescribeAsync(
+            library,
+            [.. candidates.Where(candidate => candidate.Hold is null)],
+            cancellationToken);
         var results = new List<FilingResult>(candidates.Count);
 
         for (var index = 0; index < candidates.Count; index++)
@@ -143,6 +158,96 @@ public sealed class FilingService(
         await log.FinishAsync(runId, report.Account);
 
         return report;
+    }
+
+    /// <summary>
+    /// Whether there is anything for an unattended run to do — ADR 0031.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// One query over the tool's own tables, and no filesystem at all. Working
+    /// out <em>what</em> would happen reads the header of every waiting video,
+    /// and doing that every quarter of an hour to be told that nothing has
+    /// arrived is work on somebody's NAS for nothing.
+    /// </para>
+    /// <para>
+    /// It asks the same question as <see cref="CandidatesAsync"/> and answers
+    /// only "any": settled, named by a person or by prdb, and not held. The two
+    /// have to agree, or the timer either sleeps through work or wakes up to
+    /// none — which is what <c>FilingHoldTests</c> pins.
+    /// </para>
+    /// </remarks>
+    public async Task<bool> AnythingWaitingAsync(CancellationToken cancellationToken = default)
+    {
+        var settled = Settling.SettledIfUnchangedSince(time.GetUtcNow());
+
+        return await context.DiscoveredFiles
+            .AsNoTracking()
+            .AnyAsync(
+                file => file.SizeBytes > 0
+                    && file.UnchangedSince <= settled
+                    && !context.FileHolds.Any(hold => hold.Path == file.Path)
+                    && (context.FileResolutions.Any(decision =>
+                            decision.DiscoveredFileId == file.Id
+                            && decision.Kind == ResolutionKind.Assigned)
+                        || (!context.FileResolutions.Any(decision =>
+                                decision.DiscoveredFileId == file.Id)
+                            && context.FileIdentifications.Any(identification =>
+                                identification.DiscoveredFileId == file.Id
+                                && identification.VideoId != null))),
+                cancellationToken);
+    }
+
+    /// <summary>
+    /// Whether the tool files on its own — ADR 0031. Read here rather than
+    /// through the configuration service because that one looks at every
+    /// directory as it builds its answer, and this is asked by a screen that
+    /// polls.
+    /// </summary>
+    public async Task<bool> UnattendedAsync(CancellationToken cancellationToken = default) =>
+        await context.Configuration
+            .AsNoTracking()
+            .Select(configuration => configuration.UnattendedFiling)
+            .SingleAsync(cancellationToken);
+
+    /// <summary>
+    /// Takes the hold off one file an undo put back, or off all of them —
+    /// ADR 0030.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This moves nothing. It makes a file ordinary again, and the ordinary path
+    /// takes it from there: the preview, and then the button or the timer. That
+    /// is why it is not behind the library gate and why it answers inside the
+    /// request — there is no file being copied at the other end of it.
+    /// </para>
+    /// <para>
+    /// Releasing all of them is one act rather than two hundred, because undoing
+    /// a run of two hundred is what leaves two hundred holds. It is still not the
+    /// act that moves anything.
+    /// </para>
+    /// </remarks>
+    /// <param name="fileId">
+    /// The discovered file to release, or <c>null</c> for every held file.
+    /// </param>
+    /// <returns>How many files stopped being held.</returns>
+    public async Task<int> ReleaseAsync(int? fileId, CancellationToken cancellationToken = default)
+    {
+        var released = fileId is { } id
+            ? await context.FileHolds
+                .Where(hold => context.DiscoveredFiles.Any(file =>
+                    file.Id == id && file.Path == hold.Path))
+                .ExecuteDeleteAsync(cancellationToken)
+            : await context.FileHolds.ExecuteDeleteAsync(cancellationToken);
+
+        if (released > 0)
+        {
+            logger.LogInformation(
+                "{Released} files that had been put back were released and can be filed again.",
+                released);
+        }
+
+        return released;
     }
 
     private async Task<FilingResult> CarryOutAsync(
@@ -245,6 +350,16 @@ public sealed class FilingService(
         CancellationToken cancellationToken)
     {
         var scene = candidate.Scene;
+
+        // Before anything is asked of the filesystem — ADR 0030. A file somebody
+        // put back is not filed by this run or by any other until it is
+        // released, so reading the header of it would be work on somebody's NAS
+        // to arrive at an answer that is already known.
+        if (candidate.Hold is { } hold)
+        {
+            return FilingPlan.Held(candidate.Id, candidate.Path, candidate.Name, scene, hold);
+        }
+
         var quality = await qualities.ReadAsync(candidate.Path, cancellationToken);
 
         return planner.Plan(
@@ -583,6 +698,9 @@ public sealed class FilingService(
             join written in context.FileResolutions.AsNoTracking()
                 on file.Id equals written.DiscoveredFileId into decisions
             from decision in decisions.DefaultIfEmpty()
+            join kept in context.FileHolds.AsNoTracking()
+                on file.Path equals kept.Path into holds
+            from hold in holds.DefaultIfEmpty()
             where file.SizeBytes > 0 && file.UnchangedSince <= settled
             where decision == null
                 ? identification != null && identification.VideoId != null
@@ -616,6 +734,13 @@ public sealed class FilingService(
                         decision.Title,
                         decision.ReleaseDate,
                         decision.SiteTitle),
+
+                // A held file stays in the list rather than being filtered out
+                // of it: it is a file waiting in a download directory like any
+                // other, and the screen is where somebody releases it.
+                Hold = hold == null
+                    ? null
+                    : new FilingHold(hold.HeldAt, hold.FiledAt, hold.FiledTo),
             }).ToListAsync(cancellationToken);
 
         return
@@ -631,7 +756,8 @@ public sealed class FilingService(
                 // from the same two answers as the name above — ADR 0023 and
                 // ADR 0028. It travels with the candidate because the rows it
                 // comes from are deleted the moment the file is filed.
-                OperationReason.From(row.Recognition, row.Decision))),
+                OperationReason.From(row.Recognition, row.Decision),
+                row.Hold)),
         ];
     }
 
@@ -733,6 +859,11 @@ public sealed class FilingService(
     /// </param>
     /// <param name="OsHash">The exact hash the scan read, where there was one. The other half.</param>
     /// <param name="Reason">Why the tool believes this file is that scene.</param>
+    /// <param name="Hold">
+    /// What an undo left on this file, or <c>null</c> for the ordinary case —
+    /// ADR 0030. It is read with the candidate rather than asked for per file,
+    /// and it is the first thing the plan looks at.
+    /// </param>
     private sealed record Candidate(
         int Id,
         string Path,
@@ -740,7 +871,8 @@ public sealed class FilingService(
         Scene? Scene,
         long SizeBytes,
         string? OsHash,
-        OperationReason Reason);
+        OperationReason Reason,
+        FilingHold? Hold);
 
     /// <param name="Written">
     /// What went in next to the video, for the log — <c>null</c> when nothing

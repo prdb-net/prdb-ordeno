@@ -142,15 +142,37 @@ later.
 
 ## Filing
 
-**Nothing is filed until somebody asks for it** —
-[ADR 0022](docs/adr/0022-filing-happens-when-it-is-asked-for.md). There is no
-filing timer, and its absence is a decision rather than an omission. The
-operation log and its undo now exist, which is what ADR 0022 made the timer wait
-for; what is still open is the question ADR 0029 handed it, which is what an
-undone file means to a run nobody is watching. What makes that a schedule rather than a rewrite is that **the preview
-is produced by the code that performs the run** — `FilingPlanner` decides
-everything and writes nothing, `LibraryMoves` writes and decides nothing, and
-the run works the plan out again as it reaches each file.
+**A run files what it is given, and it is the same run whether somebody asked
+for it or the clock did** —
+[ADR 0022](docs/adr/0022-filing-happens-when-it-is-asked-for.md) and
+[ADR 0031](docs/adr/0031-the-filing-timer-is-off-until-it-is-turned-on.md). The
+timer ADR 0022 deferred is `FilingWorker` calling `FilingRunner.TryFile` on an
+interval and nothing more. What makes that a schedule rather than a rewrite is
+that **the preview is produced by the code that performs the run** —
+`FilingPlanner` decides everything and writes nothing, `LibraryMoves` writes and
+decides nothing, and the run works the plan out again as it reaches each file.
+
+Four rules about the unattended half, each of which a plausible change would
+weaken into something worse:
+
+- **Off unless somebody turned it on.** `UnattendedFiling` is false for a fresh
+  installation and false for one upgraded into the release that added it; the
+  switch is in `/settings/library`, next to the artwork one, and it is not an
+  onboarding step. A tool that starts moving files because it was upgraded is
+  the surprise the hard rule below exists to prevent.
+- **The interval is a constant** (`FilingSchedule`), for the reason
+  `ScanSchedule`'s are. The switch is the setting.
+- **A run nobody asked for starts only when something is waiting**
+  (`FilingService.AnythingWaitingAsync`, one query over the tool's own tables).
+  Working out *what* would happen reads the header of every settled video, and
+  doing that four times an hour to be told nothing has arrived is work on
+  somebody's NAS for nothing.
+- **An unattended run that moved nothing leaves no row in the log.** ADR 0031
+  amends ADR 0028 here, which keeps that row for the person who asked: nobody
+  asked for a tick of the clock, and a row every quarter of an hour would push
+  three years of nights out of a thousand-run log inside a fortnight. A run that
+  moved something is logged exactly as an asked-for one is, and every run
+  records who asked.
 
 A filesystem cannot say whose a directory is, so the tool keeps one row per
 filed video — scene, directory, name, quality. It is what tells a second quality
@@ -159,7 +181,7 @@ scenes the layout gives one name, which must not. It is **not** the operation
 log: it says what is true of the library now, a row whose file has gone is
 deleted rather than kept, and the log lands next to it rather than out of it.
 
-Three rules that a plausible refactor would quietly break:
+Four rules that a plausible refactor would quietly break:
 
 - **A second quality relabels what is already there**
   ([ADR 0020](docs/adr/0020-a-second-quality-relabels-the-filed-file.md)). The
@@ -178,6 +200,13 @@ Three rules that a plausible refactor would quietly break:
   in the scene directory. A directory with anything in it counts as occupied, so
   a part file left by a killed container would make a scene's own directory look
   like somebody else's the next time round.
+- **A file an undo put back is held, and no run files it**
+  ([ADR 0030](docs/adr/0030-an-undone-file-is-held-until-somebody-releases-it.md))
+  — not the timer's, and not the one behind the button. A hold the button
+  ignored would make the plan depend on who was asking, which is the one thing
+  ADR 0022's shape rules out, and it would refile last night's two hundred for
+  somebody filing this morning's fourteen. Releasing is an act of its own, for
+  one file or all of them, and it moves nothing.
 
 ## The sidecar
 
@@ -305,6 +334,19 @@ A file that comes back is a file the tool has not seen: the row that said where
 it was went when it was filed, and the undo does not put it back. The ordinary
 loop takes it from there, which costs one prdb request and, for a file somebody
 settled by hand, the decision being asked for again.
+
+What it does leave is a **hold**
+([ADR 0030](docs/adr/0030-an-undone-file-is-held-until-somebody-releases-it.md)),
+which is what stops the loop ending where it began. `UndoService` writes the
+`FileHolds` row first among the writes that follow the move — a file that is back
+with no hold on it is the state the hold exists to prevent, so the interruption
+that could produce it is the one the order is chosen against — and it is keyed to
+the path, because there is no row left to key it to. It is not a dismissal
+(ADR 0023) and decides nothing about the video: it says that this file was filed
+and taken back. It goes when somebody releases it, when the bytes at that path
+change — the same statement in `ScanService` that forgets prdb's answer and a
+person's decision — and when a scan that walked its directory does not find the
+file.
 
 ## The review queue
 

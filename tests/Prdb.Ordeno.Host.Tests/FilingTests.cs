@@ -35,6 +35,8 @@ public sealed class FilingTests
     [InlineData("GET", "/api/filing")]
     [InlineData("POST", "/api/filing/plan")]
     [InlineData("POST", "/api/filing")]
+    [InlineData("DELETE", "/api/filing/holds")]
+    [InlineData("DELETE", "/api/filing/holds/1")]
     public async Task Filing_is_behind_the_password(string method, string path)
     {
         using var directory = new TempDirectory();
@@ -69,6 +71,33 @@ public sealed class FilingTests
         Assert.Empty(state.Results);
         Assert.Null(state.WhatItWouldDo);
         Assert.Null(state.WhatItDid);
+
+        // And it says which way the switch is set, because the sentence on the
+        // screen is built from it — ADR 0031.
+        Assert.False(state.Unattended);
+        Assert.False(state.AskedByTimer);
+        Assert.Equal(0, state.Held);
+    }
+
+    /// <summary>
+    /// Releasing a hold that is not there is not an error: the caller asked for
+    /// a file that is not held, and a file that is not held is the answer. It
+    /// works out the plan again either way, because that is what the screen
+    /// reads next.
+    /// </summary>
+    [Fact]
+    public async Task Releasing_nothing_is_an_answer_rather_than_a_failure()
+    {
+        using var directory = new TempDirectory();
+        await using var application = new OrdenoApplication(directory.Root);
+        using var client = await SignedIn(application);
+
+        using var one = await client.DeleteAsync(new Uri("/api/filing/holds/1", UriKind.Relative));
+        using var all = await client.DeleteAsync(new Uri("/api/filing/holds", UriKind.Relative));
+
+        Assert.Equal(HttpStatusCode.OK, one.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, all.StatusCode);
+        Assert.NotNull(await all.Content.ReadFromJsonAsync<FilingState>());
     }
 
     /// <summary>
