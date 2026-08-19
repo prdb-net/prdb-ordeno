@@ -811,6 +811,226 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HistoryState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/history/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UndoState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/history/runs/{runId}/undo/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    runId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UndoState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/history/runs/{runId}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    runId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UndoState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/history/operations/{operationId}/undo/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    operationId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UndoState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/history/operations/{operationId}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    operationId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UndoState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/queue": {
         parameters: {
             query?: never;
@@ -1142,6 +1362,19 @@ export interface components {
         HealthResponse: {
             status: string;
         };
+        HistoryState: {
+            runs: components["schemas"]["LoggedRunState"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pages: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            entriesShown: number | string;
+        };
         IdentificationState: {
             running: boolean;
             /** Format: date-time */
@@ -1168,6 +1401,42 @@ export interface components {
         LayoutOption: {
             name: string;
             description: string;
+        };
+        LoggedOperationState: {
+            /** Format: int32 */
+            id: number | string;
+            kind: string;
+            scene: null | string;
+            name: string;
+            from: string;
+            to: string;
+            quality: null | string;
+            movement: string;
+            what: string;
+            why: string;
+            sidecar: null | string;
+            artwork: null | string;
+            /** Format: date-time */
+            at: string;
+            /** Format: date-time */
+            undoneAt: null | string;
+        };
+        LoggedRunState: {
+            /** Format: int32 */
+            id: number | string;
+            kind: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            finishedAt: null | string;
+            account: string;
+            problem: null | string;
+            /** Format: int32 */
+            operations: number | string;
+            /** Format: int32 */
+            undone: number | string;
+            canBeUndone: boolean;
+            entries: components["schemas"]["LoggedOperationState"][];
         };
         MediaServerCheckState: {
             status: string;
@@ -1361,6 +1630,47 @@ export interface components {
             problem: null | string;
             movement: string;
             movementExplained: string;
+        };
+        UndoneFileState: {
+            /** Format: int32 */
+            operationId: number | string;
+            name: string;
+            scene: null | string;
+            state: string;
+            message: null | string;
+            leftovers: null | string;
+        };
+        UndoPlanState: {
+            /** Format: int32 */
+            operationId: number | string;
+            name: string;
+            scene: null | string;
+            outcome: string;
+            refusal: null | string;
+            message: string;
+        };
+        UndoState: {
+            running: boolean;
+            undoing: boolean;
+            /** Format: int32 */
+            runId: null | number | string;
+            /** Format: int32 */
+            operationId: null | number | string;
+            /** Format: date-time */
+            checkedAt: null | string;
+            /** Format: date-time */
+            undoneAt: null | string;
+            problem: null | string;
+            plan: components["schemas"]["UndoPlanState"][];
+            /** Format: int32 */
+            planTotal: number | string;
+            /** Format: int32 */
+            wouldReturn: number | string;
+            whatItWouldDo: null | string;
+            results: components["schemas"]["UndoneFileState"][];
+            /** Format: int32 */
+            resultTotal: number | string;
+            whatItDid: null | string;
         };
         VideoSearchState: {
             answered: boolean;

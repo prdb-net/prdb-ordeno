@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 using Microsoft.Extensions.Logging;
 
 using Prdb.Ordeno.Core.Library;
@@ -25,7 +27,18 @@ public enum ArtworkWriteState
 }
 
 /// <param name="Problem">What to tell the user. <c>null</c> when there is nothing to say.</param>
-public sealed record ArtworkOutcome(ArtworkWriteState State, string? Problem = null)
+/// <param name="Bytes">How long the image is, when one was written.</param>
+/// <param name="Fingerprint">
+/// A SHA-256 of those bytes, lowercase hexadecimal. It is the operation log's
+/// (ADR 0028), and it exists because ADR 0027 gave the image no marker: an undo
+/// may take away a file this tool downloaded and must never take away one
+/// somebody replaced it with.
+/// </param>
+public sealed record ArtworkOutcome(
+    ArtworkWriteState State,
+    string? Problem = null,
+    long? Bytes = null,
+    string? Fingerprint = null)
 {
     public bool Wrote => State is ArtworkWriteState.Written;
 }
@@ -279,8 +292,86 @@ public sealed class SceneArtwork(IHttpClientFactory clients, ILogger<SceneArtwor
 
         logger.LogInformation("Wrote {Path}.", absolutePath);
 
-        return new ArtworkOutcome(ArtworkWriteState.Written);
+        return new ArtworkOutcome(
+            ArtworkWriteState.Written,
+            Problem: null,
+            image.Length,
+            Fingerprint(image));
     }
+
+    /// <summary>
+    /// Takes away an image this tool downloaded, and only if it is still exactly
+    /// that — ADR 0029.
+    /// </summary>
+    /// <param name="bytes">How long the image was when it was written.</param>
+    /// <param name="fingerprint">What <see cref="Fingerprint"/> made of it then.</param>
+    /// <returns>
+    /// What to tell the user about what is left behind, or <c>null</c> when the
+    /// file is gone or was never there.
+    /// </returns>
+    /// <remarks>
+    /// The length is checked first because it is free, and the bytes are read
+    /// only when it matches. An image is a few hundred kilobytes, so being exact
+    /// here costs nothing — and being wrong costs somebody the picture they chose
+    /// for a scene, which is the one thing ADR 0027 was written to protect.
+    /// </remarks>
+    public string? Remove(string absolutePath, long bytes, string fingerprint)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fingerprint);
+
+        try
+        {
+            if (!File.Exists(absolutePath))
+            {
+                return null;
+            }
+
+            var found = new FileInfo(absolutePath);
+
+            if (found.Length != bytes || !Matches(absolutePath, fingerprint))
+            {
+                return $"'{Path.GetFileName(absolutePath)}' in that directory is not the image this "
+                    + "run downloaded any more, so it was left exactly where it is.";
+            }
+
+            File.Delete(absolutePath);
+
+            logger.LogInformation("Removed {Path}, which this tool downloaded.", absolutePath);
+
+            return null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(exception, "Could not remove the image {Path}.", absolutePath);
+
+            return $"'{Path.GetFileName(absolutePath)}' could not be removed: {exception.Message}";
+        }
+    }
+
+    private static bool Matches(string absolutePath, string fingerprint)
+    {
+        using var reading = new FileStream(
+            absolutePath,
+            new FileStreamOptions
+            {
+                Mode = FileMode.Open,
+                Access = FileAccess.Read,
+                Share = FileShare.Read,
+            });
+
+        return string.Equals(
+            Convert.ToHexStringLower(SHA256.HashData(reading)),
+            fingerprint,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// What was written, in thirty-two bytes. Read by an undo and by nothing
+    /// else — ADR 0027 decides writes by what is at the path, and no fingerprint
+    /// takes part in that.
+    /// </summary>
+    private static string Fingerprint(byte[] image) => Convert.ToHexStringLower(SHA256.HashData(image));
 
     private static void Stage(string staged, byte[] image)
     {

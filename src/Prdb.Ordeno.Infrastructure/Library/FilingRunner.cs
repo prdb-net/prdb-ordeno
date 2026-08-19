@@ -13,23 +13,23 @@ namespace Prdb.Ordeno.Infrastructure.Library;
 /// <remarks>
 /// <para>
 /// There is no timer here, and its absence is the decision in ADR 0022 rather
-/// than an omission. When the operation log
-/// (<see href="https://github.com/prdb-net/prdb-ordeno/issues/19">#19</see>)
-/// exists, a worker calls <see cref="TryFile"/> on an interval and nothing else
-/// about this changes.
+/// than an omission. The operation log and its undo now exist, so what is left
+/// before a worker calls <see cref="TryFile"/> on an interval is the question
+/// ADR 0029 handed it: what an undone file means to a run nobody is watching.
 /// </para>
 /// <para>
-/// One gate over both entry points. Planning while a run is filing would show a
+/// One gate over both entry points, and the way back takes the same one
+/// (<see cref="LibraryGate"/>). Planning while a run is filing would show a
 /// preview of a library that is being rearranged underneath it, and two runs at
 /// once would have two copies of the same plan moving the same file.
 /// </para>
 /// </remarks>
 public sealed class FilingRunner(
     IServiceScopeFactory scopes,
+    LibraryGate gate,
     TimeProvider time,
     ILogger<FilingRunner> logger)
 {
-    private readonly SemaphoreSlim gate = new(1, 1);
 
     /// <summary>
     /// Written by whichever thread holds the gate and read by request threads
@@ -62,7 +62,7 @@ public sealed class FilingRunner(
 
     private bool TryStart(bool filing, CancellationToken cancellationToken)
     {
-        if (!gate.Wait(0, CancellationToken.None))
+        if (!gate.TryEnter())
         {
             return false;
         }
@@ -125,7 +125,7 @@ public sealed class FilingRunner(
         }
         finally
         {
-            gate.Release();
+            gate.Leave();
         }
     }
 
@@ -138,9 +138,7 @@ public sealed class FilingRunner(
     /// <para>
     /// Nothing in here can fail a filing. It runs after the report is published,
     /// it swallows everything, and a configured connection that is down is a line
-    /// in the log — the entry the operation log
-    /// (<see href="https://github.com/prdb-net/prdb-ordeno/issues/19">#19</see>)
-    /// will carry — and never a file that did not get filed.
+    /// in the container's log and never a file that did not get filed.
     /// </para>
     /// <para>
     /// A shutdown skips it altogether. The container is going away and the videos

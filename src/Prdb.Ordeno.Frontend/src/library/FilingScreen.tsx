@@ -100,7 +100,8 @@ export default function FilingScreen({ onSignedOut }: { onSignedOut: () => void 
 
         <p className="hint">
           prdb-ordeno files nothing on its own. It moves a file when you press the second button
-          below, and until there is a way to undo a run that went wrong it will not do it unasked.
+          below, and every move it makes is in the History, where a run that went wrong can be put
+          back.
         </p>
 
         <div className="row buttons">

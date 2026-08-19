@@ -66,8 +66,16 @@ public static class LibraryServiceCollectionExtensions
         services.TryAddSingleton<SceneArtwork>();
         services.TryAddSingleton<ISceneArtwork>(provider => provider.GetRequiredService<SceneArtwork>());
 
+        // One gate over everything that rearranges the library, shared with the
+        // way back — ADR 0029. Two of them would be no gate at all.
+        services.TryAddSingleton<LibraryGate>();
+
         services.TryAddSingleton<FilingRunner>();
         services.TryAddScoped<FilingService>();
+
+        // Filing writes the operation log as it goes (ADR 0028), so the writer
+        // is part of this slice rather than something the host remembers to add.
+        services.TryAddScoped<History.OperationLog>();
 
         // The optional half: a run that has finished tells the media server what
         // it wrote, if there is one to tell. Registered here because the runner

@@ -7,6 +7,17 @@ namespace Prdb.Ordeno.Host.Library;
 internal static class FilingEndpoints
 {
     /// <summary>
+    /// What a request is told when the gate is shut. Filing and the way back
+    /// share one (<c>LibraryGate</c>), so this is what somebody pressing a
+    /// button while an undo is working gets — a sentence rather than a button
+    /// that quietly did nothing.
+    /// </summary>
+    private const string Busy =
+        "Something else is rearranging the library just now. Nothing was started; try again in a "
+        + "moment.";
+
+
+    /// <summary>
     /// Behind the password like everything else, and this group more plainly
     /// than most: one of these moves files the user cannot get back.
     /// </summary>
@@ -25,22 +36,24 @@ internal static class FilingEndpoints
         // for.
         filing.MapPost("/plan", (FilingRunner runner, IHostApplicationLifetime lifetime) =>
         {
-            runner.TryPlan(lifetime.ApplicationStopping);
+            var started = runner.TryPlan(lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(FilingState.Of(runner.Status));
+            return TypedResults.Ok(FilingState.Of(runner.Status, started ? null : Busy));
         });
 
         // The one that moves files. It is a POST from a button somebody pressed
-        // after reading the plan — ADR 0022 — and there is no timer behind it
-        // until there is a way back (#19).
+        // after reading the plan — ADR 0022 — and there is still no timer behind
+        // it: what it writes is now in the operation log, where a run can be put
+        // back (ADR 0029), and what a timer would owe an undone file is the
+        // question that decides when one arrives.
         filing.MapPost("/", (FilingRunner runner, IHostApplicationLifetime lifetime) =>
         {
             // Deliberately not the request's token. A library is minutes of
             // copying and the browser is long gone; what may stop this is the
             // container shutting down, which has to reach the file being copied.
-            runner.TryFile(lifetime.ApplicationStopping);
+            var started = runner.TryFile(lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(FilingState.Of(runner.Status));
+            return TypedResults.Ok(FilingState.Of(runner.Status, started ? null : Busy));
         });
 
         return endpoints;

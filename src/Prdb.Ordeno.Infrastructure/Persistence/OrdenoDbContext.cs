@@ -24,6 +24,10 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
 
     public DbSet<FiledVideo> FiledVideos => Set<FiledVideo>();
 
+    public DbSet<OperationRun> OperationRuns => Set<OperationRun>();
+
+    public DbSet<OperationEntry> Operations => Set<OperationEntry>();
+
     public DbSet<Session> Sessions => Set<Session>();
 
     /// <summary>
@@ -178,6 +182,72 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
             // current — the state this tool must never be in about a file it
             // has moved.
             filed.HasIndex(row => new { row.Directory, row.FileName }).IsUnique();
+        });
+
+        modelBuilder.Entity<OperationRun>(run =>
+        {
+            run.HasKey(row => row.Id);
+
+            run.Property(row => row.Kind).HasConversion<string>().HasMaxLength(32);
+
+            run.Property(row => row.StartedAt).HasConversion(UtcTimestamp);
+            run.Property(row => row.FinishedAt).HasConversion(UtcTimestamp);
+
+            // The screen reads the log newest first, and the trim reads it
+            // oldest first. One index, both directions.
+            run.HasIndex(row => row.StartedAt);
+        });
+
+        modelBuilder.Entity<OperationEntry>(operation =>
+        {
+            operation.ToTable("Operations");
+
+            operation.HasKey(row => row.Id);
+            operation.Property(row => row.FromPath).IsRequired();
+            operation.Property(row => row.ToPath).IsRequired();
+            operation.Property(row => row.QualityLabel).HasMaxLength(16);
+            operation.Property(row => row.OsHash).HasMaxLength(64);
+            operation.Property(row => row.ArtworkFingerprint).HasMaxLength(64);
+
+            // As names rather than as numbers, the way every other state is
+            // stored: reading this table with a database browser is one of the
+            // three jobs it has.
+            operation.Property(row => row.Kind).HasConversion<string>().HasMaxLength(32);
+            operation.Property(row => row.Movement).HasConversion<string>().HasMaxLength(32);
+            operation.Property(row => row.DecidedBy).HasConversion<string>().HasMaxLength(32);
+            operation.Property(row => row.Confidence).HasConversion<string>().HasMaxLength(32);
+            operation.Property(row => row.MatchedBy).HasConversion<string>().HasMaxLength(32);
+
+            operation.Property(row => row.At).HasConversion(UtcTimestamp);
+            operation.Property(row => row.DecidedAt).HasConversion(UtcTimestamp);
+            operation.Property(row => row.UndoneAt).HasConversion(UtcTimestamp);
+
+            // Every read is "the entries of this run", in the order they
+            // happened — and an undo reads the same index backwards.
+            operation.HasIndex(row => row.RunId);
+
+            // And the one question an undo asks of the whole table: has a later
+            // run taken this name. Reverse chronological order is the rule at
+            // both scales (ADR 0029), and this is how it is enforced rather than
+            // hoped for.
+            operation.HasIndex(row => row.FromPath);
+
+            // The entries go with the run, in the schema rather than in whatever
+            // code happens to do the deleting: the trim removes whole runs
+            // (ADR 0028), and half a run in the log is the one state worth
+            // ruling out.
+            operation.HasOne<OperationRun>()
+                .WithMany()
+                .HasForeignKey(row => row.RunId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // The undo run that reversed it, on the other hand, is only a
+            // reference: it is trimmed on its own schedule, and losing it must
+            // not take the entry with it.
+            operation.HasOne<OperationRun>()
+                .WithMany()
+                .HasForeignKey(row => row.UndoneByRunId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Session>(session =>

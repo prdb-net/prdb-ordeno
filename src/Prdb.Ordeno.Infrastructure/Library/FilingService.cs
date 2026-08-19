@@ -2,10 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Ordeno.Core.Configuration;
+using Prdb.Ordeno.Core.History;
 using Prdb.Ordeno.Core.Identification;
 using Prdb.Ordeno.Core.Library;
 using Prdb.Ordeno.Core.Review;
 using Prdb.Ordeno.Core.Scanning;
+using Prdb.Ordeno.Infrastructure.History;
 using Prdb.Ordeno.Infrastructure.Persistence;
 
 namespace Prdb.Ordeno.Infrastructure.Library;
@@ -39,6 +41,7 @@ public sealed class FilingService(
     LibraryMoves moves,
     Sidecars sidecars,
     SceneArtwork artwork,
+    OperationLog log,
     TimeProvider time,
     ILogger<FilingService> logger)
 {
@@ -86,10 +89,17 @@ public sealed class FilingService(
     /// </remarks>
     public async Task<FilingReport> FileAsync(CancellationToken cancellationToken = default)
     {
+        // Opened before anything is looked at, so that a run refused by an
+        // unusable library leaves the same trace as one that filed two hundred
+        // files. "You asked, and this is why nothing happened" is an answer
+        // somebody who was asleep needs as much as the other one.
+        var runId = await log.StartAsync(RunKind.Filing);
         var library = await ReadLibraryAsync(cancellationToken);
 
         if (library.Problem is not null)
         {
+            await log.FinishAsync(runId, account: null, library.Problem);
+
             return new FilingReport([], library.Problem);
         }
 
@@ -111,16 +121,32 @@ public sealed class FilingService(
                 // reported as not reached rather than silently dropped.
                 results.AddRange(candidates.Skip(index).Select(NotReached));
 
-                return new FilingReport(results, "Filing was stopped before it finished.");
+                var stopped = new FilingReport(results, "Filing was stopped before it finished.");
+                await log.FinishAsync(runId, stopped.Account, stopped.Problem);
+
+                return stopped;
             }
 
-            results.Add(await CarryOutAsync(library, candidates[index], filed, described, cancellationToken));
+            results.Add(await CarryOutAsync(
+                runId,
+                library,
+                candidates[index],
+                filed,
+                described,
+                cancellationToken));
         }
 
-        return new FilingReport(results);
+        var report = new FilingReport(results);
+
+        // Closed with what the screen says, and the log is trimmed behind it —
+        // ADR 0028, where a trim happens after a run and never inside one.
+        await log.FinishAsync(runId, report.Account);
+
+        return report;
     }
 
     private async Task<FilingResult> CarryOutAsync(
+        int runId,
         Library library,
         Candidate candidate,
         Dictionary<Guid, List<FiledCopy>> filed,
@@ -150,7 +176,7 @@ public sealed class FilingService(
                     return new FilingResult(FilingResultState.Failed, plan, renamed.Problem);
                 }
 
-                await RecordRelabelAsync(relabel);
+                await RecordRelabelAsync(runId, relabel, plan, candidate.Reason);
             }
 
             var outcome = await moves.FileAsync(
@@ -165,19 +191,30 @@ public sealed class FilingService(
                 return new FilingResult(FilingResultState.Failed, plan, outcome.Problem);
             }
 
-            await RecordFilingAsync(library, plan, filed);
+            var operationId = await RecordFilingAsync(runId, library, plan, candidate, outcome, filed);
 
             // Last, and only now: the video is where the sidecar describes it,
             // and a sidecar that fails to be written costs the library a title
             // rather than a file. The image goes after both, because it is the
             // one of the three that spends somebody's connection — and it is the
             // one that can be left out entirely without anybody noticing.
+            var sidecar = WriteSidecar(plan, described);
+            var image = await WriteArtworkAsync(plan, described, cancellationToken);
+
+            // What went in next to the video is added to the entry now rather
+            // than written with it, because it happens after the move and the
+            // entry is written with the move. A container killed in between
+            // leaves an entry that knows about a file it does not mention, and
+            // an undo that leaves that file alone — which is the safe half of
+            // the two.
+            await log.WroteAsync(operationId, sidecar.Written, image.Written);
+
             return new FilingResult(
                 FilingResultState.Filed,
                 plan,
                 outcome.Problem,
-                WriteSidecar(plan, described),
-                await WriteArtworkAsync(plan, described, cancellationToken));
+                sidecar.Message,
+                image.Message);
         }
         catch (OperationCanceledException)
         {
@@ -226,8 +263,9 @@ public sealed class FilingService(
     /// The sidecar, once the video it describes is in place.
     /// </summary>
     /// <returns>
-    /// What to tell the user about it, or <c>null</c> when it was written and
-    /// there is nothing to say.
+    /// What to tell the user about it, and what was written where — the second
+    /// half for the operation log, which is what lets an undo take away a
+    /// sidecar this run put in a directory and nothing else.
     /// </returns>
     /// <remarks>
     /// Nothing here can undo the move above, and nothing here is allowed to try.
@@ -236,13 +274,13 @@ public sealed class FilingService(
     /// reported as failed because a small file could not be written would leave
     /// the user looking for a video that is already filed.
     /// </remarks>
-    private string? WriteSidecar(FilingPlan plan, Descriptions described)
+    private SidecarWriting WriteSidecar(FilingPlan plan, Descriptions described)
     {
         if (!plan.Sidecar.Writes)
         {
             // Somebody else's, or unreadable. The planner has already said so in
             // words, and the row after the run says the same thing.
-            return plan.Sidecar.Message;
+            return new SidecarWriting(plan.Sidecar.Message);
         }
 
         if (described.Of(plan.Scene!.VideoId) is not { } metadata)
@@ -250,12 +288,16 @@ public sealed class FilingService(
             // Nothing is written on the strength of a partial or failed lookup.
             // The absence of a sidecar is a state the media server handles; one
             // built from half an answer is a state it reads and believes.
-            return described.Problem
+            return new SidecarWriting(described.Problem
                 ?? "prdb no longer knows the video this file was recognised as, so no "
-                    + $"'{ScenePath.SidecarFileName}' was written next to it. The video is filed.";
+                    + $"'{ScenePath.SidecarFileName}' was written next to it. The video is filed.");
         }
 
-        return sidecars.Write(plan.Sidecar.Path!, MovieNfo.For(metadata)).Problem;
+        var written = sidecars.Write(plan.Sidecar.Path!, MovieNfo.For(metadata));
+
+        return new SidecarWriting(
+            written.Problem,
+            written.Wrote ? new WrittenSidecar(plan.Sidecar.Path!) : null);
     }
 
     /// <summary>
@@ -274,7 +316,7 @@ public sealed class FilingService(
     /// with no image is what section 5 of the layout document measured the
     /// library against.
     /// </remarks>
-    private async Task<string?> WriteArtworkAsync(
+    private async Task<ArtworkWriting> WriteArtworkAsync(
         FilingPlan plan,
         Descriptions described,
         CancellationToken cancellationToken)
@@ -283,7 +325,7 @@ public sealed class FilingService(
         {
             // Off, or there is a file at that name already. Either way the plan
             // said so before the run started.
-            return plan.Artwork.Message;
+            return new ArtworkWriting(plan.Artwork.Message);
         }
 
         // Nothing is downloaded on the strength of a partial or failed lookup,
@@ -291,10 +333,19 @@ public sealed class FilingService(
         // row already carries the reason prdb could not be asked.
         if (described.Of(plan.Scene!.VideoId)?.ImageUrl is not { } url)
         {
-            return null;
+            return ArtworkWriting.Nothing;
         }
 
-        return (await artwork.DownloadAsync(url, plan.Artwork.Path!, cancellationToken)).Problem;
+        var downloaded = await artwork.DownloadAsync(url, plan.Artwork.Path!, cancellationToken);
+
+        // The length and the fingerprint go into the log because ADR 0027 left
+        // the image itself unmarked. They are what an undo compares before it
+        // removes one, and nothing else ever reads them.
+        return new ArtworkWriting(
+            downloaded.Problem,
+            downloaded is { Wrote: true, Bytes: { } bytes, Fingerprint: { } fingerprint }
+                ? new WrittenArtwork(plan.Artwork.Path!, bytes, fingerprint)
+                : null);
     }
 
     /// <summary>
@@ -389,9 +440,12 @@ public sealed class FilingService(
     /// the scene around it, under a name carrying prdb's id, for a reason
     /// nobody could see.
     /// </remarks>
-    private async Task RecordFilingAsync(
+    private async Task<int> RecordFilingAsync(
+        int runId,
         Library library,
         FilingPlan plan,
+        Candidate candidate,
+        MoveOutcome outcome,
         Dictionary<Guid, List<FiledCopy>> filed)
     {
         // Not the run's token, for the reason above.
@@ -431,6 +485,17 @@ public sealed class FilingService(
             FiledAt = time.GetUtcNow(),
         });
 
+        // In the same statement as the row above, which is ADR 0028's one hard
+        // requirement of this path: the record that the library holds the file
+        // and the record of how it got there are written together or not at all.
+        var entry = log.Filed(
+            runId,
+            plan,
+            candidate.Reason,
+            candidate.SizeBytes,
+            candidate.OsHash,
+            outcome.CreatedDirectory);
+
         // The file is not in the download directory any more, so neither is the
         // tool's memory of having seen it there. Waiting for the next scan to
         // notice would leave a row that a second filing run would try to move
@@ -450,6 +515,8 @@ public sealed class FilingService(
         }
 
         copies.Add(new FiledCopy(videoId, directory, fileName, plan.QualityLabel!));
+
+        return entry.Id;
     }
 
     /// <summary>
@@ -459,7 +526,11 @@ public sealed class FilingService(
     /// a record that matches the disk. Like the row below, it is written whether
     /// or not the run has been asked to stop: the rename has already happened.
     /// </summary>
-    private async Task RecordRelabelAsync(FilingRelabel relabel)
+    private async Task RecordRelabelAsync(
+        int runId,
+        FilingRelabel relabel,
+        FilingPlan plan,
+        OperationReason reason)
     {
         var directory = System.IO.Path.GetDirectoryName(relabel.From)!;
         var was = System.IO.Path.GetFileName(relabel.From);
@@ -468,6 +539,16 @@ public sealed class FilingService(
         await context.FiledVideos
             .Where(row => row.Directory == directory && row.FileName == was)
             .ExecuteUpdateAsync(row => row.SetProperty(filed => filed.FileName, now), CancellationToken.None);
+
+        // Its own entry in the log, and written here rather than with the filing
+        // that caused it: ADR 0020 asked for that, because an undo that returns
+        // the newcomer and leaves this rename in place is half an undo. It is
+        // undone after the newcomer leaves, which is what reading a run
+        // backwards gives for nothing.
+        log.Relabelled(runId, relabel, plan.Scene, reason);
+
+        await context.SaveChangesAsync(CancellationToken.None);
+        context.ChangeTracker.Clear();
     }
 
     /// <summary>
@@ -512,6 +593,8 @@ public sealed class FilingService(
                 file.Id,
                 file.SourceDirectoryId,
                 file.Path,
+                file.SizeBytes,
+                file.OsHash,
                 Recognition = identification == null
                     ? null
                     : new Recognition(
@@ -541,7 +624,14 @@ public sealed class FilingService(
                 row.Id,
                 row.Path,
                 Below(sources.GetValueOrDefault(row.SourceDirectoryId), row.Path),
-                Named(row.Recognition, row.Decision))),
+                Named(row.Recognition, row.Decision),
+                row.SizeBytes,
+                row.OsHash,
+                // What the log records as the reason, read in the same order and
+                // from the same two answers as the name above — ADR 0023 and
+                // ADR 0028. It travels with the candidate because the rows it
+                // comes from are deleted the moment the file is filed.
+                OperationReason.From(row.Recognition, row.Decision))),
         ];
     }
 
@@ -637,7 +727,32 @@ public sealed class FilingService(
     /// What this file is, or <c>null</c> when what named it does not amount to
     /// one — which the planner turns into a reason rather than a move.
     /// </param>
-    private sealed record Candidate(int Id, string Path, string Name, Scene? Scene);
+    /// <param name="SizeBytes">
+    /// What the scan measured. It goes into the log, where it is half of how an
+    /// undo tells the file it filed from one that has changed since.
+    /// </param>
+    /// <param name="OsHash">The exact hash the scan read, where there was one. The other half.</param>
+    /// <param name="Reason">Why the tool believes this file is that scene.</param>
+    private sealed record Candidate(
+        int Id,
+        string Path,
+        string Name,
+        Scene? Scene,
+        long SizeBytes,
+        string? OsHash,
+        OperationReason Reason);
+
+    /// <param name="Written">
+    /// What went in next to the video, for the log — <c>null</c> when nothing
+    /// did, whether because the plan said so or because it could not be written.
+    /// </param>
+    private sealed record SidecarWriting(string? Message, WrittenSidecar? Written = null);
+
+    /// <param name="Written">The same for the image, which is the one with a fingerprint on it.</param>
+    private sealed record ArtworkWriting(string? Message, WrittenArtwork? Written = null)
+    {
+        public static readonly ArtworkWriting Nothing = new(Message: null);
+    }
 
     /// <summary>
     /// What prdb said about the scenes this run is filing.

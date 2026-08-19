@@ -19,6 +19,13 @@ public sealed record FilingPreview(IReadOnlyList<FilingPlan> Plans, string? Prob
 public sealed record FilingReport(IReadOnlyList<FilingResult> Results, string? Problem = null)
 {
     public static readonly FilingReport Nothing = new([]);
+
+    /// <summary>
+    /// The one line the operation log keeps (ADR 0028). It is the sentence the
+    /// screen shows, from the same code, because a log that describes a run
+    /// differently from the screen that watched it is two accounts of one night.
+    /// </summary>
+    public string Account => FilingRun.WhatARunDid(Results);
 }
 
 /// <summary>
@@ -155,67 +162,68 @@ public sealed record FilingRun(
     }
 
     /// <summary>What the last run did, in one line. <c>null</c> until one has happened.</summary>
-    public string? WhatItDid
+    public string? WhatItDid => FiledAt is null ? null : WhatARunDid(Results);
+
+    /// <summary>
+    /// What a run did, in one line, from its results alone. Static because the
+    /// operation log needs the same sentence about a run that is over, and a
+    /// second implementation of it would drift.
+    /// </summary>
+    public static string WhatARunDid(IReadOnlyList<FilingResult> results)
     {
-        get
+        ArgumentNullException.ThrowIfNull(results);
+
+        var filed = results.Count(result => result.Filed);
+        var failed = results.Count(result => result.State is FilingResultState.Failed);
+        var stopped = results.Count(result => result.State is FilingResultState.Stopped);
+
+        // Filed, and the sidecar that was to go in next to it did not: prdb
+        // could not be asked, or the file could not be written. The rows say
+        // which, but a run of thousands shows two hundred of them, and prdb
+        // being down is a thing about the run rather than about one file.
+        var bare = results.Count(result =>
+            result.Filed && result.Plan.Sidecar.Writes && result.Sidecar is not null);
+
+        // And the same for the image, which is worth a line here for the
+        // same reason: one CDN having a bad afternoon is a fact about the
+        // run, and reading it off two hundred rows is nobody's evening. A
+        // scene prdb has no image for says nothing and is not counted —
+        // ADR 0027 is plain that this is the ordinary case.
+        var unillustrated = results.Count(result =>
+            result.Filed && result.Plan.Artwork.Writes && result.Artwork is not null);
+
+        var parts = new List<string>
         {
-            if (FiledAt is null)
-            {
-                return null;
-            }
+            filed == 1 ? "1 video was filed" : $"{Number(filed)} videos were filed",
+        };
 
-            var filed = Results.Count(result => result.Filed);
-            var failed = Results.Count(result => result.State is FilingResultState.Failed);
-            var stopped = Results.Count(result => result.State is FilingResultState.Stopped);
-
-            // Filed, and the sidecar that was to go in next to it did not: prdb
-            // could not be asked, or the file could not be written. The rows say
-            // which, but a run of thousands shows two hundred of them, and prdb
-            // being down is a thing about the run rather than about one file.
-            var bare = Results.Count(result =>
-                result.Filed && result.Plan.Sidecar.Writes && result.Sidecar is not null);
-
-            // And the same for the image, which is worth a line here for the
-            // same reason: one CDN having a bad afternoon is a fact about the
-            // run, and reading it off two hundred rows is nobody's evening. A
-            // scene prdb has no image for says nothing and is not counted —
-            // ADR 0027 is plain that this is the ordinary case.
-            var unillustrated = Results.Count(result =>
-                result.Filed && result.Plan.Artwork.Writes && result.Artwork is not null);
-
-            var parts = new List<string>
-            {
-                filed == 1 ? "1 video was filed" : $"{Number(filed)} videos were filed",
-            };
-
-            if (bare > 0)
-            {
-                parts.Add(bare == filed
-                    ? "none of them could be given the metadata file the media server reads, and the "
-                        + "rows say why"
-                    : $"{Number(bare)} of them could not be given the metadata file the media server "
-                        + "reads");
-            }
-
-            if (unillustrated > 0)
-            {
-                parts.Add(unillustrated == 1
-                    ? "1 did not get the image that was to go next to it"
-                    : $"{Number(unillustrated)} did not get the image that was to go next to them");
-            }
-
-            if (failed > 0)
-            {
-                parts.Add($"{Number(failed)} could not be moved and were left exactly as they were");
-            }
-
-            if (stopped > 0)
-            {
-                parts.Add($"{Number(stopped)} were not reached before the tool was asked to stop");
-            }
-
-            return Join(parts) + ".";
+        if (bare > 0)
+        {
+            parts.Add(bare == filed
+                ? "none of them could be given the metadata file the media server reads, and the "
+                    + "rows say why"
+                : $"{Number(bare)} of them could not be given the metadata file the media server "
+                    + "reads");
         }
+
+        if (unillustrated > 0)
+        {
+            parts.Add(unillustrated == 1
+                ? "1 did not get the image that was to go next to it"
+                : $"{Number(unillustrated)} did not get the image that was to go next to them");
+        }
+
+        if (failed > 0)
+        {
+            parts.Add($"{Number(failed)} could not be moved and were left exactly as they were");
+        }
+
+        if (stopped > 0)
+        {
+            parts.Add($"{Number(stopped)} were not reached before the tool was asked to stop");
+        }
+
+        return Join(parts) + ".";
     }
 
     private static string Join(IReadOnlyList<string> parts) => parts.Count switch

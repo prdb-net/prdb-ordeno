@@ -14,15 +14,22 @@ internal static class TestVideos
     /// A second of test pattern at the given size. Small enough to make in
     /// milliseconds and to leave in a temporary directory.
     /// </summary>
-    public static string Write(string path, int width, int height)
+    /// <param name="lossless">
+    /// Encoded without loss, which makes the file large rather than pretty. The
+    /// exact hash needs 128 KiB before it produces anything at all, so this is
+    /// the only way to test what the tool does with a file whose bytes changed
+    /// while its length did not.
+    /// </param>
+    public static string Write(string path, int width, int height, bool lossless = false)
     {
         Run(
             "ffmpeg",
             [
                 "-v", "error",
                 "-f", "lavfi",
-                "-i", $"testsrc=size={width}x{height}:duration=1:rate=5",
+                "-i", $"testsrc=size={width}x{height}:duration={(lossless ? 2 : 1)}:rate=5",
                 "-pix_fmt", "yuv420p",
+                .. lossless ? new[] { "-c:v", "ffv1" } : [],
                 "-y", path,
             ]);
 

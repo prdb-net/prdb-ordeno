@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { configuration as api, Refused, SignedOut, type ConfigurationState } from './api/client'
 import ConfigurationScreen from './configuration/ConfigurationScreen'
 import { firstSection } from './configuration/sections'
+import HistoryScreen from './history/HistoryScreen'
 import FilingScreen from './library/FilingScreen'
 import { areas } from './navigation/areas'
 import Navigation from './navigation/Navigation'
@@ -100,6 +101,7 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
       {area === '/downloads' && <ScanScreen onSignedOut={onSignedOut} />}
       {area === '/filing' && <FilingScreen onSignedOut={onSignedOut} />}
       {area === '/review' && <ReviewScreen onSignedOut={onSignedOut} />}
+      {area === '/history' && <HistoryScreen onSignedOut={onSignedOut} />}
       {area === '/settings' && settings}
     </>
   )

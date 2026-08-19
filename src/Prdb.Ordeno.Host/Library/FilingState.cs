@@ -108,7 +108,16 @@ public sealed record FilingState(
     /// </summary>
     public const int Limit = 200;
 
-    public static FilingState Of(FilingRun run)
+    /// <summary>
+    /// What is going on, and — when a request has just been refused — why
+    /// nothing started.
+    /// </summary>
+    /// <param name="problem">
+    /// Said instead of what the last run reported. Filing and the way back share
+    /// one gate, so a button pressed while the other one is working is a state
+    /// the screen would otherwise have to infer from nothing happening.
+    /// </param>
+    public static FilingState Of(FilingRun run, string? problem = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
@@ -117,7 +126,7 @@ public sealed record FilingState(
             Filing: run.Filing,
             PlannedAt: run.PlannedAt,
             FiledAt: run.FiledAt,
-            Problem: run.Problem,
+            Problem: problem ?? run.Problem,
             Plan: [.. run.Plan.Take(Limit).Select(Planned)],
             PlanTotal: run.Plan.Count,
             WouldFile: run.WouldFile,

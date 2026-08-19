@@ -26,7 +26,16 @@ public enum MoveState
 }
 
 /// <param name="Problem">What to tell the user. <c>null</c> when it worked.</param>
-public sealed record MoveOutcome(MoveState State, string? Problem = null)
+/// <param name="CreatedDirectory">
+/// Whether the directory the file went into did not exist a moment before. The
+/// operation log keeps it (ADR 0028) so that an undo removes a directory the
+/// tool made and never one it found — a question nothing can answer afterwards,
+/// because by then the directory exists either way.
+/// </param>
+public sealed record MoveOutcome(
+    MoveState State,
+    string? Problem = null,
+    bool CreatedDirectory = false)
 {
     public bool Moved => State is MoveState.Moved;
 
@@ -74,6 +83,18 @@ public sealed class LibraryMoves(ILogger<LibraryMoves> logger)
     /// </para>
     /// </remarks>
     public const string StagingDirectoryName = ".prdb-ordeno-incoming";
+
+    /// <summary>
+    /// What a copy on the way back is called while it is arriving — ADR 0029.
+    /// </summary>
+    /// <remarks>
+    /// A file rather than a directory, and in the destination's own directory,
+    /// because that is the filesystem the final rename has to happen on. Dotted,
+    /// so that the scan passes over it (<c>VideoFiles.IsCandidate</c>): it lands
+    /// in a download directory, which is the one place where a half-copied video
+    /// would otherwise be picked up as a new download and asked about.
+    /// </remarks>
+    public const string ReturningFilePrefix = ".prdb-ordeno-returning-";
 
     /// <summary>
     /// A file already in the library, renamed to carry its quality (ADR 0020).
@@ -158,9 +179,12 @@ public sealed class LibraryMoves(ILogger<LibraryMoves> logger)
                 + "path that is taken is not an overwrite.");
         }
 
+        var directory = Path.GetDirectoryName(target)!;
+        var created = !Directory.Exists(directory);
+
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            Directory.CreateDirectory(directory);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -171,9 +195,78 @@ public sealed class LibraryMoves(ILogger<LibraryMoves> logger)
                 $"The directory this scene goes in could not be created: {exception.Message}");
         }
 
+        var outcome = movement is FileMovement.Rename
+            ? Rename(source, target)
+            : await CopyThenDeleteAsync(source, target, () => Staging(libraryRoot), cancellationToken);
+
+        return outcome.Moved ? outcome with { CreatedDirectory = created } : outcome;
+    }
+
+    /// <summary>
+    /// A file back out of the library and into the directory it came from —
+    /// ADR 0029.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The same two shapes as the way there, deliberately: a reversal that took a
+    /// shortcut the forward path is not allowed to take would be a way of losing
+    /// a file while claiming to give it back. Nothing here decides whether the
+    /// file may go back — <c>UndoPlanner</c> has already said so, and this is
+    /// asked again only about what a failure would leave behind.
+    /// </para>
+    /// <para>
+    /// A copy is staged in the destination's own directory rather than under the
+    /// library root, because that is the filesystem the final rename has to
+    /// happen on. The name is dotted, which is what keeps the scan (
+    /// <c>VideoFiles.IsCandidate</c>) from picking a half-copied video up as a
+    /// new download.
+    /// </para>
+    /// </remarks>
+    public async Task<MoveOutcome> ReturnAsync(
+        string source,
+        string target,
+        FileMovement movement,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+
+        if (!File.Exists(source))
+        {
+            return new MoveOutcome(
+                MoveState.SourceMissing,
+                "The file was gone by the time it was to be moved back. Nothing was written.");
+        }
+
+        if (Exists(target))
+        {
+            return new MoveOutcome(
+                MoveState.TargetTaken,
+                $"Something is already at '{Path.GetFileName(target)}'. Nothing was written — a "
+                + "reversal that overwrites is not a reversal.");
+        }
+
         return movement is FileMovement.Rename
             ? Rename(source, target)
-            : await CopyThenDeleteAsync(source, target, libraryRoot, cancellationToken);
+            : await CopyThenDeleteAsync(
+                source,
+                target,
+                () => Path.Combine(
+                    Path.GetDirectoryName(target)!,
+                    $"{ReturningFilePrefix}{Guid.NewGuid():n}.part"),
+                cancellationToken);
+    }
+
+    /// <summary>
+    /// Where a copy into the library is written before it is put in place. The
+    /// directory is created on the way past, which is the one thing that can fail
+    /// before any bytes are read.
+    /// </summary>
+    private static string Staging(string libraryRoot)
+    {
+        var staging = Directory.CreateDirectory(Path.Combine(libraryRoot, StagingDirectoryName));
+
+        return Path.Combine(staging.FullName, $"{Guid.NewGuid():n}.part");
     }
 
     /// <summary>
@@ -207,11 +300,40 @@ public sealed class LibraryMoves(ILogger<LibraryMoves> logger)
         }
     }
 
-    private IEnumerable<string> Enumerate(string staging)
+    /// <summary>
+    /// The same for the way back, in a directory a file is being returned to.
+    /// Called once per directory at the start of an undo rather than per file,
+    /// because it lists a download directory and those hold thousands of entries.
+    /// </summary>
+    public void ClearReturning(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        foreach (var leftover in Enumerate(directory, $"{ReturningFilePrefix}*.part"))
+        {
+            try
+            {
+                File.Delete(leftover);
+
+                logger.LogInformation(
+                    "Removed {Path}, left behind by a copy back that did not finish.",
+                    leftover);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                logger.LogWarning(exception, "Could not remove the leftover copy {Path}.", leftover);
+            }
+        }
+    }
+
+    private IEnumerable<string> Enumerate(string staging, string pattern = "*")
     {
         try
         {
-            return Directory.EnumerateFiles(staging).ToList();
+            return Directory.EnumerateFiles(staging, pattern).ToList();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -251,23 +373,22 @@ public sealed class LibraryMoves(ILogger<LibraryMoves> logger)
     private async Task<MoveOutcome> CopyThenDeleteAsync(
         string source,
         string target,
-        string libraryRoot,
+        Func<string> staging,
         CancellationToken cancellationToken)
     {
         string staged;
 
         try
         {
-            var staging = Directory.CreateDirectory(Path.Combine(libraryRoot, StagingDirectoryName));
-            staged = Path.Combine(staging.FullName, $"{Guid.NewGuid():n}.part");
+            staged = staging();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            logger.LogWarning(exception, "Could not prepare the staging directory under {Root}.", libraryRoot);
+            logger.LogWarning(exception, "Could not prepare somewhere to copy {Source} to.", source);
 
             return new MoveOutcome(
                 MoveState.Failed,
-                $"The library could not be written to: {exception.Message}");
+                $"The copy could not be prepared: {exception.Message}");
         }
 
         try

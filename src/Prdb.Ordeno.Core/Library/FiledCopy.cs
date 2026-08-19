@@ -15,11 +15,10 @@ namespace Prdb.Ordeno.Core.Library;
 /// </para>
 /// <para>
 /// It is deliberately the smallest record that answers it, and it is not the
-/// operation log
-/// (<see href="https://github.com/prdb-net/prdb-ordeno/issues/19">#19</see>).
-/// The log records what happened so it can be undone; this records what is
-/// currently true of the library so the next filing can be decided. The log will
-/// be written from the plan, and will grow next to this rather than out of it.
+/// operation log (ADR 0028). The log records what happened so it can be undone;
+/// this records what is currently true of the library so the next filing can be
+/// decided. The log is written from the plan, and it grew next to this rather
+/// than out of it.
 /// </para>
 /// </remarks>
 /// <param name="VideoId">

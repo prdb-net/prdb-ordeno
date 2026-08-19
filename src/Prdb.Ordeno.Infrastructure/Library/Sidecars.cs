@@ -158,6 +158,53 @@ public sealed class Sidecars(ILogger<Sidecars> logger) : ISidecars
             state is SidecarState.Ours ? SidecarWriteState.Replaced : SidecarWriteState.Written);
     }
 
+    /// <summary>
+    /// Takes away a sidecar this tool wrote, and nothing else — ADR 0029.
+    /// </summary>
+    /// <returns>
+    /// What to tell the user about what is left behind, or <c>null</c> when the
+    /// file is gone or was never there.
+    /// </returns>
+    /// <remarks>
+    /// Whose it is, is asked here rather than taken from the log: the marker
+    /// ADR 0024 puts in the document is the answer, a user who deleted that line
+    /// has taken the file back, and an undo is exactly as bound by that as a
+    /// rewrite is.
+    /// </remarks>
+    public string? Remove(string absolutePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
+
+        switch (StateOf(absolutePath))
+        {
+            case SidecarState.Missing:
+                return null;
+
+            case SidecarState.Foreign:
+                return $"'{Path.GetFileName(absolutePath)}' in that directory was not written by "
+                    + "this tool, so it was left exactly where it is.";
+
+            case SidecarState.Unknown:
+                return $"'{Path.GetFileName(absolutePath)}' in that directory could not be read, so "
+                    + "it was left exactly where it is.";
+        }
+
+        try
+        {
+            File.Delete(absolutePath);
+
+            logger.LogInformation("Removed {Path}, which this tool wrote.", absolutePath);
+
+            return null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(exception, "Could not remove the sidecar {Path}.", absolutePath);
+
+            return $"'{Path.GetFileName(absolutePath)}' could not be removed: {exception.Message}";
+        }
+    }
+
     private static void Stage(string staged, string document)
     {
         using var writing = new FileStream(

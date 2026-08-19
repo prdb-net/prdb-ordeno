@@ -12,13 +12,12 @@ namespace Prdb.Ordeno.Infrastructure.Persistence;
 /// answer.
 /// </para>
 /// <para>
-/// It is not the operation log
-/// (<see href="https://github.com/prdb-net/prdb-ordeno/issues/19">#19</see>).
-/// The log records what happened so that it can be undone; this records what is
-/// currently true of the library so the next filing can be decided, and it holds
-/// nothing filing does not read. A row that no longer describes a file on disk
-/// is deleted rather than kept as history — which is exactly what a log would
-/// have to keep, and why it is a table of its own rather than a column here.
+/// It is not the operation log (<see cref="OperationEntry"/>, ADR 0028). The log
+/// records what happened so that it can be undone; this records what is currently
+/// true of the library so the next filing can be decided, and it holds nothing
+/// filing does not read. A row that no longer describes a file on disk is deleted
+/// rather than kept as history — which is exactly what the log has to keep, and
+/// why it is a table of its own rather than a column here.
 /// </para>
 /// </remarks>
 public sealed class FiledVideo
