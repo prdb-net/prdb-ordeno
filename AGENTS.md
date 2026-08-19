@@ -214,8 +214,11 @@ A filed video with a tidy name and no metadata next to it is not what anyone cam
 for: what the media server shows comes out of a `movie.nfo` in the scene
 directory. **It is written as part of filing a video and at no other time**
 ([ADR 0024](docs/adr/0024-the-sidecar-is-written-by-filing-and-only-over-its-own.md)),
-and *when* an existing one is refreshed is still an open question rather than an
-omission.
+and that is still the only thing writing one today. *When* an existing one is
+refreshed is decided and not yet built — a run of its own, over the scenes the
+tool filed, rewriting a document only where it differs from what prdb says now
+([ADR 0032](docs/adr/0032-a-refresh-is-a-run-of-its-own-over-what-the-tool-filed.md)
+and [ADR 0033](docs/adr/0033-a-refresh-rewrites-only-its-own-and-cannot-be-undone.md)).
 
 `MovieNfo` builds the document and touches nothing; `Sidecars` puts it on disk and
 decides nothing except what it finds at the path the moment before it writes.
@@ -268,9 +271,11 @@ Four rules that a plausible refactor would quietly break:
 - **Nothing is ever written over, and there is no marker.** That is the point: a
   tool that never replaces need not recognise its own work, so an image stays
   whether the tool wrote it last month or the user chose it this morning, and
-  deleting the file is how a fresh one is asked for. A refresh that replaced one
-  would be an amendment to ADR 0027 ([#38](https://github.com/prdb-net/prdb-ordeno/issues/38)),
-  not a tidy-up.
+  deleting the file is how a fresh one is asked for. The refresh decision was
+  offered that amendment and declined it
+  ([ADR 0033](docs/adr/0033-a-refresh-rewrites-only-its-own-and-cannot-be-undone.md)):
+  a refresh writes an image where there is none and never over one, so replacing
+  is still something no path in this tool does.
 - **A failed download leaves nothing and fails nothing.** A dotted temporary
   name, flushed, renamed with `overwrite: false`; the size is capped and the
   bytes are checked to be a whole JPEG before any of that, because the URL is one
