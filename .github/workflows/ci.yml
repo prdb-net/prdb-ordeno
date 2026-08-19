@@ -17,6 +17,10 @@ jobs:
     name: Build, test and check the API contract
     runs-on: ubuntu-latest
 
+    # This job passes in about five minutes. The default is six hours, which is
+    # long enough for a step that hangs to look like a step that is working.
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v7
 
@@ -38,8 +42,51 @@ jobs:
       # out of a real file need the same pair here. Faking them would test the
       # parser rather than the question, and the question is what decides
       # whether somebody's video is filed.
+      #
+      # They still come from the archives rather than from a binary pinned here,
+      # for the reason ADR 0013 gives for the image: a distribution build is the
+      # ffmpeg the tool actually runs, and it is kept current by somebody else.
+      # Both stalls that prompted this installed in about two minutes when the
+      # step was simply run again, so where the binary comes from was never the
+      # problem — a step that waited for it forever was. So that is what is
+      # bounded: apt drops a connection that has stopped answering instead of
+      # holding it open, three attempts cover a mirror that is briefly gone, and
+      # the limit on the step turns anything worse into a red job somebody can
+      # re-run rather than a check that reads as "still building" until GitHub's
+      # six-hour limit kills it.
       - name: Install ffmpeg and ffprobe
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y ffmpeg
+        timeout-minutes: 12
+        run: |
+          apt_get() {
+            sudo timeout 240 apt-get \
+              -o Acquire::http::Timeout=15 \
+              -o Acquire::https::Timeout=15 \
+              -o Acquire::Retries=2 \
+              "$@"
+          }
+
+          attempts=3
+
+          for attempt in $(seq "$attempts"); do
+            if apt_get update && apt_get install --no-install-recommends -y ffmpeg; then
+              ffmpeg -version | head -n 1
+              ffprobe -version | head -n 1
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$attempts" ]; then
+              echo "::warning::Installing ffmpeg failed or stalled on attempt ${attempt} of ${attempts}, retrying in 15 seconds."
+
+              # An attempt the timeout killed can leave dpkg half-configured,
+              # and the next one would then fail on that rather than on the
+              # archives it is here to retry.
+              sudo dpkg --configure -a || true
+              sleep 15
+            fi
+          done
+
+          echo "::error::ffmpeg could not be installed in ${attempts} attempts; the apt output above is the failure. This is usually a transient archive or DNS problem on the runner, so re-running the job is the first thing to try."
+          exit 1
 
       # Writes src/Prdb.Ordeno.Host/openapi.json on the way through.
       - name: Build
