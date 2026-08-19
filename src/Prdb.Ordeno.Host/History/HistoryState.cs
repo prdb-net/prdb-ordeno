@@ -140,7 +140,16 @@ public sealed record UndoState(
     /// </summary>
     public const int Limit = 200;
 
-    public static UndoState Of(UndoRun run)
+    /// <summary>
+    /// What is going on, and — when a request has just been refused — why
+    /// nothing started.
+    /// </summary>
+    /// <param name="problem">
+    /// Said instead of what the last run reported. It is the answer to a button
+    /// that did nothing, which is a state the screen would otherwise have to
+    /// infer from the absence of a change.
+    /// </param>
+    public static UndoState Of(UndoRun run, string? problem = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
@@ -151,7 +160,7 @@ public sealed record UndoState(
             OperationId: run.OperationId,
             CheckedAt: run.CheckedAt,
             UndoneAt: run.UndoneAt,
-            Problem: run.Problem,
+            Problem: problem ?? run.Problem,
             Plan: [.. run.Plan.Take(Limit).Select(Planned)],
             PlanTotal: run.Plan.Count,
             WouldReturn: run.WouldReturn,

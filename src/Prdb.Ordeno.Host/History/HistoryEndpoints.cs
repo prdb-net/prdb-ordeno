@@ -7,6 +7,17 @@ namespace Prdb.Ordeno.Host.History;
 internal static class HistoryEndpoints
 {
     /// <summary>
+    /// What a request is told when the gate is shut. Filing and undoing share
+    /// one (<c>LibraryGate</c>), so this is what somebody pressing a button
+    /// while a filing run is finishing gets — a sentence rather than a button
+    /// that quietly did nothing.
+    /// </summary>
+    private const string Busy =
+        "Something else is rearranging the library just now. Nothing was started; try again in a "
+        + "moment.";
+
+
+    /// <summary>
     /// Behind the password like everything else, and this group as plainly as
     /// filing: half of it moves files that a user cannot get back — back.
     /// </summary>
@@ -35,9 +46,9 @@ internal static class HistoryEndpoints
             UndoRunner runner,
             IHostApplicationLifetime lifetime) =>
         {
-            runner.TryCheck(runId, operationId: null, lifetime.ApplicationStopping);
+            var started = runner.TryCheck(runId, operationId: null, lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(UndoState.Of(runner.Status));
+            return TypedResults.Ok(UndoState.Of(runner.Status, started ? null : Busy));
         });
 
         // The one that moves files back. A POST from a button somebody pressed
@@ -49,9 +60,9 @@ internal static class HistoryEndpoints
             UndoRunner runner,
             IHostApplicationLifetime lifetime) =>
         {
-            runner.TryUndo(runId, operationId: null, lifetime.ApplicationStopping);
+            var started = runner.TryUndo(runId, operationId: null, lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(UndoState.Of(runner.Status));
+            return TypedResults.Ok(UndoState.Of(runner.Status, started ? null : Busy));
         });
 
         // And the same pair for one operation — the file somebody is looking at.
@@ -61,9 +72,9 @@ internal static class HistoryEndpoints
             UndoRunner runner,
             IHostApplicationLifetime lifetime) =>
         {
-            runner.TryCheck(runId: null, operationId, lifetime.ApplicationStopping);
+            var started = runner.TryCheck(runId: null, operationId, lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(UndoState.Of(runner.Status));
+            return TypedResults.Ok(UndoState.Of(runner.Status, started ? null : Busy));
         });
 
         history.MapPost("/operations/{operationId:int}/undo", (
@@ -71,9 +82,9 @@ internal static class HistoryEndpoints
             UndoRunner runner,
             IHostApplicationLifetime lifetime) =>
         {
-            runner.TryUndo(runId: null, operationId, lifetime.ApplicationStopping);
+            var started = runner.TryUndo(runId: null, operationId, lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(UndoState.Of(runner.Status));
+            return TypedResults.Ok(UndoState.Of(runner.Status, started ? null : Busy));
         });
 
         return endpoints;

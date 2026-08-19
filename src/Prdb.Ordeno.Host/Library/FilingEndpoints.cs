@@ -7,6 +7,17 @@ namespace Prdb.Ordeno.Host.Library;
 internal static class FilingEndpoints
 {
     /// <summary>
+    /// What a request is told when the gate is shut. Filing and the way back
+    /// share one (<c>LibraryGate</c>), so this is what somebody pressing a
+    /// button while an undo is working gets — a sentence rather than a button
+    /// that quietly did nothing.
+    /// </summary>
+    private const string Busy =
+        "Something else is rearranging the library just now. Nothing was started; try again in a "
+        + "moment.";
+
+
+    /// <summary>
     /// Behind the password like everything else, and this group more plainly
     /// than most: one of these moves files the user cannot get back.
     /// </summary>
@@ -25,9 +36,9 @@ internal static class FilingEndpoints
         // for.
         filing.MapPost("/plan", (FilingRunner runner, IHostApplicationLifetime lifetime) =>
         {
-            runner.TryPlan(lifetime.ApplicationStopping);
+            var started = runner.TryPlan(lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(FilingState.Of(runner.Status));
+            return TypedResults.Ok(FilingState.Of(runner.Status, started ? null : Busy));
         });
 
         // The one that moves files. It is a POST from a button somebody pressed
@@ -40,9 +51,9 @@ internal static class FilingEndpoints
             // Deliberately not the request's token. A library is minutes of
             // copying and the browser is long gone; what may stop this is the
             // container shutting down, which has to reach the file being copied.
-            runner.TryFile(lifetime.ApplicationStopping);
+            var started = runner.TryFile(lifetime.ApplicationStopping);
 
-            return TypedResults.Ok(FilingState.Of(runner.Status));
+            return TypedResults.Ok(FilingState.Of(runner.Status, started ? null : Busy));
         });
 
         return endpoints;

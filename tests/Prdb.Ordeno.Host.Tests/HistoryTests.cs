@@ -115,13 +115,7 @@ public sealed class HistoryTests
 
         var run = Assert.Single((await Filed(client)).Runs);
 
-        using var response = await client.PostAsync(
-            new Uri($"/api/history/runs/{run.Id}/undo/check", UriKind.Relative),
-            content: null);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var state = await Settled(client);
+        var state = await Checked(client, $"/api/history/runs/{run.Id}/undo/check");
 
         Assert.Equal(run.Id, state.RunId);
         Assert.NotNull(state.CheckedAt);
@@ -140,11 +134,7 @@ public sealed class HistoryTests
         await using var application = new OrdenoApplication(directory.Root);
         using var client = await SignedIn(application);
 
-        await Accepted(client.PostAsync(
-            new Uri("/api/history/runs/404/undo/check", UriKind.Relative),
-            content: null));
-
-        var state = await Settled(client);
+        var state = await Checked(client, "/api/history/runs/404/undo/check");
 
         Assert.NotNull(state.Problem);
         Assert.Empty(state.Plan);
@@ -173,14 +163,49 @@ public sealed class HistoryTests
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
     }
 
-    /// <summary>Polls until the run that was started has finished.</summary>
-    private static async Task<UndoState> Settled(HttpClient client)
+    /// <summary>
+    /// Asks for a check and waits for it, asking again while something else is
+    /// under way.
+    /// </summary>
+    /// <remarks>
+    /// Filing and the way back share one gate, and a filing run holds it until
+    /// after it has written its row in the log — which is the moment this test
+    /// waits for. So "no" is a real answer here rather than a flake to sleep
+    /// through, and asking again is exactly what somebody pressing the button
+    /// again would do.
+    /// </remarks>
+    private static async Task<UndoState> Checked(HttpClient client, string path)
+    {
+        var before = await client.GetFromJsonAsync<UndoState>("/api/history/undo");
+
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            using var response = await client.PostAsync(new Uri(path, UriKind.Relative), content: null);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var started = await response.Content.ReadFromJsonAsync<UndoState>();
+
+            // Either it is working, or it was so quick that it has already
+            // finished. Both mean this request was the one that started it.
+            if (started is { Running: true } || started?.CheckedAt != before?.CheckedAt)
+            {
+                return await Settled(client, before?.CheckedAt);
+            }
+
+            await Task.Delay(20);
+        }
+
+        throw new InvalidOperationException("The check never started.");
+    }
+
+    /// <summary>Polls until the check that was started has finished.</summary>
+    private static async Task<UndoState> Settled(HttpClient client, DateTimeOffset? before)
     {
         for (var attempt = 0; attempt < 100; attempt++)
         {
             var state = await client.GetFromJsonAsync<UndoState>("/api/history/undo");
 
-            if (state is not null && !state.Running && state.CheckedAt is not null)
+            if (state is { Running: false, CheckedAt: not null } && state.CheckedAt != before)
             {
                 return state;
             }
@@ -188,7 +213,7 @@ public sealed class HistoryTests
             await Task.Delay(20);
         }
 
-        throw new InvalidOperationException("The undo did not finish.");
+        throw new InvalidOperationException("The check did not finish.");
     }
 
     /// <summary>Polls until a filing run has left its row in the log.</summary>

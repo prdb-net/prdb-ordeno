@@ -141,7 +141,9 @@ A run is checked before it is put back. Checking moves nothing and says, file by
 file, what would go back and what would not; putting it back moves the files to
 the directories they came from, takes away the `movie.nfo` and the `fanart.jpg`
 that run wrote — and only those — and removes the scene directory it made if
-nothing else is left in it. A single file can be put back on its own.
+nothing else is left in it. A single file can be put back on its own. Filing and
+putting back never happen at once, and a button pressed while the other one is
+working says so rather than quietly doing nothing.
 
 Anything that cannot be put back safely is left exactly as it is and says why:
 it is not where it was filed, it has changed since, something is already where it
