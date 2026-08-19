@@ -130,6 +130,36 @@ says what did not arrive next to it. A scene prdb has no picture for is filed
 without one and without a complaint, because that is the ordinary case rather
 than a problem.
 
+Every file the tool moves is now written down, and a run can be put back. A new
+History area lists the runs newest first: what each one did, every file it
+moved, where that file came from, where it went — and why the tool believed that
+was right, which is the rung prdb matched on and how it graded the match, or
+that you named the video yourself in the review queue. Months later that is the
+answer to "why is this file here", and it is what a bug report can quote.
+
+A run is checked before it is put back. Checking moves nothing and says, file by
+file, what would go back and what would not; putting it back moves the files to
+the directories they came from, takes away the `movie.nfo` and the `fanart.jpg`
+that run wrote — and only those — and removes the scene directory it made if
+nothing else is left in it. A single file can be put back on its own.
+
+Anything that cannot be put back safely is left exactly as it is and says why:
+it is not where it was filed, it has changed since, something is already where it
+would go back to, the directory it came from is gone, or a later run renamed it.
+A partial undo is reported rather than hidden — if a hundred and ninety of two
+hundred go back, the ten that did not are on the screen with a reason each. What
+you wrote yourself is never removed: a `movie.nfo` you edited stays where it is,
+and so does an image that is not the one the tool downloaded.
+
+A file that comes back is a file the tool has not seen. The next scan finds it,
+prdb is asked about it once more, and an answer you gave in the review queue for
+it is asked for again.
+
+The log does not grow forever, and it needs no pruning. It keeps the most recent
+runs — twenty thousand moved files or a thousand runs, whichever bites first —
+and drops the oldest runs whole, so a run that is in the log can always be put
+back as a run rather than as half of one.
+
 Setup has gained one optional step: the address of your media server and an API
 key for it. Leaving it empty is a complete setup and there is no warning
 anywhere about it — the tool files videos and writes the metadata file beside

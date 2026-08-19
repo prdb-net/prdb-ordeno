@@ -31,8 +31,10 @@ internal static class FilingEndpoints
         });
 
         // The one that moves files. It is a POST from a button somebody pressed
-        // after reading the plan — ADR 0022 — and there is no timer behind it
-        // until there is a way back (#19).
+        // after reading the plan — ADR 0022 — and there is still no timer behind
+        // it: what it writes is now in the operation log, where a run can be put
+        // back (ADR 0029), and what a timer would owe an undone file is the
+        // question that decides when one arrives.
         filing.MapPost("/", (FilingRunner runner, IHostApplicationLifetime lifetime) =>
         {
             // Deliberately not the request's token. A library is minutes of

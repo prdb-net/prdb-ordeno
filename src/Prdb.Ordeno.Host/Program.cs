@@ -8,12 +8,14 @@ using Microsoft.OpenApi;
 
 using Prdb.Ordeno.Host.Access;
 using Prdb.Ordeno.Host.Configuration;
+using Prdb.Ordeno.Host.History;
 using Prdb.Ordeno.Host.Identification;
 using Prdb.Ordeno.Host.Library;
 using Prdb.Ordeno.Host.Review;
 using Prdb.Ordeno.Host.Scanning;
 using Prdb.Ordeno.Infrastructure.Access;
 using Prdb.Ordeno.Infrastructure.Configuration;
+using Prdb.Ordeno.Infrastructure.History;
 using Prdb.Ordeno.Infrastructure.Identification;
 using Prdb.Ordeno.Infrastructure.Library;
 using Prdb.Ordeno.Infrastructure.Persistence;
@@ -33,6 +35,7 @@ builder.Services.AddOrdenoConfiguration();
 builder.Services.AddOrdenoScanning();
 builder.Services.AddOrdenoIdentification();
 builder.Services.AddOrdenoLibrary();
+builder.Services.AddOrdenoHistory();
 builder.Services.AddOrdenoReview();
 
 // The tool is set up once and left alone, so looking in the download
@@ -139,6 +142,7 @@ app.MapConfiguration();
 app.MapScanning();
 app.MapIdentification();
 app.MapFiling();
+app.MapHistory();
 app.MapReview();
 
 // ADR 0006: routing happens in the browser, so unknown paths return index.html

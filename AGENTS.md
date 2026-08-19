@@ -144,10 +144,10 @@ later.
 
 **Nothing is filed until somebody asks for it** —
 [ADR 0022](docs/adr/0022-filing-happens-when-it-is-asked-for.md). There is no
-filing timer, and its absence is a decision rather than an omission: the
-unattended run arrives with the operation log and its undo
-([#19](https://github.com/prdb-net/prdb-ordeno/issues/19)) and not one release
-earlier. What makes that a schedule rather than a rewrite is that **the preview
+filing timer, and its absence is a decision rather than an omission. The
+operation log and its undo now exist, which is what ADR 0022 made the timer wait
+for; what is still open is the question ADR 0029 handed it, which is what an
+undone file means to a run nobody is watching. What makes that a schedule rather than a rewrite is that **the preview
 is produced by the code that performs the run** — `FilingPlanner` decides
 everything and writes nothing, `LibraryMoves` writes and decides nothing, and
 the run works the plan out again as it reaches each file.
@@ -253,6 +253,58 @@ The image URL rides in on the batch lookup the sidecar is already written from
 (`VideoDetailDto.Images`, first entry — the order is documented and stable), so
 artwork costs prdb no extra request. A scene it has no image for is the ordinary
 case and says nothing at all.
+
+## The operation log, and the way back
+
+Everything the tool moves is written down as it moves it, and a run can be put
+back — [ADR 0028](docs/adr/0028-the-operation-log-records-what-changed-and-is-trimmed-by-whole-runs.md)
+and [ADR 0029](docs/adr/0029-undo-returns-one-operation-or-one-run-and-refuses-rather-than-guessing.md).
+One record with three jobs: it is what the History screen shows, what a bug
+report quotes, and what an undo reads.
+
+`Core/History` decides and writes nothing — `UndoPlanner` turns an entry and what
+the filesystem says about it into a plan. `Infrastructure/History` performs:
+`OperationLog` writes the entries and trims the log, `UndoService` puts files
+back, and it does it through `LibraryMoves`, so the way back is as careful as the
+way there.
+
+Six rules that a plausible refactor would quietly break:
+
+- **An entry is written in the same `SaveChanges` as the `FiledVideos` row, and
+  with no cancellation token.** A file the tool moved and did not log is the one
+  file with no way back, and it is created by exactly the interruption undo
+  exists for. What went in next to the video — the sidecar, the image — is added
+  to the entry afterwards, because it is written afterwards; the entry is never
+  delayed to wait for it.
+- **Only what changed a filesystem is an entry.** Skipped, already filed, blocked
+  and failed moved nothing, so the run's own row carries the sentence about them
+  and the log stays a record of what the tool did rather than an activity feed
+  that grows with the download directories.
+- **A relabel is an entry of its own, and a run is undone backwards.** ADR 0020
+  asked for the first and ADR 0029 for the second: the newcomer leaves before the
+  file it relabelled is renamed back, or the undo is half of one. The same rule
+  holds between runs — an operation whose file a later run renamed is refused,
+  and the refusal names that run.
+- **Nothing is removed on the strength of the log alone.** The `movie.nfo` has to
+  still carry ADR 0024's marker, the `fanart.jpg` has to still be the bytes the
+  entry recorded a fingerprint of, and the scene directory has to be one that
+  operation created and have nothing left in it. The fingerprint is the one thing
+  ADR 0027 left no other way to answer, and it is read by an undo and by nothing
+  else: it takes no part in deciding a write, where the answer stays "never over
+  anything".
+- **The trim drops whole runs, oldest first**, at the point a run is closed and
+  never inside one. A run in the log can be undone as a run, or it is not in the
+  log at all. The bounds are counts rather than an age
+  (`HistoryLimits`) — an age bounds nothing on the week somebody points the tool
+  at a NAS full of files, which is the week an undo is most likely to be wanted.
+- **Filing and undoing are behind one gate** (`LibraryGate`), because two runs
+  rearranging one library at once is two plans moving one file in opposite
+  directions.
+
+A file that comes back is a file the tool has not seen: the row that said where
+it was went when it was filed, and the undo does not put it back. The ordinary
+loop takes it from there, which costs one prdb request and, for a file somebody
+settled by hand, the decision being asked for again.
 
 ## The review queue
 

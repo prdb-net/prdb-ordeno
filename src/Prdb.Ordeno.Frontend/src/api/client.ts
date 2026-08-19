@@ -15,6 +15,12 @@ export type RecognisedState = components['schemas']['RecognisedState']
 export type FilingState = components['schemas']['FilingState']
 export type PlannedFileState = components['schemas']['PlannedFileState']
 export type FiledFileState = components['schemas']['FiledFileState']
+export type HistoryState = components['schemas']['HistoryState']
+export type LoggedRunState = components['schemas']['LoggedRunState']
+export type LoggedOperationState = components['schemas']['LoggedOperationState']
+export type UndoState = components['schemas']['UndoState']
+export type UndoPlanState = components['schemas']['UndoPlanState']
+export type UndoneFileState = components['schemas']['UndoneFileState']
 export type ReviewQueueState = components['schemas']['ReviewQueueState']
 export type ReviewEntryState = components['schemas']['ReviewEntryState']
 export type ReviewCandidateState = components['schemas']['ReviewCandidateState']
@@ -185,6 +191,35 @@ export const filing = {
   plan: () => request<FilingState>('/api/filing/plan', { method: 'POST' }),
 
   file: () => request<FilingState>('/api/filing', { method: 'POST' }),
+}
+
+/**
+ * What the tool did to somebody's files, and the way back out of it — ADR 0028
+ * and ADR 0029.
+ *
+ * `check` moves nothing and `undo` moves files back; they are two calls for the
+ * reason filing's two are, and the second is the one that is not safe to press.
+ * Both answer as soon as a run is under way rather than when it has finished, so
+ * the screen keeps reading `undoState` until `running` goes back to false.
+ */
+export const history = {
+  read: (page = 1) => request<HistoryState>(`/api/history?page=${String(page)}`),
+
+  undoState: () => request<UndoState>('/api/history/undo'),
+
+  checkRun: (runId: number) =>
+    request<UndoState>(`/api/history/runs/${String(runId)}/undo/check`, { method: 'POST' }),
+
+  undoRun: (runId: number) =>
+    request<UndoState>(`/api/history/runs/${String(runId)}/undo`, { method: 'POST' }),
+
+  checkOperation: (operationId: number) =>
+    request<UndoState>(`/api/history/operations/${String(operationId)}/undo/check`, {
+      method: 'POST',
+    }),
+
+  undoOperation: (operationId: number) =>
+    request<UndoState>(`/api/history/operations/${String(operationId)}/undo`, { method: 'POST' }),
 }
 
 /** Which list of the queue is being read. */
