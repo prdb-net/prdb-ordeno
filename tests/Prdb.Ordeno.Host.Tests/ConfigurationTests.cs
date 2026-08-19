@@ -171,6 +171,36 @@ public sealed class ConfigurationTests
         }
     }
 
+    /// <summary>
+    /// ADR 0027's switch, over HTTP: off on a fresh installation, and on only
+    /// because somebody asked. It is not part of the guided path, so nothing
+    /// about finishing the setup depends on it.
+    /// </summary>
+    [Fact]
+    public async Task Artwork_is_off_until_it_is_turned_on()
+    {
+        using var directory = new TempDirectory();
+        await using var application = new OrdenoApplication(directory.Root);
+        using var client = await SignedIn(application);
+
+        var fresh = await client.GetFromJsonAsync<ConfigurationState>("/api/configuration");
+        Assert.False(fresh!.Artwork);
+
+        var response = await client.PutAsJsonAsync(
+            "/api/configuration/artwork",
+            new SetArtworkRequest(Enabled: true));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True((await response.Content.ReadFromJsonAsync<ConfigurationState>())!.Artwork);
+
+        // And back off again, because a switch that only goes one way is not one.
+        var off = await client.PutAsJsonAsync(
+            "/api/configuration/artwork",
+            new SetArtworkRequest(Enabled: false));
+
+        Assert.False((await off.Content.ReadFromJsonAsync<ConfigurationState>())!.Artwork);
+    }
+
     [Fact]
     public async Task A_layout_this_release_does_not_have_is_refused()
     {

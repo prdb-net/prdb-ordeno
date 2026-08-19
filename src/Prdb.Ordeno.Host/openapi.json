@@ -319,6 +319,45 @@
         }
       }
     },
+    "/api/configuration/artwork": {
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetArtworkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/configuration/media-server": {
       "put": {
         "tags": [
@@ -872,6 +911,7 @@
           "layout",
           "availableLayouts",
           "mediaServer",
+          "artwork",
           "complete",
           "readyToComplete",
           "whatHappensNext"
@@ -918,6 +958,9 @@
                 "$ref": "#/components/schemas/MediaServerState"
               }
             ]
+          },
+          "artwork": {
+            "type": "boolean"
           },
           "complete": {
             "type": "boolean"
@@ -979,7 +1022,8 @@
           "scene",
           "targetName",
           "message",
-          "sidecar"
+          "sidecar",
+          "artwork"
         ],
         "type": "object",
         "properties": {
@@ -1016,6 +1060,12 @@
             ]
           },
           "sidecar": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artwork": {
             "type": [
               "null",
               "string"
@@ -1295,7 +1345,8 @@
           "movement",
           "moves",
           "message",
-          "sidecar"
+          "sidecar",
+          "artwork"
         ],
         "type": "object",
         "properties": {
@@ -1365,6 +1416,12 @@
             ]
           },
           "sidecar": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artwork": {
             "type": [
               "null",
               "string"
@@ -1999,6 +2056,17 @@
         "properties": {
           "apiKey": {
             "type": "string"
+          }
+        }
+      },
+      "SetArtworkRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
           }
         }
       },

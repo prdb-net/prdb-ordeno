@@ -42,6 +42,11 @@ public sealed record MediaServerState(string Url);
 /// never will be: the tool stores it and tells the browser only that it has one
 /// (ADR 0009).
 /// </summary>
+/// <param name="Artwork">
+/// Whether filing downloads one image per scene (ADR 0027). Not something
+/// onboarding collects — the tool runs without it — so it is here for the
+/// settings screen and false on every installation that never asked for it.
+/// </param>
 public sealed record ConfigurationState(
     bool ApiKeySet,
     IReadOnlyList<SourceState> Sources,
@@ -49,6 +54,7 @@ public sealed record ConfigurationState(
     string? Layout,
     IReadOnlyList<LayoutOption> AvailableLayouts,
     MediaServerState? MediaServer,
+    bool Artwork,
     bool Complete,
     bool ReadyToComplete,
     string WhatHappensNext);
@@ -85,6 +91,13 @@ public sealed record SetApiKeyRequest(string ApiKey);
 public sealed record AddSourceRequest(string Path);
 
 public sealed record SetTargetRequest(string Path, string Layout);
+
+/// <summary>
+/// The artwork switch. A field rather than a bare <c>PUT</c> and <c>DELETE</c>
+/// pair, because this is one setting with two values and not a thing that exists
+/// or does not.
+/// </summary>
+public sealed record SetArtworkRequest(bool Enabled);
 
 /// <summary>
 /// Both fields together, because neither is any use alone. Sending them empty is
@@ -135,6 +148,15 @@ internal static class ConfigurationEndpoints
             ConfigurationService service,
             CancellationToken cancellationToken) =>
             Answer(await service.SetTargetAsync(request.Path, request.Layout, cancellationToken)));
+
+        // ADR 0027's switch. It lives with the library settings because it is a
+        // property of what filing writes, and it answers with the whole
+        // configuration like every other change here.
+        configuration.MapPut("/artwork", async Task<Results<Ok<ConfigurationState>, BadRequest<ConfigurationProblem>>> (
+            SetArtworkRequest request,
+            ConfigurationService service,
+            CancellationToken cancellationToken) =>
+            Answer(await service.SetArtworkAsync(request.Enabled, cancellationToken)));
 
         // ADR 0018's two optional fields. Nothing here is on the filing path, and
         // a setup that never touches these endpoints is a finished setup.
@@ -217,6 +239,7 @@ internal static class ConfigurationEndpoints
             .. LibraryLayouts.All.Select(choice => new LayoutOption(choice.Name, choice.Description)),
         ],
         MediaServer: configuration.MediaServerUrl is { } url ? new MediaServerState(url) : null,
+        Artwork: configuration.Artwork,
         Complete: configuration.Complete,
         ReadyToComplete: configuration.ReadyToComplete,
         WhatHappensNext: configuration.WhatHappensNext);

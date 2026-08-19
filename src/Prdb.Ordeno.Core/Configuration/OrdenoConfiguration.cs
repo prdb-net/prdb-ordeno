@@ -1,3 +1,5 @@
+using Prdb.Ordeno.Core.Library;
+
 namespace Prdb.Ordeno.Core.Configuration;
 
 /// <summary>One watched directory, as it stands right now.</summary>
@@ -20,12 +22,18 @@ public sealed record ConfiguredSource(int Id, DirectoryInspection Inspection, Fi
 /// only ever stored together with one, so this being set is what "a connection
 /// is configured" means.
 /// </param>
+/// <param name="Artwork">
+/// Whether filing downloads one image per scene (ADR 0027). Off unless somebody
+/// turned it on: it spends a connection and a disk that are not the tool's, and
+/// it is not part of what onboarding collects, because the tool runs without it.
+/// </param>
 public sealed record OrdenoConfiguration(
     bool ApiKeySet,
     IReadOnlyList<ConfiguredSource> Sources,
     DirectoryInspection? Target,
     LibraryLayout? Layout,
     string? MediaServerUrl,
+    bool Artwork,
     DateTimeOffset? OnboardingCompletedAt)
 {
     /// <summary>
@@ -111,6 +119,15 @@ public sealed record OrdenoConfiguration(
                     + "by itself until there is a way to undo a run that went wrong."
                 : string.Empty;
 
+            // The same rule as below, applied to the other switch nobody has to
+            // touch: an installation that files without images is the ordinary
+            // one, so silence is what off reads as.
+            var images = Artwork
+                ? " Each scene it files also gets one image next to it as "
+                    + $"'{ScenePath.ArtworkFileName}', downloaded from prdb, where there is no file "
+                    + "at that name already."
+                : string.Empty;
+
             // Said only when there is something to say. A setup that left the two
             // fields blank is the ordinary one, and a sentence about what it is
             // missing would turn a deliberate choice into a warning — ADR 0018.
@@ -121,7 +138,7 @@ public sealed record OrdenoConfiguration(
 
             return ending
                 + $"recognises into {Target.Path}, in the layout {LibraryLayouts.NameOf(Layout.Value)} "
-                + "reads." + speed + notYet + connected;
+                + "reads." + speed + images + notYet + connected;
         }
     }
 }

@@ -421,6 +421,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/configuration/artwork": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetArtworkRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationProblem"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/configuration/media-server": {
         parameters: {
             query?: never;
@@ -1048,6 +1096,7 @@ export interface components {
             layout: null | string;
             availableLayouts: components["schemas"]["LayoutOption"][];
             mediaServer: null | components["schemas"]["MediaServerState"];
+            artwork: boolean;
             complete: boolean;
             readyToComplete: boolean;
             whatHappensNext: string;
@@ -1069,6 +1118,7 @@ export interface components {
             targetName: null | string;
             message: null | string;
             sidecar: null | string;
+            artwork: null | string;
         };
         FilingState: {
             running: boolean;
@@ -1144,6 +1194,7 @@ export interface components {
             moves: boolean;
             message: null | string;
             sidecar: null | string;
+            artwork: null | string;
         };
         ProblemResponse: {
             message: string;
@@ -1284,6 +1335,9 @@ export interface components {
         };
         SetApiKeyRequest: {
             apiKey: string;
+        };
+        SetArtworkRequest: {
+            enabled: boolean;
         };
         SetMediaServerRequest: {
             url: string;

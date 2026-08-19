@@ -144,7 +144,25 @@ public sealed class PrdbVideoLookup(
         video.ReleaseDate is { } date ? (DateOnly)date : null,
         video.Site?.Id,
         video.Site?.Title,
-        [.. (video.Actors ?? []).Select(actor => actor.Name).OfType<string>()]);
+        [.. (video.Actors ?? []).Select(actor => actor.Name).OfType<string>()],
+        FirstImage(video));
+
+    /// <summary>
+    /// The first image prdb lists for a video, or <c>null</c> where it lists
+    /// none — which is a scene nobody has photographed rather than an answer
+    /// that went wrong.
+    /// </summary>
+    /// <remarks>
+    /// First, because prdb documents the order as stable — oldest first, image id
+    /// breaking ties — and a filing decision needs two runs to choose the same
+    /// image. It fixes the order and not a ranking: nothing says the oldest image
+    /// is the best one, and ADR 0027 picks it for being reproducible.
+    /// The value is a complete URL despite the field's name, which the schema has
+    /// said since <c>Prdb.Sdk</c> 0.6.2.
+    /// </remarks>
+    private static string? FirstImage(VideoDetailDto video) => (video.Images ?? [])
+        .Select(image => image.CdnPath)
+        .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
 
     /// <summary>
     /// Everything except a cancellation this caller asked for, which belongs to

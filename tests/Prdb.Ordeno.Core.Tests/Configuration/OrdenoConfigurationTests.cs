@@ -24,6 +24,7 @@ public sealed class OrdenoConfigurationTests
             Target: null,
             Layout: null,
             MediaServerUrl: null,
+            Artwork: false,
             OnboardingCompletedAt: null);
 
         Assert.False(configuration.ReadyToComplete);
@@ -41,6 +42,7 @@ public sealed class OrdenoConfigurationTests
             Target: null,
             Layout: null,
             MediaServerUrl: null,
+            Artwork: false,
             OnboardingCompletedAt: null);
 
         Assert.False(configuration.ReadyToComplete);
@@ -182,5 +184,6 @@ public sealed class OrdenoConfigurationTests
         Target: UsableTarget,
         Layout: LibraryLayout.Jellyfin,
         MediaServerUrl: null,
+        Artwork: false,
         OnboardingCompletedAt: null);
 }

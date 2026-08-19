@@ -22,7 +22,11 @@ namespace Prdb.Ordeno.Core.Library;
 /// I/O — ADR 0012.
 /// </para>
 /// </remarks>
-public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directories, ISidecars sidecars)
+public sealed class FilingPlanner(
+    TargetPaths targets,
+    ISceneDirectories directories,
+    ISidecars sidecars,
+    ISceneArtwork artwork)
 {
     /// <summary>
     /// The plan for one video.
@@ -42,6 +46,12 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
     /// file the user has since deleted must not stop the scene being filed
     /// again.
     /// </param>
+    /// <param name="wantsArtwork">
+    /// Whether somebody switched artwork on. It arrives as an argument rather
+    /// than being read here, because this project reads nothing (ADR 0012) — and
+    /// it is false by default, which is the hard rule applied to bandwidth
+    /// rather than to data (ADR 0027).
+    /// </param>
     public FilingPlan Plan(
         int fileId,
         string sourcePath,
@@ -50,7 +60,8 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
         FileMovement movement,
         Scene? scene,
         VideoQualityReading quality,
-        IReadOnlyList<FiledCopy> filed)
+        IReadOnlyList<FiledCopy> filed,
+        bool wantsArtwork = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
@@ -109,8 +120,8 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
         }
 
         return live.Count == 0
-            ? First(fileId, sourcePath, sourceName, libraryRoot, movement, scene, measured)
-            : Next(fileId, sourcePath, sourceName, movement, scene, measured, live);
+            ? First(fileId, sourcePath, sourceName, libraryRoot, movement, scene, measured, wantsArtwork)
+            : Next(fileId, sourcePath, sourceName, movement, scene, measured, live, wantsArtwork);
     }
 
     /// <summary>
@@ -125,7 +136,8 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
         string libraryRoot,
         FileMovement movement,
         Scene scene,
-        VideoQuality quality)
+        VideoQuality quality,
+        bool wantsArtwork)
     {
         var target = targets.For(libraryRoot, scene, sourceName);
 
@@ -154,7 +166,11 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
             // Nothing is at that path, and this is known rather than asked:
             // a directory holding anything at all counts as occupied, so a
             // target that got this far is one no sidecar can be sitting in.
-            new SidecarPlan(SidecarAction.Write, Sidecar(target.Directory!)));
+            new SidecarPlan(SidecarAction.Write, Sidecar(target.Directory!)),
+            // And for the same reason there is no image in it either.
+            wantsArtwork
+                ? new ArtworkPlan(ArtworkAction.Write, Artwork(target.Directory!))
+                : ArtworkPlan.None);
     }
 
     /// <summary>
@@ -169,7 +185,8 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
         FileMovement movement,
         Scene scene,
         VideoQuality quality,
-        IReadOnlyList<FiledCopy> live)
+        IReadOnlyList<FiledCopy> live,
+        bool wantsArtwork)
     {
         var same = live.FirstOrDefault(copy =>
             string.Equals(copy.QualityLabel, quality.Label, StringComparison.OrdinalIgnoreCase));
@@ -194,7 +211,11 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
                 // that might be missing from a directory the tool filled last
                 // year. When one is refreshed is its own decision, and a run
                 // that reports moving nothing must not be quietly writing.
-                SidecarPlan.None);
+                SidecarPlan.None,
+                // Least of all a download. Spending somebody's connection on a
+                // run that reports moving nothing is the surprise ADR 0027's
+                // switch exists to prevent.
+                ArtworkPlan.None);
         }
 
         // Every copy of one scene lives in one directory — that is what makes
@@ -234,7 +255,8 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
             relabel,
             movement,
             message,
-            SidecarIn(home.Directory));
+            SidecarIn(home.Directory),
+            wantsArtwork ? ArtworkIn(home.Directory) : ArtworkPlan.None);
     }
 
     /// <summary>
@@ -265,8 +287,39 @@ public sealed class FilingPlanner(TargetPaths targets, ISceneDirectories directo
         };
     }
 
+    /// <summary>
+    /// Whether the directory the library already holds has an image in it. The
+    /// only place the question arises, for the reason above — and the answer is
+    /// never "replace it", so there is no state here that leads to a write over
+    /// somebody's file.
+    /// </summary>
+    private ArtworkPlan ArtworkIn(string directory)
+    {
+        var path = Artwork(directory);
+
+        return artwork.StateOf(path) switch
+        {
+            ArtworkState.Missing => new ArtworkPlan(ArtworkAction.Write, path),
+
+            ArtworkState.Present => new ArtworkPlan(
+                ArtworkAction.Keep,
+                path,
+                $"There is already a '{ScenePath.ArtworkFileName}' in that directory. It is left "
+                + "exactly as it is — deleting it is how you ask for a fresh one."),
+
+            _ => new ArtworkPlan(
+                ArtworkAction.Keep,
+                path,
+                $"The '{ScenePath.ArtworkFileName}' in that directory could not be looked at, so "
+                + "nothing is downloaded over it."),
+        };
+    }
+
     private static string Sidecar(string directory) =>
         System.IO.Path.Combine(directory, ScenePath.SidecarFileName);
+
+    private static string Artwork(string directory) =>
+        System.IO.Path.Combine(directory, ScenePath.ArtworkFileName);
 
     private static string Qualities(IReadOnlyList<FiledCopy> live) =>
         live.Count == 1

@@ -377,7 +377,55 @@ function TargetStep({
           {busy ? 'Looking…' : 'Save'}
         </button>
       </form>
+
+      {/* Not part of the guided path — ADR 0027. Onboarding collects what the
+          tool cannot run without, and it runs without this; a fifth step for a
+          switch would make an optional thing look like a missing answer. */}
+      {number === undefined && <ArtworkSwitch state={state} run={run} />}
     </Step>
+  )
+}
+
+/**
+ * One image per filed scene, off until somebody says otherwise — ADR 0027. It
+ * lives here rather than in a section of its own because it is a property of
+ * what filing writes into this directory.
+ *
+ * It saves as it is clicked, unlike the forms above it: there is nothing to
+ * type, nothing to check, and nothing happens until the next filing run, so a
+ * Save button next to a checkbox would be a second click for no second decision.
+ */
+function ArtworkSwitch({ state, run }: { state: ConfigurationState; run: Run }) {
+  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const toggle = async (enabled: boolean) => {
+    setBusy(true)
+    setProblem(await run(() => api.setArtwork(enabled)))
+    setBusy(false)
+  }
+
+  return (
+    <>
+      <label className="pick">
+        <input
+          type="checkbox"
+          checked={state.artwork}
+          disabled={busy}
+          onChange={(event) => void toggle(event.target.checked)}
+        />
+        Download one image for each scene
+      </label>
+
+      <p className="hint">
+        With this on, a filed scene gets a <code>fanart.jpg</code> next to it, downloaded from
+        prdb — one image, and only where there is no file at that name. Nothing is ever written
+        over: deleting the file is how you ask for a fresh one. It costs a download per scene
+        filed, which is why it is off unless you turn it on.
+      </p>
+
+      {problem !== null && <p className="problem">{problem}</p>}
+    </>
   )
 }
 

@@ -124,6 +124,17 @@ export const configuration = {
     request<ConfigurationState>('/api/configuration/target', { method: 'PUT', body: body({ path, layout }) }),
 
   /**
+   * The one image per filed scene — ADR 0027. It is off until this is called
+   * with true, and it belongs to the library settings rather than to the guided
+   * path, because the tool files perfectly well without it.
+   */
+  setArtwork: (enabled: boolean) =>
+    request<ConfigurationState>('/api/configuration/artwork', {
+      method: 'PUT',
+      body: body({ enabled }),
+    }),
+
+  /**
    * The optional media server connection — ADR 0018. Storing it answers with
    * what the server said about itself, which is more than "it answered": the
    * release date format, and whether it holds anything this tool has filed.

@@ -42,6 +42,19 @@ public sealed record ScenePath(string SiteDirectory, string SceneDirectory, stri
     public const string SidecarFileName = "movie.nfo";
 
     /// <summary>
+    /// The image's name, which is the same in every scene directory — section 5:
+    /// of the sixteen names Jellyfin reads, this is the one worth the bandwidth
+    /// for images shaped the way prdb's are. A landscape image in the Primary
+    /// slot is measurably worse than no image at all, so there is no
+    /// <c>poster.jpg</c> next to it (ADR 0027).
+    /// </summary>
+    /// <remarks>
+    /// Like the sidecar, one name in every directory: a file already at it
+    /// cannot be stepped around, and is never written over.
+    /// </remarks>
+    public const string ArtworkFileName = "fanart.jpg";
+
+    /// <summary>
     /// The names read back off a scene directory the tool filed into earlier,
     /// rather than computed from a scene.
     /// </summary>
@@ -100,4 +113,7 @@ public sealed record ScenePath(string SiteDirectory, string SceneDirectory, stri
 
     public string SidecarUnder(string libraryRoot) =>
         Path.Combine(DirectoryUnder(libraryRoot), SidecarFileName);
+
+    public string ArtworkUnder(string libraryRoot) =>
+        Path.Combine(DirectoryUnder(libraryRoot), ArtworkFileName);
 }

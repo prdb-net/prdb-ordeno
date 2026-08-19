@@ -48,6 +48,14 @@ public sealed class StoredConfiguration
     /// </summary>
     public string? MediaServerApiKey { get; set; }
 
+    /// <summary>
+    /// Whether filing downloads one image per scene — ADR 0027. Not nullable and
+    /// false by default, unlike everything above it: this is not something
+    /// onboarding is waiting for an answer to, it is a switch that is off until
+    /// somebody turns it on.
+    /// </summary>
+    public bool DownloadArtwork { get; set; }
+
     public DateTimeOffset? OnboardingCompletedAt { get; set; }
 
     /// <summary>

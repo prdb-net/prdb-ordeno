@@ -10,13 +10,27 @@ namespace Prdb.Ordeno.Core.Review;
 /// more often than by their titles, which is exactly the case the queue exists
 /// for.
 /// </param>
+/// <param name="ImageUrl">
+/// Where the first of prdb's images for this scene is, ready to request — an
+/// absolute URL, scheme and host included, whatever the field it arrives in is
+/// called. <c>null</c> where prdb has no image, and <c>null</c> for every video
+/// a search answered with: only the batch endpoint carries images, which is why
+/// this has a default rather than being asked of every caller.
+/// </param>
+/// <remarks>
+/// The image is not shown to anybody choosing between videos. It is here because
+/// the answer that carries it is the one filing already asks for (ADR 0027), and
+/// a second request to prdb for something already in hand is the pattern
+/// ADR 0001 exists to avoid.
+/// </remarks>
 public sealed record VideoSummary(
     Guid VideoId,
     string? Title,
     DateOnly? ReleaseDate,
     Guid? SiteId,
     string? SiteTitle,
-    IReadOnlyList<string> Performers)
+    IReadOnlyList<string> Performers,
+    string? ImageUrl = null)
 {
     /// <summary>
     /// The video in one line, the way a candidate button or a search result

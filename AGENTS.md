@@ -213,6 +213,47 @@ The three shapes that fail silently — the date format, the actor element, the
 escaping — are in `MovieNfoTests` rather than in comments, because none of them
 produces an error anywhere.
 
+## The artwork
+
+A filed scene may also get a picture: **one image, `fanart.jpg`, written only
+where there is no file at that name**
+([ADR 0027](docs/adr/0027-artwork-is-one-image-written-only-where-there-is-none.md)).
+`SceneArtwork` fetches it and decides nothing except what it finds at the path
+the moment before it writes; the planner decides whether it would be written at
+all, and the answer is on the plan the user read.
+
+Four rules that a plausible refactor would quietly break:
+
+- **One image, and it is not a poster.** Section 5 measured it: prdb's images are
+  the shape of the video, the card in a Movies library is portrait whatever the
+  image is, and the client sizes its request from the image's own aspect ratio —
+  so a landscape `poster.jpg` is fetched 113 pixels tall and stretched over a
+  card three times that, while an item with no poster falls back to its backdrop
+  at 300. Writing one is worse than writing nothing. **Do not** pick the name
+  from the downloaded image's shape either: the aspect ratio is only knowable
+  after the bytes arrive, and the preview would then be promising something it
+  has not seen.
+- **Off unless somebody turned it on**, which is the hard rule applied to
+  bandwidth rather than to data. The switch is in `/settings/library` and is not
+  an onboarding step, because the tool runs without it.
+- **Nothing is ever written over, and there is no marker.** That is the point: a
+  tool that never replaces need not recognise its own work, so an image stays
+  whether the tool wrote it last month or the user chose it this morning, and
+  deleting the file is how a fresh one is asked for. A refresh that replaced one
+  would be an amendment to ADR 0027 ([#38](https://github.com/prdb-net/prdb-ordeno/issues/38)),
+  not a tidy-up.
+- **A failed download leaves nothing and fails nothing.** A dotted temporary
+  name, flushed, renamed with `overwrite: false`; the size is capped and the
+  bytes are checked to be a whole JPEG before any of that, because the URL is one
+  the tool did not compose. Nothing here throws — a stop arriving mid-download
+  comes back as a sentence, or a video that is filed would be reported as one
+  that was not.
+
+The image URL rides in on the batch lookup the sidecar is already written from
+(`VideoDetailDto.Images`, first entry — the order is documented and stable), so
+artwork costs prdb no extra request. A scene it has no image for is the ordinary
+case and says nothing at all.
+
 ## The review queue
 
 What prdb could not settle waits for a person: several videos that fit equally
