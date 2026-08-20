@@ -64,6 +64,15 @@ public sealed class StoredConfiguration
     /// </summary>
     public bool UnattendedFiling { get; set; }
 
+    /// <summary>
+    /// Whether the tool checks what it filed against what prdb says now, every
+    /// <c>RefreshSchedule.Interval</c>, without being asked — ADR 0032. False on
+    /// the same terms as <see cref="UnattendedFiling"/>, and separate from it:
+    /// one moves files somebody downloaded and the other rewrites files the tool
+    /// wrote itself, and somebody may reasonably want one without the other.
+    /// </summary>
+    public bool UnattendedRefresh { get; set; }
+
     public DateTimeOffset? OnboardingCompletedAt { get; set; }
 
     /// <summary>

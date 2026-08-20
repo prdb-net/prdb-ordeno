@@ -78,14 +78,25 @@ public sealed record VideoSummary(
 /// pressing the button again.
 /// </remarks>
 /// <param name="Total">How many videos match in total, of which <paramref name="Videos"/> is one page.</param>
+/// <param name="RateLimit">
+/// What prdb said about the quota on the way past, when the answer carried a
+/// reading. Nobody working through the review queue pages fast enough for it to
+/// matter; the metadata refresh reads it, because it walks a whole library fifty
+/// scenes at a time and has to stop before it has spent somebody's hour
+/// (ADR 0032).
+/// </param>
 public sealed record VideoLookupAnswer(
     bool Answered,
     IReadOnlyList<VideoSummary> Videos,
     int Total,
-    string? Message = null)
+    string? Message = null,
+    Identification.RateLimitReading? RateLimit = null)
 {
-    public static VideoLookupAnswer From(IReadOnlyList<VideoSummary> videos, int? total = null) =>
-        new(true, videos, total ?? videos.Count);
+    public static VideoLookupAnswer From(
+        IReadOnlyList<VideoSummary> videos,
+        int? total = null,
+        Identification.RateLimitReading? rateLimit = null) =>
+        new(true, videos, total ?? videos.Count, RateLimit: rateLimit);
 
     public static VideoLookupAnswer Stopped(string message) => new(false, [], 0, message);
 }

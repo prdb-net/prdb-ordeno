@@ -178,6 +178,34 @@ button still stand between it and the library. A hold goes on its own when the
 file leaves the download directory, or when something else arrives under that
 name.
 
+The library stops going stale. prdb corrects a title, a date or a cast entry,
+and the `movie.nfo` written last spring still says the old thing — the new
+Metadata screen is where that is put right. It asks prdb about every scene the
+tool filed here, fifty at a time, and rewrites a metadata file the tool wrote
+itself when what is in it is no longer what prdb says. A scene whose file already
+says the right thing is not written to at all, so the second check over an
+unchanged library writes nothing, touches no timestamp and tells your media
+server nothing.
+
+It moves nothing and renames nothing: a corrected title reaches the metadata file
+and leaves the directory and the file name exactly as they were. A `movie.nfo`
+you wrote yourself is never touched, and an image is only ever written where
+there is none — which also means turning artwork on over a library that was filed
+without it fills the pictures in over the following checks, rather than needing
+everything filed again. A check cannot be undone and does not need to be:
+everything it writes came from prdb, and everything it replaced the tool had
+written itself.
+
+It can also happen without being asked. Turn on "Keep filed metadata up to date
+on its own" under Settings → Library and the tool checks five hundred scenes
+every twenty-four hours, least recently checked first, so a library of any size
+comes round on a schedule you can work out — and a night that costs ten prdb
+requests stays ten whatever size the library grows to. It stops well before
+prdb's hourly or monthly quota is spent, says so, and carries on where it stopped
+next time; identifying new downloads always comes first. Every check that changed
+something is in the History, and one that changed nothing and nobody asked for
+leaves no trace at all.
+
 The log does not grow forever, and it needs no pruning. It keeps the most recent
 runs — twenty thousand moved files or a thousand runs, whichever bites first —
 and drops the oldest runs whole, so a run that is in the log can always be put

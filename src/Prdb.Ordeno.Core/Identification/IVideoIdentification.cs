@@ -96,7 +96,17 @@ public sealed record IdentificationAnswer(
 /// spend a request to find out whether there are requests left.
 /// </summary>
 /// <param name="Remaining">Requests left in the hour, or <c>null</c> if the answer carried no reading.</param>
-public sealed record RateLimitReading(int? Remaining, TimeSpan? ResetIn);
+/// <param name="MonthRemaining">
+/// Requests left in the month, on the same terms. Identification does not pace
+/// off it — a run that asks about two hundred files at a time is an hourly
+/// consumer — and the metadata refresh does, because a nightly pass over a whole
+/// library is the first thing here that spends a month rather than an hour
+/// (ADR 0032).
+/// </param>
+public sealed record RateLimitReading(
+    int? Remaining,
+    TimeSpan? ResetIn,
+    int? MonthRemaining = null);
 
 /// <summary>
 /// Asks prdb what a batch of files is. One implementation, over

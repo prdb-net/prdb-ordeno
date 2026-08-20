@@ -54,6 +54,12 @@ public sealed record MediaServerState(string Url);
 /// rule as the image switch and for a larger reason: this is the one setting
 /// that lets the tool move files with nobody in front of it.
 /// </param>
+/// <param name="RefreshesMetadata">
+/// Whether the tool checks what it filed against what prdb says now without
+/// being asked (ADR 0032), and <paramref name="RefreshIntervalHours"/> is how
+/// often. Its own switch rather than part of the one above: that one moves files
+/// somebody downloaded, this one rewrites files the tool wrote itself.
+/// </param>
 public sealed record ConfigurationState(
     bool ApiKeySet,
     IReadOnlyList<SourceState> Sources,
@@ -64,6 +70,8 @@ public sealed record ConfigurationState(
     bool Artwork,
     bool Unattended,
     int UnattendedIntervalMinutes,
+    bool RefreshesMetadata,
+    int RefreshIntervalHours,
     bool Complete,
     bool ReadyToComplete,
     string WhatHappensNext);
@@ -110,6 +118,9 @@ public sealed record SetArtworkRequest(bool Enabled);
 
 /// <summary>The unattended filing switch, in the same shape and for the same reason.</summary>
 public sealed record SetUnattendedFilingRequest(bool Enabled);
+
+/// <summary>The unattended metadata refresh switch — ADR 0032, same shape again.</summary>
+public sealed record SetUnattendedRefreshRequest(bool Enabled);
 
 /// <summary>
 /// Both fields together, because neither is any use alone. Sending them empty is
@@ -179,6 +190,15 @@ internal static class ConfigurationEndpoints
             ConfigurationService service,
             CancellationToken cancellationToken) =>
             Answer(await service.SetUnattendedFilingAsync(request.Enabled, cancellationToken)));
+
+        // ADR 0032's switch, next to it. What it turns on rewrites metadata files
+        // the tool wrote itself and writes images where there are none; it moves
+        // nothing, which is why it is a smaller decision than the one above.
+        configuration.MapPut("/unattended-refresh", async Task<Results<Ok<ConfigurationState>, BadRequest<ConfigurationProblem>>> (
+            SetUnattendedRefreshRequest request,
+            ConfigurationService service,
+            CancellationToken cancellationToken) =>
+            Answer(await service.SetUnattendedRefreshAsync(request.Enabled, cancellationToken)));
 
         // ADR 0018's two optional fields. Nothing here is on the filing path, and
         // a setup that never touches these endpoints is a finished setup.
@@ -264,6 +284,8 @@ internal static class ConfigurationEndpoints
         Artwork: configuration.Artwork,
         Unattended: configuration.Unattended,
         UnattendedIntervalMinutes: (int)FilingSchedule.Interval.TotalMinutes,
+        RefreshesMetadata: configuration.RefreshesMetadata,
+        RefreshIntervalHours: (int)RefreshSchedule.Interval.TotalHours,
         Complete: configuration.Complete,
         ReadyToComplete: configuration.ReadyToComplete,
         WhatHappensNext: configuration.WhatHappensNext);

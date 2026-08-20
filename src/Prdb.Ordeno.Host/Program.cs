@@ -53,6 +53,11 @@ builder.Services.AddHostedService<PerceptualHashWorker>();
 // a row in the database that can change while the container runs.
 builder.Services.AddHostedService<FilingWorker>();
 
+// The fifth, which writes into the library without moving anything in it: what
+// prdb has corrected since a scene was filed (ADR 0032). Off until somebody
+// turns it on, like the one above, and registered on the same terms.
+builder.Services.AddHostedService<RefreshWorker>();
+
 // ADR 0014: this describes the API for the build that turns it into the
 // frontend's types. Nothing maps it as an endpoint — the document is written to
 // a file at build time and committed, and the browser never asks for it.
@@ -148,6 +153,7 @@ app.MapConfiguration();
 app.MapScanning();
 app.MapIdentification();
 app.MapFiling();
+app.MapRefresh();
 app.MapHistory();
 app.MapReview();
 

@@ -322,6 +322,15 @@ function RunRow({
         </p>
       )}
 
+      {run.kind === 'refresh' && (
+        <p className="hint">
+          This was a metadata check: it rewrote metadata files the tool had written itself, where
+          prdb no longer said what they said. It moved nothing, and there is no way back out of one
+          — the way to change what a <code>movie.nfo</code> says is prdb, and the next check brings
+          it.
+        </p>
+      )}
+
       {run.entries.length > 0 && (
         <RowTable heads={['What happened', 'Why', '']}>
           {run.entries.map((entry) => (
@@ -372,7 +381,9 @@ function RunRow({
           </>
         )}
       </td>
-      <td>{String(run.operations)}</td>
+      {/* A refresh has no entries by decision — ADR 0033 — so the count would
+          read as a run that did nothing. It says what it was instead. */}
+      <td>{run.kind === 'refresh' ? <span className="hint">metadata</span> : String(run.operations)}</td>
     </Row>
   )
 }

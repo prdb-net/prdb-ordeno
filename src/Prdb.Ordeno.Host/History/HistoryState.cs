@@ -38,7 +38,7 @@ public sealed record LoggedOperationState(
 /// <summary>
 /// One run, and the entries it wrote.
 /// </summary>
-/// <param name="Kind"><c>filing</c> or <c>undo</c>.</param>
+/// <param name="Kind"><c>filing</c>, <c>undo</c> or <c>refresh</c>.</param>
 /// <param name="AskedByTimer">
 /// Whether nobody asked for this run — the tool filed on its own (ADR 0031).
 /// Never true of an undo: there is no timer behind the way back.
@@ -233,7 +233,7 @@ internal static class HistoryStates
 
     private static LoggedRunState Run(LoggedRun run) => new(
         run.Id,
-        run.Kind is RunKind.Undo ? "undo" : "filing",
+        Name(run.Kind),
         run.AskedBy is AskedBy.Timer,
         run.StartedAt,
         run.FinishedAt,
@@ -243,6 +243,19 @@ internal static class HistoryStates
         run.Undone,
         run.CanBeUndone,
         [.. run.Entries.Select(Entry)]);
+
+    /// <summary>
+    /// As a name rather than a number, like every other state that crosses this
+    /// boundary. A refresh has a row here and no entries of its own (ADR 0033),
+    /// so the screen needs to be able to tell it from a filing that moved
+    /// nothing.
+    /// </summary>
+    private static string Name(RunKind kind) => kind switch
+    {
+        RunKind.Undo => "undo",
+        RunKind.Refresh => "refresh",
+        _ => "filing",
+    };
 
     private static LoggedOperationState Entry(LoggedOperation operation) => new(
         operation.Id,

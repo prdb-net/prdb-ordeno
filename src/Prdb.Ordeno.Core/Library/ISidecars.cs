@@ -29,6 +29,18 @@ public enum SidecarState
 }
 
 /// <summary>
+/// What is at the path, and what it says when the tool may read it as its own.
+/// </summary>
+/// <param name="Document">
+/// The whole document, when it is the tool's own and could be read;
+/// <c>null</c> otherwise. A refresh compares it with what
+/// <see cref="MovieNfo.For"/> produces now, which is the whole of what makes a
+/// refresh write anything (ADR 0033) — and the reason it is the document rather
+/// than the head of it.
+/// </param>
+public sealed record SidecarLook(SidecarState State, string? Document = null);
+
+/// <summary>
 /// Looks at the sidecar in one scene directory, and answers whose it is.
 /// </summary>
 /// <remarks>
@@ -39,4 +51,12 @@ public enum SidecarState
 public interface ISidecars
 {
     SidecarState StateOf(string absolutePath);
+
+    /// <summary>
+    /// The same question, with the document when there is one to read. Filing
+    /// asks <see cref="StateOf"/> because whose the file is, is all it needs; a
+    /// refresh asks this, because "is what is there already right" cannot be
+    /// answered from the first eight kilobytes.
+    /// </summary>
+    SidecarLook Look(string absolutePath);
 }

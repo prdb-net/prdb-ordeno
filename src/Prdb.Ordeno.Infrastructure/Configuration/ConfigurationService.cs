@@ -234,6 +234,36 @@ public sealed class ConfigurationService(
     }
 
     /// <summary>
+    /// Turns the unattended metadata refresh on or off — ADR 0032.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is checked before it is stored, for the reason the other two
+    /// switches check nothing. It is logged plainly rather than loudly: this one
+    /// rewrites files the tool wrote itself and writes images where there are
+    /// none, which is a smaller thing than moving somebody's downloads.
+    /// </remarks>
+    public async Task<ConfigurationChange> SetUnattendedRefreshAsync(
+        bool wanted,
+        CancellationToken cancellationToken = default)
+    {
+        var configuration = await SingleConfigurationAsync(cancellationToken);
+        configuration.UnattendedRefresh = wanted;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            wanted
+                ? "Unattended metadata refreshing was turned on: the tool will check what it filed "
+                    + "against prdb every {Hours} hours, {Slice} scenes at a time."
+                : "Unattended metadata refreshing was turned off: the library is checked when "
+                    + "somebody asks for it.",
+            RefreshSchedule.Interval.TotalHours,
+            RefreshSchedule.Slice);
+
+        return ConfigurationChange.Made(await BuildAsync(cancellationToken));
+    }
+
+    /// <summary>
     /// Stores where the media server is and the key that gets in — the two
     /// optional fields of ADR 0018 — and only after the server has answered for
     /// them.
@@ -392,6 +422,7 @@ public sealed class ConfigurationService(
                 : configuration.MediaServerUrl,
             Artwork: configuration.DownloadArtwork,
             Unattended: configuration.UnattendedFiling,
+            RefreshesMetadata: configuration.UnattendedRefresh,
             OnboardingCompletedAt: configuration.OnboardingCompletedAt);
     }
 

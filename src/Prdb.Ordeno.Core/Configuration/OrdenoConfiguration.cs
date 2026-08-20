@@ -27,6 +27,12 @@ public sealed record ConfiguredSource(int Id, DirectoryInspection Inspection, Fi
 /// turned it on: it spends a connection and a disk that are not the tool's, and
 /// it is not part of what onboarding collects, because the tool runs without it.
 /// </param>
+/// <param name="RefreshesMetadata">
+/// Whether the tool checks what it filed against what prdb says now, on the
+/// interval in <see cref="Library.RefreshSchedule"/> (ADR 0032). Off unless
+/// somebody turned it on, like the two above it, and separate from them: it
+/// rewrites metadata files the tool wrote itself and moves nothing.
+/// </param>
 /// <param name="Unattended">
 /// Whether the tool files on its own, on the interval in
 /// <see cref="Library.FilingSchedule"/> (ADR 0031). Off unless somebody turned it
@@ -41,6 +47,7 @@ public sealed record OrdenoConfiguration(
     string? MediaServerUrl,
     bool Artwork,
     bool Unattended,
+    bool RefreshesMetadata,
     DateTimeOffset? OnboardingCompletedAt)
 {
     /// <summary>

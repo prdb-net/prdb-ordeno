@@ -3,7 +3,8 @@ import { sections, type Section } from '../configuration/sections'
 /**
  * The workspace's areas, in the order they are shown and in the order somebody
  * meets them: what was found, what would happen to it, what the tool could not
- * settle on its own, what it has already done — and how it is set up.
+ * settle on its own, what has to stay true about what it filed, what it has
+ * already done — and how it is set up.
  *
  * One list, because the navigation, the routing and the fallback all have to
  * agree about what exists — three copies of that would disagree the first time
@@ -18,6 +19,7 @@ export const areas = [
   { path: '/downloads', label: 'Downloads' },
   { path: '/filing', label: 'Filing' },
   { path: '/review', label: 'Review' },
+  { path: '/metadata', label: 'Metadata' },
   { path: '/history', label: 'History' },
   { path: '/settings', label: 'Settings', sections },
 ] as const

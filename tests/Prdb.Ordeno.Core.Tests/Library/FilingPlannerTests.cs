@@ -62,6 +62,12 @@ public sealed class FilingPlannerTests
 
             return answers.GetValueOrDefault(absolutePath, SidecarState.Missing);
         }
+
+        /// <summary>
+        /// What the refresh asks. Filing never does — it needs whose the file is
+        /// and not what it says — so this answers the state and no document.
+        /// </summary>
+        public SidecarLook Look(string absolutePath) => new(StateOf(absolutePath));
     }
 
     /// <summary>Whether there is an image at each path; there is none anywhere else.</summary>

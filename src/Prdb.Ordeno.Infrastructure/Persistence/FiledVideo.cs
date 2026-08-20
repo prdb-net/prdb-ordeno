@@ -56,4 +56,23 @@ public sealed class FiledVideo
     public required string QualityLabel { get; set; }
 
     public DateTimeOffset FiledAt { get; set; }
+
+    /// <summary>
+    /// When a refresh last checked this scene against what prdb says, or
+    /// <c>null</c> for one nothing has looked at yet — ADR 0032.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The one column here filing does not read, and it earns its place for the
+    /// reason the rest of the row does: it says something that is true of the
+    /// library now, and it goes when the row does. Nulls first is what puts a
+    /// library filed before this shipped at the front of the queue exactly once.
+    /// </para>
+    /// <para>
+    /// It is also the whole of what makes a run resumable. A run bounded by a
+    /// slice or stopped by the quota stamps what it reached, so the next one
+    /// starts where it stopped rather than at the top of the library forever.
+    /// </para>
+    /// </remarks>
+    public DateTimeOffset? MetadataCheckedAt { get; set; }
 }
