@@ -213,12 +213,10 @@ Four rules that a plausible refactor would quietly break:
 A filed video with a tidy name and no metadata next to it is not what anyone came
 for: what the media server shows comes out of a `movie.nfo` in the scene
 directory. **It is written as part of filing a video and at no other time**
-([ADR 0024](docs/adr/0024-the-sidecar-is-written-by-filing-and-only-over-its-own.md)),
-and that is still the only thing writing one today. *When* an existing one is
-refreshed is decided and not yet built — a run of its own, over the scenes the
-tool filed, rewriting a document only where it differs from what prdb says now
-([ADR 0032](docs/adr/0032-a-refresh-is-a-run-of-its-own-over-what-the-tool-filed.md)
-and [ADR 0033](docs/adr/0033-a-refresh-rewrites-only-its-own-and-cannot-be-undone.md)).
+([ADR 0024](docs/adr/0024-the-sidecar-is-written-by-filing-and-only-over-its-own.md)).
+Filing is not the only thing that writes one any more — *when an existing one is
+refreshed* is answered below, by a run of its own — but nothing about filing's own
+rules changed to make room for it.
 
 `MovieNfo` builds the document and touches nothing; `Sidecars` puts it on disk and
 decides nothing except what it finds at the path the moment before it writes.
@@ -271,11 +269,12 @@ Four rules that a plausible refactor would quietly break:
 - **Nothing is ever written over, and there is no marker.** That is the point: a
   tool that never replaces need not recognise its own work, so an image stays
   whether the tool wrote it last month or the user chose it this morning, and
-  deleting the file is how a fresh one is asked for. The refresh decision was
-  offered that amendment and declined it
+  deleting the file is how a fresh one is asked for — and the metadata refresh
+  brings it, without waiting for something to be filed into the scene. That run
+  was offered the amendment and declined it
   ([ADR 0033](docs/adr/0033-a-refresh-rewrites-only-its-own-and-cannot-be-undone.md)):
-  a refresh writes an image where there is none and never over one, so replacing
-  is still something no path in this tool does.
+  it writes an image where there is none and never over one, so replacing is
+  still something no path in this tool does.
 - **A failed download leaves nothing and fails nothing.** A dotted temporary
   name, flushed, renamed with `overwrite: false`; the size is capped and the
   bytes are checked to be a whole JPEG before any of that, because the URL is one
@@ -287,6 +286,54 @@ The image URL rides in on the batch lookup the sidecar is already written from
 (`VideoDetailDto.Images`, first entry — the order is documented and stable), so
 artwork costs prdb no extra request. A scene it has no image for is the ordinary
 case and says nothing at all.
+
+## The metadata refresh
+
+`VISION.md`'s "the library is not written once": prdb corrects a title, a date or
+a cast entry, and the file written last spring still says the old thing.
+**A refresh is a run of its own, over the scenes the tool filed, and it moves
+nothing** —
+[ADR 0032](docs/adr/0032-a-refresh-is-a-run-of-its-own-over-what-the-tool-filed.md)
+and [ADR 0033](docs/adr/0033-a-refresh-rewrites-only-its-own-and-cannot-be-undone.md).
+`SceneRefresh` decides and writes nothing; `RefreshService` performs; the run is
+started by `RefreshRunner` from a button or by `RefreshWorker` on a day's timer,
+through the gate filing and undo take.
+
+Six rules that a plausible refactor would quietly break:
+
+- **The trigger is the document, not `updatedAtUtc`.** `MovieNfo` is
+  deterministic, so a run builds what prdb's answer produces now and compares it
+  with the bytes on disk: different, or nothing there, and it is written.
+  Identical and *nothing happens at all* — no write, no rename, no media server
+  told. The timestamp is on the video row and a corrected cast entry need not
+  touch it, which is one of the three cases the feature exists for.
+- **The look comes before the question.** What is in the directory decides
+  whether prdb is asked about the scene, which is the opposite of filing's order
+  and deliberate: the look is a directory read the run makes anyway, and the
+  request is the scarce thing. A scene with somebody else's sidecar and an image
+  already in place takes no place in a batch.
+- **Its subject is `FiledVideos`, never a walk of the library root.** Rows for
+  the library the tool is pointed at *now*, least recently checked first
+  (`MetadataCheckedAt`, nulls first). Every directory a run reaches is stamped,
+  including one it could write nothing to — a scene that never gets a stamp holds
+  the front of the queue forever and starves the rest of the library.
+- **It moves nothing and renames nothing**, whatever the corrected title would
+  make the layout produce. Re-filing a library is a different operation with
+  different risks, and it is not decided.
+- **It stops on the quota, far earlier than identification does, and on both
+  windows.** Identification is the loop; a nightly pass over a library is the
+  first thing here that spends a month rather than an hour. What it did not ask
+  about is left unstamped, so the next run starts there.
+- **A rewrite is not an entry, and a refresh cannot be undone.** The run gets a
+  row and no entries: an entry is shaped for a way back a replaced document does
+  not need — everything in it came from prdb, everything it replaced carried the
+  tool's own marker — and a few hundred a night would push the moves that *can*
+  be undone out of the log. An unattended run that changed nothing leaves no row
+  at all, which is ADR 0031's rule applied here.
+
+ADR 0027 is unchanged by this and was offered the amendment: an image is written
+where there is none and never over one, so turning artwork on over a library
+filed without it fills it in over the following runs.
 
 ## The operation log, and the way back
 

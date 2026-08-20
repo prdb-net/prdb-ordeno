@@ -397,6 +397,45 @@
         }
       }
     },
+    "/api/configuration/unattended-refresh": {
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUnattendedRefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/configuration/media-server": {
       "put": {
         "tags": [
@@ -674,6 +713,42 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FilingState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/refresh": {
+      "get": {
+        "tags": [
+          "Refresh"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Refresh"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshState"
                 }
               }
             }
@@ -1180,6 +1255,8 @@
           "artwork",
           "unattended",
           "unattendedIntervalMinutes",
+          "refreshesMetadata",
+          "refreshIntervalHours",
           "complete",
           "readyToComplete",
           "whatHappensNext"
@@ -1234,6 +1311,17 @@
             "type": "boolean"
           },
           "unattendedIntervalMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "refreshesMetadata": {
+            "type": "boolean"
+          },
+          "refreshIntervalHours": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -2001,6 +2089,194 @@
           }
         }
       },
+      "RefreshedSceneState": {
+        "required": [
+          "scene",
+          "directory",
+          "title",
+          "sidecar",
+          "artwork",
+          "sidecarMessage",
+          "artworkMessage",
+          "problem"
+        ],
+        "type": "object",
+        "properties": {
+          "scene": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sidecar": {
+            "type": "boolean"
+          },
+          "artwork": {
+            "type": "boolean"
+          },
+          "sidecarMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artworkMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "problem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RefreshState": {
+        "required": [
+          "running",
+          "unattended",
+          "askedByTimer",
+          "intervalHours",
+          "slice",
+          "scenes",
+          "neverChecked",
+          "oldestCheckedAt",
+          "finishedAt",
+          "problem",
+          "checked",
+          "sidecars",
+          "images",
+          "waiting",
+          "whatItDid",
+          "changed",
+          "changedTotal"
+        ],
+        "type": "object",
+        "properties": {
+          "running": {
+            "type": "boolean"
+          },
+          "unattended": {
+            "type": "boolean"
+          },
+          "askedByTimer": {
+            "type": "boolean"
+          },
+          "intervalHours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "slice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "scenes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "neverChecked": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "oldestCheckedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "problem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "checked": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sidecars": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "images": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "waiting": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "whatItDid": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RefreshedSceneState"
+            }
+          },
+          "changedTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ResolutionState": {
         "required": [
           "kind",
@@ -2639,6 +2915,17 @@
           }
         }
       },
+      "SetUnattendedRefreshRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "SignInRequest": {
         "required": [
           "password"
@@ -2996,6 +3283,9 @@
     },
     {
       "name": "Filing"
+    },
+    {
+      "name": "Refresh"
     },
     {
       "name": "History"

@@ -18,6 +18,13 @@ internal sealed class FakeVideoLookup : IVideoLookup
     /// <summary>What every call answers with instead, when prdb is having a bad day.</summary>
     public string? Stopped { get; set; }
 
+    /// <summary>
+    /// What the answers carry about the quota. The refresh paces off it and
+    /// stops before it has spent somebody's hour (ADR 0032), so a test needs to
+    /// be able to say what prdb reported.
+    /// </summary>
+    public Core.Identification.RateLimitReading? Quota { get; set; }
+
     public List<IReadOnlyList<Guid>> Described { get; } = [];
 
     public List<string> Searched { get; } = [];
@@ -94,6 +101,7 @@ internal sealed class FakeVideoLookup : IVideoLookup
         // An id prdb does not know is left out of the answer rather than failing
         // it, exactly as the real endpoint does.
         return Task.FromResult(VideoLookupAnswer.From(
-            [.. videoIds.Select(id => videos.GetValueOrDefault(id)).OfType<VideoSummary>()]));
+            [.. videoIds.Select(id => videos.GetValueOrDefault(id)).OfType<VideoSummary>()],
+            rateLimit: Quota));
     }
 }

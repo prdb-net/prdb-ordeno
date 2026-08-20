@@ -90,6 +90,43 @@ public sealed class Sidecars(ILogger<Sidecars> logger) : ISidecars
     }
 
     /// <summary>
+    /// Whose the sidecar is, and what it says when it is the tool's own — the
+    /// question a refresh asks (ADR 0033).
+    /// </summary>
+    /// <remarks>
+    /// The whole document rather than <see cref="HeadBytes"/> of it, because the
+    /// answer this exists for is "does this already say what prdb says", which
+    /// the top of the file cannot give. It is only read that far for a document
+    /// the tool wrote, which is one it also knows the size of within a few
+    /// kilobytes.
+    /// </remarks>
+    public SidecarLook Look(string absolutePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
+
+        var state = StateOf(absolutePath);
+
+        if (state is not SidecarState.Ours)
+        {
+            return new SidecarLook(state);
+        }
+
+        try
+        {
+            return new SidecarLook(state, File.ReadAllText(absolutePath, Encoding.UTF8));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // It was readable a moment ago and is not now. Unknown rather than
+            // ours, for the reason StateOf answers that way: nothing is written
+            // over a file on the strength of not having been able to look at it.
+            logger.LogWarning(exception, "Could not read the sidecar {Path}.", absolutePath);
+
+            return new SidecarLook(SidecarState.Unknown);
+        }
+    }
+
+    /// <summary>
     /// Puts <paramref name="document"/> at <paramref name="absolutePath"/>,
     /// replacing what this tool wrote there before and nothing else.
     /// </summary>

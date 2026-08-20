@@ -5,6 +5,7 @@ import ConfigurationScreen from './configuration/ConfigurationScreen'
 import { firstSection } from './configuration/sections'
 import HistoryScreen from './history/HistoryScreen'
 import FilingScreen from './library/FilingScreen'
+import MetadataScreen from './library/MetadataScreen'
 import { areas } from './navigation/areas'
 import Navigation from './navigation/Navigation'
 import { useRoute } from './navigation/useRoute'
@@ -101,6 +102,7 @@ export default function Workspace({ onSignedOut }: { onSignedOut: () => void }) 
       {area === '/downloads' && <ScanScreen onSignedOut={onSignedOut} />}
       {area === '/filing' && <FilingScreen onSignedOut={onSignedOut} />}
       {area === '/review' && <ReviewScreen onSignedOut={onSignedOut} />}
+      {area === '/metadata' && <MetadataScreen onSignedOut={onSignedOut} />}
       {area === '/history' && <HistoryScreen onSignedOut={onSignedOut} />}
       {area === '/settings' && settings}
     </>

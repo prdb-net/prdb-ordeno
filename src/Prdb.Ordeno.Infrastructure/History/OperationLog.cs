@@ -169,17 +169,29 @@ public sealed class OperationLog(
     /// The one line the screen showed while it was happening. Stored rather than
     /// recomputed: it counts files nothing happened to, which leave no entry.
     /// </param>
+    /// <param name="changedFiles">
+    /// Whether this run changed a file, for a run whose changes are not entries.
+    /// A refresh has none by decision (ADR 0033) and still keeps its row when it
+    /// rewrote something, so it answers this rather than being counted. Left
+    /// <c>null</c>, the entries are the answer, which is what filing and undo
+    /// want.
+    /// </param>
     /// <remarks>
-    /// A run nobody asked for that moved nothing is removed instead of closed —
+    /// A run nobody asked for that changed nothing is removed instead of closed —
     /// ADR 0031, amending ADR 0028. That ADR keeps the row for an empty run
     /// because it answers the first question of somebody who was asleep, and
     /// that is owed to whoever asked; nobody asked for a tick of the clock, and
     /// a row every quarter of an hour would push three years of nights out of a
-    /// thousand-run log inside a fortnight.
+    /// thousand-run log inside a fortnight. A nightly refresh that found nothing
+    /// to correct is the same row for the same reason.
     /// </remarks>
-    public async Task FinishAsync(int runId, string? account, string? problem = null)
+    public async Task FinishAsync(
+        int runId,
+        string? account,
+        string? problem = null,
+        bool? changedFiles = null)
     {
-        if (await LeavesNothingAsync(runId))
+        if (await LeavesNothingAsync(runId, changedFiles))
         {
             await context.OperationRuns
                 .Where(run => run.Id == runId)
@@ -210,8 +222,12 @@ public sealed class OperationLog(
     /// container killed mid-run leaves the honest record of a run that did not
     /// finish.
     /// </remarks>
-    private async Task<bool> LeavesNothingAsync(int runId) =>
-        await context.OperationRuns
+    private async Task<bool> LeavesNothingAsync(int runId, bool? changedFiles) =>
+        // A run that says it changed something keeps its row whether or not the
+        // change was an entry. Everything else is the question this always
+        // asked: nobody asked for it, and nothing it did is in the log.
+        changedFiles is not true
+        && await context.OperationRuns
             .AsNoTracking()
             .AnyAsync(run => run.Id == runId
                 && run.AskedBy == AskedBy.Timer

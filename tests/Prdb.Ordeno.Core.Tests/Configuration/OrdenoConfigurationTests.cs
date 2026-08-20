@@ -26,6 +26,7 @@ public sealed class OrdenoConfigurationTests
             MediaServerUrl: null,
             Artwork: false,
             Unattended: false,
+            RefreshesMetadata: false,
             OnboardingCompletedAt: null);
 
         Assert.False(configuration.ReadyToComplete);
@@ -45,6 +46,7 @@ public sealed class OrdenoConfigurationTests
             MediaServerUrl: null,
             Artwork: false,
             Unattended: false,
+            RefreshesMetadata: false,
             OnboardingCompletedAt: null);
 
         Assert.False(configuration.ReadyToComplete);
@@ -204,5 +206,6 @@ public sealed class OrdenoConfigurationTests
         MediaServerUrl: null,
         Artwork: false,
         Unattended: false,
+        RefreshesMetadata: false,
         OnboardingCompletedAt: null);
 }

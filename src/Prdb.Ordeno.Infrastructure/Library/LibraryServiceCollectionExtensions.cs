@@ -73,6 +73,12 @@ public static class LibraryServiceCollectionExtensions
         services.TryAddSingleton<FilingRunner>();
         services.TryAddScoped<FilingService>();
 
+        // The refresh (ADR 0032), in the same two halves and behind the same
+        // gate: one run at a time over one library, whether it is filing, undoing
+        // or bringing metadata up to date.
+        services.TryAddSingleton<RefreshRunner>();
+        services.TryAddScoped<RefreshService>();
+
         // Filing writes the operation log as it goes (ADR 0028), so the writer
         // is part of this slice rather than something the host remembers to add.
         services.TryAddScoped<History.OperationLog>();

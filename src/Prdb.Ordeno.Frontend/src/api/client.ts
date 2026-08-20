@@ -15,6 +15,8 @@ export type RecognisedState = components['schemas']['RecognisedState']
 export type FilingState = components['schemas']['FilingState']
 export type PlannedFileState = components['schemas']['PlannedFileState']
 export type FiledFileState = components['schemas']['FiledFileState']
+export type RefreshState = components['schemas']['RefreshState']
+export type RefreshedSceneState = components['schemas']['RefreshedSceneState']
 export type HistoryState = components['schemas']['HistoryState']
 export type LoggedRunState = components['schemas']['LoggedRunState']
 export type LoggedOperationState = components['schemas']['LoggedOperationState']
@@ -152,6 +154,17 @@ export const configuration = {
     }),
 
   /**
+   * The unattended metadata refresh — ADR 0032. Off until this is called with
+   * true. It is next to the other two and is none of their business: it moves
+   * nothing and rewrites only what the tool wrote itself.
+   */
+  setUnattendedRefresh: (enabled: boolean) =>
+    request<ConfigurationState>('/api/configuration/unattended-refresh', {
+      method: 'PUT',
+      body: body({ enabled }),
+    }),
+
+  /**
    * The optional media server connection — ADR 0018. Storing it answers with
    * what the server said about itself, which is more than "it answered": the
    * release date format, and whether it holds anything this tool has filed.
@@ -213,6 +226,21 @@ export const filing = {
     request<FilingState>(`/api/filing/holds/${String(fileId)}`, { method: 'DELETE' }),
 
   releaseAll: () => request<FilingState>('/api/filing/holds', { method: 'DELETE' }),
+}
+
+/**
+ * The library the tool has already filed, checked against what prdb says now —
+ * ADR 0032.
+ *
+ * One call rather than filing's two, because there is nothing here to preview:
+ * this run moves no file, and working out what it would write costs the same
+ * requests as writing it. It answers as soon as a run is under way, so the
+ * screen keeps reading `read` until `running` goes back to false.
+ */
+export const refresh = {
+  read: () => request<RefreshState>('/api/refresh'),
+
+  start: () => request<RefreshState>('/api/refresh', { method: 'POST' }),
 }
 
 /**

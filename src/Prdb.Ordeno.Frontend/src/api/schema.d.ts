@@ -517,6 +517,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/configuration/unattended-refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetUnattendedRefreshRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationState"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfigurationProblem"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/configuration/media-server": {
         parameters: {
             query?: never;
@@ -926,6 +974,60 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RefreshState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RefreshState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1440,6 +1542,9 @@ export interface components {
             unattended: boolean;
             /** Format: int32 */
             unattendedIntervalMinutes: number | string;
+            refreshesMetadata: boolean;
+            /** Format: int32 */
+            refreshIntervalHours: number | string;
             complete: boolean;
             readyToComplete: boolean;
             whatHappensNext: string;
@@ -1607,6 +1712,46 @@ export interface components {
             /** Format: date-time */
             askedAt: string;
         };
+        RefreshedSceneState: {
+            scene: string;
+            directory: string;
+            title: null | string;
+            sidecar: boolean;
+            artwork: boolean;
+            sidecarMessage: null | string;
+            artworkMessage: null | string;
+            problem: null | string;
+        };
+        RefreshState: {
+            running: boolean;
+            unattended: boolean;
+            askedByTimer: boolean;
+            /** Format: int32 */
+            intervalHours: number | string;
+            /** Format: int32 */
+            slice: number | string;
+            /** Format: int32 */
+            scenes: number | string;
+            /** Format: int32 */
+            neverChecked: number | string;
+            /** Format: date-time */
+            oldestCheckedAt: null | string;
+            /** Format: date-time */
+            finishedAt: null | string;
+            problem: null | string;
+            /** Format: int32 */
+            checked: number | string;
+            /** Format: int32 */
+            sidecars: number | string;
+            /** Format: int32 */
+            images: number | string;
+            /** Format: int32 */
+            waiting: number | string;
+            whatItDid: null | string;
+            changed: components["schemas"]["RefreshedSceneState"][];
+            /** Format: int32 */
+            changedTotal: number | string;
+        };
         ResolutionState: {
             kind: string;
             from: null | string;
@@ -1748,6 +1893,9 @@ export interface components {
             layout: string;
         };
         SetUnattendedFilingRequest: {
+            enabled: boolean;
+        };
+        SetUnattendedRefreshRequest: {
             enabled: boolean;
         };
         SignInRequest: {

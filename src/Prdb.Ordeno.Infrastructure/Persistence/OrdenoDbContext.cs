@@ -173,6 +173,7 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
             filed.Property(row => row.QualityLabel).IsRequired().HasMaxLength(16);
 
             filed.Property(row => row.FiledAt).HasConversion(UtcTimestamp);
+            filed.Property(row => row.MetadataCheckedAt).HasConversion(UtcTimestamp);
 
             // What every filing asks: is this scene already in this library, and
             // at which qualities. Not unique — that is the whole point of
@@ -184,6 +185,13 @@ public sealed class OrdenoDbContext(DbContextOptions<OrdenoDbContext> options) :
             // current — the state this tool must never be in about a file it
             // has moved.
             filed.HasIndex(row => new { row.Directory, row.FileName }).IsUnique();
+
+            // What a refresh asks: which scenes of this library have gone longest
+            // without being checked against what prdb says (ADR 0032). The
+            // library root comes first because that is the equality, and a row
+            // filed under a root the tool is no longer pointed at says nothing
+            // about the one it is.
+            filed.HasIndex(row => new { row.LibraryRoot, row.MetadataCheckedAt });
         });
 
         modelBuilder.Entity<FileHold>(hold =>

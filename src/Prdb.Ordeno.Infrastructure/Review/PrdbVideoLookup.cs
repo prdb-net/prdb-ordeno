@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Kiota.Abstractions;
 
+using Prdb.Ordeno.Core.Identification;
 using Prdb.Ordeno.Core.Review;
 using Prdb.Ordeno.Infrastructure.Configuration;
 using Prdb.Sdk;
@@ -102,19 +103,26 @@ public sealed class PrdbVideoLookup(
                 nameof(videoIds));
         }
 
+        // Read off the answer this call is making anyway. The review queue has
+        // no use for it; the metadata refresh walks a library fifty scenes at a
+        // time and stops on it (ADR 0032), and asking GET /rate-limit instead
+        // would spend a request to find out whether there are requests left.
+        var limits = new RateLimitOption();
+
         try
         {
             var client = Client(apiKey);
 
             var response = await client.Videos.Batch.PostAsync(
                 new GetVideosByIdsRequest { Ids = [.. videoIds.Select(id => (Guid?)id)] },
-                cancellationToken: cancellationToken);
+                configuration => configuration.Options.Add(limits),
+                cancellationToken);
 
             // An id prdb does not know is left out of the answer rather than
             // failing it, so this is a shorter list and not an error: a video
             // that has been merged away since the identification is exactly that
             // case, and the row it belongs to says so by having no words on it.
-            return VideoLookupAnswer.From([.. (response ?? []).Select(Read)]);
+            return VideoLookupAnswer.From([.. (response ?? []).Select(Read)], rateLimit: Reading(limits));
         }
         catch (Exception exception) when (Handled(exception, cancellationToken))
         {
@@ -129,6 +137,19 @@ public sealed class PrdbVideoLookup(
         // that takes a minute to say the same thing one try would have said.
         retry: PrdbRetryOptions.Disabled,
         timeout: LookupTimeout);
+
+    /// <summary>
+    /// What the answer said about the quota, in this repository's own terms.
+    /// Both windows, because a run that repeats nightly over a whole library
+    /// spends a month where identification spends an hour.
+    /// </summary>
+    private static RateLimitReading? Reading(RateLimitOption limits) =>
+        limits is { Hour: null, Month: null }
+            ? null
+            : new RateLimitReading(
+                limits.Hour?.Remaining,
+                limits.Hour is { } hour ? TimeSpan.FromSeconds(hour.ResetInSeconds) : null,
+                limits.Month?.Remaining);
 
     private static VideoSummary Read(VideoSummaryDto video) => new(
         video.Id ?? Guid.Empty,

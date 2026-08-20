@@ -388,6 +388,12 @@ function TargetStep({
           consent depends on; the History screen is that information, and it is
           here that somebody comes back to once they have read it. */}
       {number === undefined && <UnattendedFilingSwitch state={state} run={run} />}
+
+      {/* The third switch, and the mildest of them — ADR 0032. It rewrites files
+          the tool wrote itself and writes images where there are none; it moves
+          nothing, which is why the words under it are shorter than the ones
+          above. */}
+      {number === undefined && <UnattendedRefreshSwitch state={state} run={run} />}
     </Step>
   )
 }
@@ -472,6 +478,50 @@ function UnattendedFilingSwitch({ state, run }: { state: ConfigurationState; run
         the same plan. Every run is in the History, where one that went wrong can be put back, and
         a file you put back is never filed again until you release it. With it off, nothing moves
         until you ask.
+      </p>
+
+      {problem !== null && <p className="problem">{problem}</p>}
+    </>
+  )
+}
+
+/**
+ * Whether the tool checks what it filed against what prdb says now, without
+ * being asked — ADR 0032. The Metadata screen is where a run is asked for and
+ * where the last one is reported; this is the switch that makes it happen on its
+ * own.
+ *
+ * It saves as it is clicked, like the two switches above it.
+ */
+function UnattendedRefreshSwitch({ state, run }: { state: ConfigurationState; run: Run }) {
+  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const toggle = async (enabled: boolean) => {
+    setBusy(true)
+    setProblem(await run(() => api.setUnattendedRefresh(enabled)))
+    setBusy(false)
+  }
+
+  return (
+    <>
+      <label className="pick">
+        <input
+          type="checkbox"
+          checked={state.refreshesMetadata}
+          disabled={busy}
+          onChange={(event) => void toggle(event.target.checked)}
+        />
+        Keep filed metadata up to date on its own
+      </label>
+
+      <p className="hint">
+        With this on, prdb-ordeno checks part of the library every{' '}
+        {String(state.refreshIntervalHours)} hours and rewrites a <code>movie.nfo</code> it wrote
+        itself when prdb has corrected the title, the date or the cast since. It moves nothing and
+        renames nothing, it never touches a metadata file you wrote, and an image is only ever
+        written where there is none. With it off, the Metadata screen does the same thing when you
+        ask.
       </p>
 
       {problem !== null && <p className="problem">{problem}</p>}

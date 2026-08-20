@@ -10,6 +10,19 @@ public enum RunKind
 
     /// <summary>Putting a run, or one operation of one, back where it came from.</summary>
     Undo,
+
+    /// <summary>
+    /// Checking what the tool filed against what prdb says now, and rewriting the
+    /// metadata files that no longer say it — ADR 0032.
+    /// </summary>
+    /// <remarks>
+    /// It has a row and never an entry. A rewritten document has no way back and
+    /// needs none — everything in it came from prdb and everything it replaced
+    /// carried the tool's own marker — while an entry is shaped for a way back,
+    /// and a few hundred a night would push the moves that <em>can</em> be undone
+    /// out of the log (ADR 0033).
+    /// </remarks>
+    Refresh,
 }
 
 /// <summary>
