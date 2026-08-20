@@ -178,11 +178,11 @@ public sealed class PrdbVideoLookup(
     /// breaking ties — and a filing decision needs two runs to choose the same
     /// image. It fixes the order and not a ranking: nothing says the oldest image
     /// is the best one, and ADR 0027 picks it for being reproducible.
-    /// The value is a complete URL despite the field's name, which the schema has
-    /// said since <c>Prdb.Sdk</c> 0.6.2.
+    /// The value is a complete URL, which the schema has said since
+    /// <c>Prdb.Sdk</c> 0.6.2 and names accurately since 0.7.0.
     /// </remarks>
     private static string? FirstImage(VideoDetailDto video) => (video.Images ?? [])
-        .Select(image => image.CdnPath)
+        .Select(image => image.Url)
         .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
 
     /// <summary>
